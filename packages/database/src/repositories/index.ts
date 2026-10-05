@@ -11,10 +11,13 @@ import { createHash } from "node:crypto";
 import type { createDatabase } from "../index";
 import {
   auditEvents,
+  approvalRequirements,
+  approvals,
   duplicateFindings,
   extractionRuns,
   memberships,
   obligationSources,
+  obligationVersions,
   obligations,
   vendorDestinations,
   vendors,
@@ -23,6 +26,37 @@ import {
 export type Database = ReturnType<typeof createDatabase>["db"];
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Executor = Database | Transaction;
+type MembershipRole = (typeof memberships.role.enumValues)[number];
+const financeWriteRoles: readonly MembershipRole[] = [
+  "OWNER",
+  "FINANCE",
+  "ACCOUNTANT",
+  "CFO",
+];
+const destinationWriteRoles: readonly MembershipRole[] = [
+  ...financeWriteRoles,
+  "TREASURY",
+];
+
+async function requireWriteRole(
+  tx: Executor,
+  actor: TenantActor,
+  allowed: readonly MembershipRole[],
+) {
+  const rows = await tx
+    .select({ role: memberships.role })
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.organizationId, actor.organizationId),
+        eq(memberships.userId, actor.userId),
+        eq(memberships.status, "ACTIVE"),
+      ),
+    )
+    .limit(1);
+  if (!rows[0] || !allowed.includes(rows[0].role))
+    throw new Error("Actor is not authorized for this finance operation");
+}
 
 export interface TenantActor {
   organizationId: string;
@@ -158,6 +192,7 @@ export async function createVendor(
 ) {
   const value = vendorInputSchema.parse(input);
   const result = await db.transaction(async (tx) => {
+    await requireWriteRole(tx, actor, financeWriteRoles);
     const [vendor] = await tx
       .insert(vendors)
       .values({ organizationId: actor.organizationId, ...value })
@@ -205,6 +240,7 @@ export async function updateVendor(
 ) {
   const value = vendorInputSchema.parse(input);
   return db.transaction(async (tx) => {
+    await requireWriteRole(tx, actor, financeWriteRoles);
     const [vendor] = await tx
       .update(vendors)
       .set({ ...value, updatedAt: new Date() })
@@ -234,6 +270,10 @@ export async function addVendorDestination(
 ) {
   const value = destinationInputSchema.parse(input);
   return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`,
+    );
+    await requireWriteRole(tx, actor, destinationWriteRoles);
     const vendor = await getVendor(tx, actor.organizationId, vendorId);
     if (!vendor) return null;
     await tx
@@ -243,7 +283,7 @@ export async function addVendorDestination(
         and(
           eq(vendorDestinations.organizationId, actor.organizationId),
           eq(vendorDestinations.vendorId, vendorId),
-          eq(vendorDestinations.verificationStatus, "UNVERIFIED"),
+          ne(vendorDestinations.verificationStatus, "SUPERSEDED"),
         ),
       );
     const fingerprint = createHash("sha256")
@@ -267,6 +307,65 @@ export async function addVendorDestination(
       subjectId: destination.id,
       payload: { vendorId, fingerprint, verificationStatus: "UNVERIFIED" },
     });
+    const affected = await tx
+      .select({ id: obligations.id })
+      .from(obligations)
+      .where(
+        and(
+          eq(obligations.organizationId, actor.organizationId),
+          eq(obligations.vendorId, vendorId),
+          sql`${obligations.state} in ('APPROVAL_REQUIRED','APPROVED','READY_TO_SETTLE','BLOCKED')`,
+        ),
+      );
+    for (const item of affected) {
+      const invalidated = await tx
+        .update(approvals)
+        .set({
+          invalidatedAt: new Date(),
+          invalidationReason: "Vendor destination changed",
+        })
+        .where(
+          and(
+            eq(approvals.organizationId, actor.organizationId),
+            eq(approvals.obligationId, item.id),
+            sql`${approvals.invalidatedAt} is null`,
+          ),
+        )
+        .returning({ id: approvals.id });
+      await tx
+        .update(approvalRequirements)
+        .set({ state: "INVALIDATED" })
+        .where(
+          and(
+            eq(approvalRequirements.organizationId, actor.organizationId),
+            eq(approvalRequirements.obligationId, item.id),
+            ne(approvalRequirements.state, "INVALIDATED"),
+          ),
+        );
+      await tx
+        .update(obligations)
+        .set({
+          state: "UNDER_REVIEW",
+          destinationId: null,
+          updatedAt: new Date(),
+        })
+        .where(
+          and(
+            eq(obligations.organizationId, actor.organizationId),
+            eq(obligations.id, item.id),
+          ),
+        );
+      for (const approval of invalidated)
+        await appendAuditEvent(tx, actor, {
+          eventType: "APPROVAL_INVALIDATED",
+          subjectType: "APPROVAL",
+          subjectId: approval.id,
+          payload: {
+            obligationId: item.id,
+            reason: "Vendor destination changed",
+          },
+        });
+    }
     return destination;
   });
 }
@@ -307,6 +406,7 @@ export async function createSource(
   input: SourceInput,
 ) {
   return db.transaction(async (tx) => {
+    await requireWriteRole(tx, actor, financeWriteRoles);
     const [source] = await tx
       .insert(obligationSources)
       .values({
@@ -391,6 +491,7 @@ export async function createObligation(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`,
     );
+    await requireWriteRole(tx, actor, financeWriteRoles);
     const vendor = await getVendor(tx, actor.organizationId, value.vendorId);
     if (!vendor) throw new Error("Vendor is unavailable in this organization");
     let sourceHash: string | null = null;
@@ -488,6 +589,21 @@ export async function createObligation(
       .returning();
     if (!obligation)
       throw new Error("Obligation insert did not return a record");
+    await tx.insert(obligationVersions).values({
+      organizationId: actor.organizationId,
+      obligationId: obligation.id,
+      version: obligation.version,
+      vendorId: obligation.vendorId,
+      type: obligation.type,
+      reference: obligation.reference,
+      currency: obligation.currency,
+      amountMinor: obligation.amountMinor,
+      dueAt: obligation.dueAt,
+      category: obligation.category,
+      description: obligation.description,
+      sourceId: obligation.sourceId,
+      changedBy: actor.userId,
+    });
     await appendAuditEvent(tx, actor, {
       eventType: "OBLIGATION_CREATED",
       subjectType: "OBLIGATION",
@@ -541,6 +657,7 @@ export async function updateObligation(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`,
     );
+    await requireWriteRole(tx, actor, financeWriteRoles);
     const existingRows = await tx
       .select()
       .from(obligations)
@@ -626,6 +743,61 @@ export async function updateObligation(
       )
       .returning();
     if (!updated) return null;
+    await tx.insert(obligationVersions).values({
+      organizationId: actor.organizationId,
+      obligationId: updated.id,
+      version: updated.version,
+      vendorId: updated.vendorId,
+      type: updated.type,
+      reference: updated.reference,
+      currency: updated.currency,
+      amountMinor: updated.amountMinor,
+      dueAt: updated.dueAt,
+      category: updated.category,
+      description: updated.description,
+      sourceId: updated.sourceId,
+      changedBy: actor.userId,
+    });
+    const invalidated = await tx
+      .update(approvals)
+      .set({
+        invalidatedAt: new Date(),
+        invalidationReason: "Material obligation fields changed",
+      })
+      .where(
+        and(
+          eq(approvals.organizationId, actor.organizationId),
+          eq(approvals.obligationId, obligationId),
+          sql`${approvals.invalidatedAt} is null`,
+        ),
+      )
+      .returning({ id: approvals.id });
+    await tx
+      .update(approvalRequirements)
+      .set({ state: "INVALIDATED" })
+      .where(
+        and(
+          eq(approvalRequirements.organizationId, actor.organizationId),
+          eq(approvalRequirements.obligationId, obligationId),
+          ne(approvalRequirements.state, "INVALIDATED"),
+        ),
+      );
+    await tx
+      .update(obligations)
+      .set({ state: "UNDER_REVIEW", destinationId: null })
+      .where(
+        and(
+          eq(obligations.organizationId, actor.organizationId),
+          eq(obligations.id, obligationId),
+        ),
+      );
+    for (const approval of invalidated)
+      await appendAuditEvent(tx, actor, {
+        eventType: "APPROVAL_INVALIDATED",
+        subjectType: "APPROVAL",
+        subjectId: approval.id,
+        payload: { obligationId, reason: "Material obligation fields changed" },
+      });
     await tx
       .delete(duplicateFindings)
       .where(
@@ -747,7 +919,10 @@ export async function getObligation(
       .where(
         and(
           eq(auditEvents.organizationId, organizationId),
-          eq(auditEvents.subjectId, obligationId),
+          or(
+            eq(auditEvents.subjectId, obligationId),
+            sql`${auditEvents.payloadJson}->>'obligationId' = ${obligationId}`,
+          ),
         ),
       )
       .orderBy(desc(auditEvents.createdAt)),
@@ -763,13 +938,22 @@ export async function getDashboardMetrics(
     .select({
       openCount: sql<number>`count(*)::int`,
       dueSoon: sql<number>`count(*) filter (where ${obligations.dueAt} >= now() and ${obligations.dueAt} <= now() + interval '14 days')::int`,
+      awaitingReview: sql<number>`count(*) filter (where ${obligations.state} = 'UNDER_REVIEW')::int`,
+      awaitingApproval: sql<number>`count(*) filter (where ${obligations.state} = 'APPROVAL_REQUIRED')::int`,
+      blocked: sql<number>`count(*) filter (where ${obligations.state} = 'BLOCKED')::int`,
+      readyToSettle: sql<number>`count(*) filter (where ${obligations.state} = 'READY_TO_SETTLE')::int`,
     })
     .from(obligations)
     .where(eq(obligations.organizationId, organizationId));
   const possible = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(duplicateFindings)
-    .where(eq(duplicateFindings.organizationId, organizationId));
+    .where(
+      and(
+        eq(duplicateFindings.organizationId, organizationId),
+        eq(duplicateFindings.resolutionStatus, "OPEN"),
+      ),
+    );
   const totals = await db
     .select({
       currency: obligations.currency,
@@ -781,3 +965,5 @@ export async function getDashboardMetrics(
     .orderBy(asc(obligations.currency));
   return { ...rows[0], totals, possibleDuplicates: possible[0]?.count ?? 0 };
 }
+
+export * from "./control";

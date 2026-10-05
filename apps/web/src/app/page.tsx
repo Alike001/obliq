@@ -47,7 +47,7 @@ export default function LandingPage() {
             <div className="mb-7 flex items-center gap-3">
               <StatusPill status="IMPLEMENTED" />
               <span className="text-muted text-xs">
-                Phase 1 obligation engine
+                Phase 2 control &amp; approval engine
               </span>
             </div>
             <h1 className="display max-w-[780px]">
@@ -66,9 +66,9 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="text-muted mt-5 max-w-xl text-xs leading-5">
-              The product foundation is live. Obligation workflows, Zcash
-              settlement and reconciliation remain explicitly planned—not
-              simulated.
+              Capture, deterministic controls and human approvals are
+              implemented. Zcash settlement and reconciliation remain explicitly
+              unavailable—not simulated.
             </p>
           </div>
           <ProductPreview />

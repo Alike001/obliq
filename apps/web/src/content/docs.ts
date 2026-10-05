@@ -29,7 +29,7 @@ export const docs: readonly DocPage[] = [
     slug: "overview",
     title: "Overview",
     status: "IMPLEMENTED",
-    description: "What Obliq is, who it serves, and what exists in Phase 1.",
+    description: "What Obliq is, who it serves, and what exists in Phase 2.",
     sections: [
       {
         id: "product",
@@ -43,12 +43,13 @@ export const docs: readonly DocPage[] = [
         id: "today",
         title: "What exists today",
         paragraphs: [
-          "Phase 1 adds persisted, organization-scoped vendors, invoice sources, human-reviewed obligations, duplicate detection and audit history to the product foundation.",
+          "Phase 2 adds versioned deterministic controls, structured findings, server-authorized human approvals and explainable settlement readiness to the persisted obligation engine.",
         ],
         bullets: [
           "Manual and invoice-backed obligation capture",
           "Exact integer money types and PostgreSQL bigint columns",
           "Server-enforced organization membership and tenant-scoped repositories",
+          "Version-bound policy decisions, approvals and readiness records",
           "Zcash interfaces with no fake implementation",
         ],
       },
@@ -56,7 +57,7 @@ export const docs: readonly DocPage[] = [
         id: "not-yet",
         title: "What does not exist yet",
         paragraphs: [
-          "Approvals, policy evaluation, settlement, scanning, transaction execution, reconciliation and evidence generation are not live.",
+          "Zcash pricing, payment requests, wallet integration, signing, broadcast, scanning, reconciliation and evidence generation are not live.",
         ],
         callout: {
           tone: "warning",
@@ -127,7 +128,7 @@ export const docs: readonly DocPage[] = [
         id: "planned",
         title: "Planned package boundaries",
         paragraphs: [
-          "Policy, ledger, evidence and AI will become packages only when their implementation begins. Their boundaries are documented now without creating empty workspaces.",
+          "Policy is an executable framework-independent package. Ledger and evidence remain documented future boundaries; AI owns extraction suggestions only.",
         ],
       },
     ],
@@ -149,7 +150,7 @@ export const docs: readonly DocPage[] = [
         id: "control",
         title: "Control",
         paragraphs: [
-          "Evaluate deterministic policy and collect required human approvals. Approval remains distinct from settlement. Phase 2 scope.",
+          "Evaluate immutable policy versions, record structured findings and collect server-authorized human approvals. Implemented in Phase 2. Approval remains distinct from settlement.",
         ],
       },
       {
@@ -204,7 +205,7 @@ export const docs: readonly DocPage[] = [
         callout: {
           tone: "note",
           title: "No inflated claim",
-          text: "Phase 1 does not execute shielded transactions, so it does not claim that a customer payment is private or settled.",
+          text: "Phase 2 does not execute shielded transactions, so READY_TO_SETTLE does not claim that a customer payment is private or settled.",
         },
       },
     ],
@@ -329,12 +330,12 @@ export const docs: readonly DocPage[] = [
         id: "planned",
         title: "Planned and unavailable",
         paragraphs: [
-          "Production authentication provider integration, policy execution, approvals, signing, shielded settlement, viewing/scanning, reconciliation, ledger settlement operations and evidence packages are not implemented.",
+          "Production authentication provider integration, signing, shielded settlement, viewing/scanning, reconciliation, ledger settlement operations and evidence packages are not implemented.",
         ],
         callout: {
           tone: "warning",
           title: "Current proof boundary",
-          text: "There is no real settlement, network connection, transaction identifier or blockchain evidence to verify in Phase 1.",
+          text: "There is no real settlement, network connection, transaction identifier or blockchain evidence to verify in Phase 2.",
         },
       },
     ],
@@ -356,9 +357,9 @@ export const docs: readonly DocPage[] = [
         id: "state",
         title: "Current state machine",
         paragraphs: [
-          "Human-confirmed Phase 1 records stop at UNDER_REVIEW. Obliq deliberately does not assert APPROVAL_REQUIRED until the Phase 2 policy engine evaluates the record.",
+          "Human-confirmed records enter UNDER_REVIEW. A server-side command may move them to BLOCKED or APPROVAL_REQUIRED only after policy evaluation. Satisfied current approvals produce APPROVED; a fresh version-bound readiness evaluation alone produces READY_TO_SETTLE.",
         ],
-        code: "DRAFT → UNDER_REVIEW → [Phase 2 control evaluation]",
+        code: "DRAFT → UNDER_REVIEW → APPROVAL_REQUIRED → APPROVED → READY_TO_SETTLE\n                    ↘ BLOCKED",
       },
       {
         id: "money",
@@ -386,12 +387,12 @@ export const docs: readonly DocPage[] = [
         id: "destinations",
         title: "Payment destinations",
         paragraphs: [
-          "Adding a destination creates an immutable historical row and supersedes the preceding active unverified row. Manual records remain UNVERIFIED; no wallet-control or cryptographic verification is claimed.",
+          "Adding a destination creates an immutable historical row and supersedes the preceding active row. An authorized Treasury, CFO or Owner may record VERIFIED_MANUALLY with timestamp, method and note. This is operational verification, not cryptographic proof of wallet control.",
         ],
         callout: {
           tone: "warning",
           title: "No wallet integration",
-          text: "A stored receiver is identity data only. It is not approved for payment and cannot move funds.",
+          text: "A destination change invalidates approvals and readiness. Later settlement must bind the exact reviewed destination version. No destination record can move funds.",
         },
       },
     ],
@@ -453,6 +454,71 @@ export const docs: readonly DocPage[] = [
     ],
   },
   {
+    slug: "policies",
+    title: "Policies and controls",
+    status: "IMPLEMENTED",
+    description:
+      "Deterministic rules, immutable versions and structured findings.",
+    sections: [
+      {
+        id: "rules",
+        title: "Focused financial controls",
+        paragraphs: [
+          "The active accounts-payable policy evaluates completeness, supported policy currency, vendor history, exact destination status, unresolved duplicate findings and amount tiers. It produces stable PASS, BLOCK and REQUIRE_APPROVAL findings without AI input.",
+        ],
+      },
+      {
+        id: "versions",
+        title: "Historical meaning is immutable",
+        paragraphs: [
+          "Publishing a policy creates a new immutable PolicyVersion. Each PolicyDecision records its policy version, obligation version, destination version, input hash, findings and requirements. Activating a later version does not rewrite earlier decisions; it invalidates active authorization and returns affected obligations to review.",
+        ],
+      },
+      {
+        id: "defaults",
+        title: "Supported approval tiers",
+        paragraphs: [
+          "Finance leads can set the two exact thresholds and policy currency. Below the first threshold requires Finance; the middle tier requires Finance and Treasury; the upper tier requires two distinct Treasury approvals. New vendors add Treasury review. Unsupported currencies block rather than applying an invented exchange rate.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "approvals",
+    title: "Approvals and readiness",
+    status: "IMPLEMENTED",
+    description:
+      "Human authorization that remains separate from Zcash signing.",
+    sections: [
+      {
+        id: "authorization",
+        title: "Server-authorized actions",
+        paragraphs: [
+          "Approval requirements derive from the policy decision. The server checks active organization membership, eligible role, current requirement state, obligation version and creator restrictions. A database constraint prevents one actor from counting twice within a decision.",
+        ],
+      },
+      {
+        id: "invalidation",
+        title: "Material changes invalidate authorization",
+        paragraphs: [
+          "Changing vendor, amount, currency, obligation type, reference, due date, category, description or destination returns the obligation to UNDER_REVIEW and invalidates active approvals. Material revisions append an immutable obligation-version snapshot. Fresh policy evaluation and human approval are required.",
+        ],
+      },
+      {
+        id: "readiness",
+        title: "Explainable settlement readiness",
+        paragraphs: [
+          "A fresh readiness evaluation checks the exact obligation, policy and destination versions; blocking findings; duplicate resolution; destination status; and every approval threshold. It returns structured reasons and only then may set READY_TO_SETTLE.",
+        ],
+        callout: {
+          tone: "warning",
+          title: "Not a signature",
+          text: "READY_TO_SETTLE is business authorization. Phase 2 cannot construct, sign, broadcast or reconcile a Zcash transaction.",
+        },
+      },
+    ],
+  },
+  {
     slug: "audit-history",
     title: "Audit and activity history",
     status: "IMPLEMENTED",
@@ -462,7 +528,7 @@ export const docs: readonly DocPage[] = [
         id: "events",
         title: "Recorded activity",
         paragraphs: [
-          "Vendor creation and edits, destination changes, source uploads, extraction, obligation creation, duplicate findings and review confirmation produce actor-attributed events.",
+          "Vendor and destination actions, source and obligation changes, policy versions and evaluations, control findings, approval requests and decisions, invalidations, duplicate resolutions and readiness evaluations produce actor-attributed events.",
         ],
       },
       {
@@ -490,15 +556,11 @@ export const docGroups: readonly DocGroup[] = [
       "vendors",
       "invoice-ingestion",
       "duplicate-detection",
+      "policies",
+      "approvals",
       "audit-history",
     ],
-    planned: [
-      "Policies",
-      "Approvals",
-      "Settlements",
-      "Reconciliation",
-      "Evidence",
-    ],
+    planned: ["Settlements", "Reconciliation", "Evidence"],
   },
   {
     title: "Privacy",

@@ -17,6 +17,7 @@ const nextConfig: NextConfig = {
     "@obliq/ai",
     "@obliq/database",
     "@obliq/domain",
+    "@obliq/policy",
     "@obliq/storage",
     "@obliq/zcash",
   ],

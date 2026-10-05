@@ -14,13 +14,6 @@ export default async function AppOverviewPage() {
     getDashboardMetrics(db, tenant.organizationId),
     listObligations(db, tenant.organizationId),
   ]);
-  const totalValue = metrics.totals.length
-    ? metrics.totals
-        .map((total) =>
-          formatMinorUnits(BigInt(total.amountMinor), total.currency),
-        )
-        .join(" · ")
-    : "—";
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -40,14 +33,22 @@ export default async function AppOverviewPage() {
           </Link>
         </div>
         <section
-          className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-          aria-label="Real obligation metrics"
+          className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+          aria-label="Real control metrics"
         >
           <Metric
-            label="Open obligations"
-            value={String(metrics.openCount ?? 0)}
+            label="Awaiting review"
+            value={String(metrics.awaitingReview ?? 0)}
           />
-          <Metric label="Amount due by currency" value={totalValue} />
+          <Metric
+            label="Awaiting approval"
+            value={String(metrics.awaitingApproval ?? 0)}
+          />
+          <Metric label="Blocked" value={String(metrics.blocked ?? 0)} />
+          <Metric
+            label="Ready to settle"
+            value={String(metrics.readyToSettle ?? 0)}
+          />
           <Metric label="Due in 14 days" value={String(metrics.dueSoon ?? 0)} />
           <Metric
             label="Possible duplicates"
@@ -98,6 +99,8 @@ export default async function AppOverviewPage() {
             <h2 className="font-semibold">System readiness</h2>
             <div className="mt-5 space-y-4">
               <Ready label="Obligation persistence" status="IMPLEMENTED" />
+              <Ready label="Policy + approvals" status="IMPLEMENTED" />
+              <Ready label="Settlement readiness" status="IMPLEMENTED" />
               <Ready label="Audit hash chain" status="IMPLEMENTED" />
               <Ready label="Extraction fixture" status="SEEDED" />
               <Ready label="Zcash settlement" status="UNAVAILABLE" />

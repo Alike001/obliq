@@ -29,6 +29,20 @@
       "when": 1791225001291,
       "tag": "0003_graceful_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791238160414,
+      "tag": "0004_normal_scarlet_spider",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791239356245,
+      "tag": "0005_cooing_wrecking_crew",
+      "breakpoints": true
     }
   ]
 }

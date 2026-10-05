@@ -2,7 +2,7 @@ import { CheckCircle2, CircleSlash2, GitCommitHorizontal } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { StatusPill } from "@/components/status-pill";
-import { checkDatabaseConnection } from "@obliq/database";
+import { checkDatabaseConnection, verifyAuditChain } from "@obliq/database";
 import { getDatabase } from "@/lib/db";
 
 const capabilities = [
@@ -15,6 +15,26 @@ const capabilities = [
     "PostgreSQL persistence",
     "IMPLEMENTED",
     "Migrated repositories for vendors, sources, obligations and audit events",
+  ],
+  [
+    "Deterministic policy engine",
+    "IMPLEMENTED",
+    "Immutable policy versions produce structured findings and approval requirements",
+  ],
+  [
+    "Approval workflow",
+    "IMPLEMENTED",
+    "Role eligibility, distinct actors, creator separation and stale-approval invalidation",
+  ],
+  [
+    "Destination controls",
+    "IMPLEMENTED",
+    "Authorized manual verification with provenance; destination changes invalidate approvals",
+  ],
+  [
+    "Settlement readiness",
+    "IMPLEMENTED",
+    "Explainable version-bound authorization gate; it does not move money",
   ],
   [
     "Development extraction provider",
@@ -32,7 +52,7 @@ const capabilities = [
     "No viewing key, scanner or network observer configured",
   ],
   [
-    "Audit chain foundation",
+    "Audit chain",
     "IMPLEMENTED",
     "Organization-local SHA-256 event chain with verification tests; not blockchain evidence",
   ],
@@ -50,10 +70,20 @@ export default async function ProofPage() {
     process.env.GIT_COMMIT_SHA?.slice(0, 12) ??
     "local-development";
   let databaseRuntime = "NOT CONFIGURED";
+  let auditRuntime = "NOT CONFIGURED";
   if (process.env.DATABASE_URL) {
     try {
       await checkDatabaseConnection(getDatabase());
       databaseRuntime = "CONNECTED";
+      if (process.env.OBLIQ_DEV_ORGANIZATION_ID) {
+        const audit = await verifyAuditChain(
+          getDatabase(),
+          process.env.OBLIQ_DEV_ORGANIZATION_ID,
+        );
+        auditRuntime = audit.valid
+          ? `VALID · ${audit.eventCount} events`
+          : "INVALID";
+      }
     } catch {
       databaseRuntime = "UNAVAILABLE";
     }
@@ -68,9 +98,10 @@ export default async function ProofPage() {
             Claims should be inspectable—or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/60">
-            Phase 1 reports persisted obligation capability and build state.
-            There is no fabricated transaction, network connection,
-            reconciliation result or blockchain evidence.
+            Phase 2 reports persisted controls, human approvals and readiness.
+            READY_TO_SETTLE is business authorization only. There is no
+            fabricated transaction, signature, reconciliation result or
+            blockchain evidence.
           </p>
         </div>
       </section>
@@ -101,6 +132,12 @@ export default async function ProofPage() {
             </div>
           </div>
           <div className="space-y-5">
+            <ProofCard
+              label="Audit-chain runtime"
+              value={auditRuntime}
+              detail="Computed server-side by replaying the configured organization's application event chain. This is not blockchain evidence."
+              good={auditRuntime.startsWith("VALID")}
+            />
             <ProofCard
               label="Server spend authority"
               value="NONE"

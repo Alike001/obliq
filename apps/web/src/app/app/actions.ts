@@ -7,7 +7,14 @@ import {
   createObligation,
   createSource,
   createVendor,
+  createDefaultPolicy,
+  createPolicyVersion,
+  decideApproval,
+  evaluateObligationControls,
+  evaluateSettlementReadiness,
+  resolveDuplicateFinding,
   updateObligation,
+  verifyDestinationManually,
 } from "@obliq/database";
 import {
   LocalDocumentStorage,
@@ -19,6 +26,8 @@ import { redirect } from "next/navigation";
 import { resolve } from "node:path";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
+import { defaultPolicyConfig } from "@obliq/policy";
+import { parseMoneyInput } from "@obliq/domain";
 
 function field(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -174,4 +183,114 @@ export async function uploadInvoiceAction(formData: FormData) {
     throw error;
   }
   redirect(`/app/obligations/review/${sourceId}`);
+}
+
+export async function createDefaultPolicyAction() {
+  const actor = await getTenantContext();
+  await createDefaultPolicy(getDatabase(), actor);
+  revalidatePath("/app/policies");
+  redirect("/app/policies?created=1");
+}
+
+export async function createPolicyVersionAction(
+  policyId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  const currency = field(formData, "currency").toUpperCase();
+  const lower = parseMoneyInput(field(formData, "lowerThreshold"), currency);
+  const upper = parseMoneyInput(field(formData, "upperThreshold"), currency);
+  await createPolicyVersion(getDatabase(), actor, policyId, {
+    ...defaultPolicyConfig,
+    currency,
+    tiers: [
+      {
+        upperBoundMinor: lower.amountMinor.toString(),
+        label: `Under ${currency} ${field(formData, "lowerThreshold")}`,
+        requirements: [{ role: "FINANCE", count: 1, prohibitCreator: false }],
+      },
+      {
+        upperBoundMinor: upper.amountMinor.toString(),
+        label: `${currency} ${field(formData, "lowerThreshold")}–${field(formData, "upperThreshold")}`,
+        requirements: [
+          { role: "FINANCE", count: 1, prohibitCreator: false },
+          { role: "TREASURY", count: 1, prohibitCreator: true },
+        ],
+      },
+      {
+        label: `Above ${currency} ${field(formData, "upperThreshold")}`,
+        requirements: [{ role: "TREASURY", count: 2, prohibitCreator: true }],
+      },
+    ],
+  });
+  revalidatePath("/app/policies");
+  redirect("/app/policies?version=created");
+}
+
+export async function evaluateControlsAction(obligationId: string) {
+  const actor = await getTenantContext();
+  await evaluateObligationControls(getDatabase(), actor, obligationId);
+  revalidatePath(`/app/obligations/${obligationId}`);
+  redirect(`/app/obligations/${obligationId}?controls=evaluated`);
+}
+
+export async function approvalDecisionAction(
+  requirementId: string,
+  obligationId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  const decision = field(formData, "decision");
+  if (decision !== "APPROVE" && decision !== "REJECT")
+    throw new Error("Invalid approval decision");
+  await decideApproval(
+    getDatabase(),
+    actor,
+    requirementId,
+    decision,
+    optional(formData, "note"),
+  );
+  revalidatePath("/app/approvals");
+  revalidatePath(`/app/obligations/${obligationId}`);
+  redirect(`/app/obligations/${obligationId}?approval=recorded`);
+}
+
+export async function readinessAction(obligationId: string) {
+  const actor = await getTenantContext();
+  await evaluateSettlementReadiness(getDatabase(), actor, obligationId);
+  revalidatePath(`/app/obligations/${obligationId}`);
+  redirect(`/app/obligations/${obligationId}?readiness=evaluated`);
+}
+
+export async function verifyDestinationAction(
+  vendorId: string,
+  destinationId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  await verifyDestinationManually(
+    getDatabase(),
+    actor,
+    destinationId,
+    field(formData, "method"),
+    field(formData, "note"),
+  );
+  revalidatePath(`/app/vendors/${vendorId}`);
+  redirect(`/app/vendors/${vendorId}?verified=1`);
+}
+
+export async function resolveDuplicateAction(
+  obligationId: string,
+  findingId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  await resolveDuplicateFinding(
+    getDatabase(),
+    actor,
+    findingId,
+    field(formData, "note"),
+  );
+  revalidatePath(`/app/obligations/${obligationId}`);
+  redirect(`/app/obligations/${obligationId}?duplicate=resolved`);
 }

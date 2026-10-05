@@ -4,9 +4,9 @@
 
 Owns exact money types, lifecycle vocabulary, authority types, and tenant guards. A future settlement cannot exist without an obligation. `APPROVED`, `BROADCAST`, and `SETTLED` are distinct states.
 
-## Policy (planned)
+## Policy
 
-Will evaluate deterministic, versioned rules and produce recorded decisions. It must not call AI or mutate settlement state implicitly. Material amount, vendor, destination, or obligation changes invalidate relevant approvals.
+Evaluates deterministic, versioned rules and returns structured findings and approval requirements. The database application layer records decisions against exact obligation, policy and destination versions, authorizes approval actions, invalidates stale authorization and invokes readiness explicitly. It does not call AI, price assets, sign or broadcast.
 
 ## Ledger (planned)
 

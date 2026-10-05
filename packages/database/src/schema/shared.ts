@@ -6,6 +6,9 @@ export const membershipRole = pgEnum("membership_role", [
   "APPROVER",
   "SIGNER",
   "ACCOUNTANT",
+  "TREASURY",
+  "CFO",
+  "POLICY_ADMIN",
 ]);
 export const recordStatus = pgEnum("record_status", [
   "ACTIVE",
@@ -16,6 +19,7 @@ export const verificationStatus = pgEnum("verification_status", [
   "UNVERIFIED",
   "PENDING",
   "VERIFIED",
+  "VERIFIED_MANUALLY",
   "SUPERSEDED",
 ]);
 export const obligationState = pgEnum("obligation_state", [
@@ -63,6 +67,27 @@ export const extractionMode = pgEnum("extraction_mode", [
 export const extractionStatus = pgEnum("extraction_status", [
   "COMPLETED",
   "FAILED",
+]);
+export const controlFindingOutcome = pgEnum("control_finding_outcome", [
+  "PASS",
+  "BLOCK",
+  "REQUIRE_APPROVAL",
+]);
+export const policyDecisionResult = pgEnum("policy_decision_result", [
+  "BLOCKED",
+  "APPROVAL_REQUIRED",
+]);
+export const approvalDecision = pgEnum("approval_decision", [
+  "APPROVE",
+  "REJECT",
+]);
+export const duplicateResolutionStatus = pgEnum("duplicate_resolution_status", [
+  "OPEN",
+  "RESOLVED",
+]);
+export const readinessResult = pgEnum("readiness_result", [
+  "READY",
+  "NOT_READY",
 ]);
 
 export const id = () => uuid("id").primaryKey().defaultRandom();

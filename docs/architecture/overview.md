@@ -5,7 +5,7 @@ Obliq is organized around a business object, the Obligation. A blockchain transa
 ```text
 Finance UI / server entry points
           ↓ organization-scoped command
-Domain rules → persisted obligation → policy + human approvals (planned)
+Domain rules → persisted obligation → deterministic policy + human approvals
           ↓ version-bound SettlementIntent
 Zcash adapter boundary
           ↓ exact external signing handoff
@@ -16,13 +16,13 @@ Read-only reconciliation boundary (planned, sensitive)
 Ledger + controlled evidence (planned)
 ```
 
-Phase 1 adds executable `packages/ai` and `packages/storage` boundaries to the Phase 0 workspaces. The AI package owns suggestion schemas and the labelled development fixture; storage owns validated private invoice bytes. Policy, ledger and evidence remain documented boundaries until their phases begin.
+Phase 1 added executable `packages/ai` and `packages/storage` boundaries. Phase 2 adds `packages/policy` for deterministic evaluation and explainable readiness. The database application layer persists immutable policy meaning and authorized actions. Ledger and evidence remain documented boundaries until their phases begin.
 
 ## Runtime surfaces
 
 - `/` communicates the product and current build status.
 - `/app` exposes real organization-scoped vendors, obligations, invoice review and database-derived metrics.
-- `/docs` renders Phase-1 documentation with desktop and mobile navigation.
+- `/docs` renders Phase-2 documentation with desktop and mobile navigation.
 - `/security` describes enforced and planned controls separately.
 - `/proof` reports real build/system capability states; it contains no mocked chain evidence.
 

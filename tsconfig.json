@@ -5,6 +5,7 @@
     { "path": "./packages/ai" },
     { "path": "./packages/database" },
     { "path": "./packages/storage" },
+    { "path": "./packages/policy" },
     { "path": "./packages/zcash" },
     { "path": "./apps/web" }
   ]

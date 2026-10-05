@@ -1,10 +1,14 @@
-import { getVendor, listVendorDestinations } from "@obliq/database";
+import {
+  getVendor,
+  listObligations,
+  listVendorDestinations,
+} from "@obliq/database";
 import { notFound } from "next/navigation";
 import { StatusPill } from "@/components/status-pill";
 import { Field, Input } from "@/components/finance-form";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
-import { addDestinationAction } from "../../actions";
+import { addDestinationAction, verifyDestinationAction } from "../../actions";
 export const dynamic = "force-dynamic";
 
 export default async function VendorDetail({
@@ -14,12 +18,14 @@ export default async function VendorDetail({
 }) {
   const { id } = await params;
   const tenant = await getTenantContext();
-  const [vendor, destinations] = await Promise.all([
+  const [vendor, destinations, history] = await Promise.all([
     getVendor(getDatabase(), tenant.organizationId, id),
     listVendorDestinations(getDatabase(), tenant.organizationId, id),
+    listObligations(getDatabase(), tenant.organizationId, { vendorId: id }),
   ]);
   if (!vendor) notFound();
   const add = addDestinationAction.bind(null, id);
+  const canVerify = ["OWNER", "CFO", "TREASURY"].includes(tenant.role);
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-5xl">
@@ -52,6 +58,37 @@ export default async function VendorDetail({
                       Fingerprint {d.fingerprint.slice(0, 16)}… ·{" "}
                       {d.createdAt.toLocaleString()}
                     </p>
+                    {d.verifiedAt && (
+                      <p className="mt-2 text-emerald-800">
+                        Verified manually {d.verifiedAt.toLocaleString()} ·{" "}
+                        {d.verificationMethod} · actor{" "}
+                        {d.verifiedBy?.slice(0, 8)}…
+                      </p>
+                    )}
+                    {d.verificationStatus === "UNVERIFIED" && canVerify && (
+                      <form
+                        action={verifyDestinationAction.bind(null, id, d.id)}
+                        className="mt-3 grid gap-2"
+                      >
+                        <input
+                          name="method"
+                          required
+                          minLength={3}
+                          placeholder="Method (for example, video call)"
+                          className="min-h-10 rounded-lg border px-3"
+                        />
+                        <input
+                          name="note"
+                          required
+                          minLength={3}
+                          placeholder="Verification note"
+                          className="min-h-10 rounded-lg border px-3"
+                        />
+                        <button className="button button-dark">
+                          Record manual verification
+                        </button>
+                      </form>
+                    )}
                   </div>
                 ))
               ) : (
@@ -62,13 +99,14 @@ export default async function VendorDetail({
           <form action={add} className="card p-6">
             <h2 className="font-semibold">Add destination</h2>
             <p className="mt-2 text-xs text-amber-800">
-              UNVERIFIED · This stores identity history only. It does not
-              validate wallet control.
+              UNVERIFIED · This supersedes the current destination and
+              invalidates affected approvals. It does not validate wallet
+              control.
             </p>
             <div className="mt-5">
               <Field
                 label="Zcash receiver"
-                hint="Adding a destination supersedes the current unverified record without deleting history."
+                hint="Adding a destination supersedes the current record without deleting history."
               >
                 <Input
                   name="receiver"
@@ -83,6 +121,25 @@ export default async function VendorDetail({
             </button>
           </form>
         </div>
+        <section className="card mt-5 p-6">
+          <h2 className="font-semibold">Obligation history</h2>
+          <div className="mt-4 divide-y">
+            {history.length ? (
+              history.map(({ obligation }) => (
+                <a
+                  href={`/app/obligations/${obligation.id}`}
+                  key={obligation.id}
+                  className="flex justify-between gap-3 py-3 text-sm"
+                >
+                  <span>{obligation.reference}</span>
+                  <strong>{obligation.state}</strong>
+                </a>
+              ))
+            ) : (
+              <p className="text-muted text-sm">No obligations yet.</p>
+            )}
+          </div>
+        </section>
       </div>
     </main>
   );

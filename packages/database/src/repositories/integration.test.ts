@@ -57,6 +57,9 @@ suite("PostgreSQL repositories", () => {
       .delete(schema.extractionRuns)
       .where(inArray(schema.extractionRuns.organizationId, organizations));
     await connection.db
+      .delete(schema.obligationVersions)
+      .where(inArray(schema.obligationVersions.organizationId, organizations));
+    await connection.db
       .delete(schema.obligations)
       .where(inArray(schema.obligations.organizationId, organizations));
     await connection.db

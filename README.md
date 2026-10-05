@@ -2,7 +2,7 @@
 
 Obliq is private financial operations software for crypto-native organizations. It is designed to help finance teams capture vendor and contractor obligations, apply deterministic controls and human approvals, settle privately with Zcash, reconcile settlement to the original business object, and create controlled financial evidence—without surrendering treasury spending authority.
 
-> **Phase 1 status:** the persisted obligation engine is implemented. Vendors, invoice sources, human-reviewed obligations, duplicate findings and audit history are real PostgreSQL records. Money-moving workflows are not implemented.
+> **Phase 2 status:** the persisted control and approval engine is implemented. Versioned policies, structured control findings, role-authorized approvals, invalidation and explainable settlement readiness are real PostgreSQL records. READY_TO_SETTLE does not move money.
 
 ## The problem
 
@@ -20,6 +20,7 @@ Shielded Zcash settlement is the privacy primitive that keeps the central promis
 apps/web             Next.js product, application, docs, security and proof surfaces
 packages/domain      Exact money, lifecycle status, tenant and authority types
 packages/database    PostgreSQL/Drizzle schema and migration ownership
+packages/policy      Deterministic controls and settlement-readiness rules
 packages/ai          Strict extraction suggestion contract and labelled fixture
 packages/storage     Private invoice document storage abstraction
 packages/zcash       Protocol-facing ports; no runtime implementation
@@ -28,7 +29,7 @@ docs/decisions       Architecture decision records
 scripts              Repository quality checks
 ```
 
-Policy, ledger and evidence become packages when implementation starts. Phase 1 adds only the AI and storage boundaries needed for invoice ingestion.
+Ledger and evidence become packages when implementation starts. The policy package is framework-independent and has no AI or network dependency.
 
 ## Local setup
 
@@ -69,12 +70,15 @@ npm audit --omit=dev
 - Money is represented with `bigint` minor units and zatoshis, never floating point.
 - Tenant-owned financial tables carry `organization_id`; server repositories scope reads and writes and integration tests exercise cross-organization denial.
 - Invoice uploads validate size, file signature and MIME agreement; storage names are generated and raw files have no public route.
-- Manual vendor destinations are historical records and remain explicitly `UNVERIFIED`.
+- Vendor destinations are immutable history. Authorized actors can record `VERIFIED_MANUALLY` with provenance; this is not cryptographic ownership proof.
+- Policies are immutable versions. Decisions bind the exact policy, obligation and destination versions.
+- Approval role eligibility and creator restrictions are enforced server-side; one actor cannot count twice in one policy decision.
+- Material obligation or destination changes invalidate active approvals and force fresh evaluation.
 - Settlement records require an obligation and settlement intent at the database level.
 - Zcash settlement and reconciliation adapters are absent and reported as `UNAVAILABLE`.
 - Viewing authority is treated as sensitive secret material and is never a client-side configuration value.
 
-The current tenant boundary is a server-validated development membership, not production authentication. Row-level security, identity-provider integration, full RBAC, malware scanning, object storage, encryption/secret management, and rate limiting remain planned.
+The current tenant boundary is a server-validated development membership, not production authentication. Row-level security, identity-provider integration, malware scanning, object storage, encryption/secret management, rate limiting and independent audit anchoring remain planned.
 
 See [security architecture](docs/architecture/security.md), [threat model](docs/architecture/threat-model.md), and the in-product `/security` and `/proof` surfaces.
 
@@ -88,7 +92,7 @@ See [security architecture](docs/architecture/security.md), [threat model](docs/
 | Tenant repository isolation and audit hash chain    | IMPLEMENTED           |
 | Development extraction provider                     | SEEDED                |
 | Production authentication and RBAC                  | PLANNED               |
-| Policies and approvals                              | PLANNED (Phase 2)     |
+| Versioned policies, approvals and readiness         | IMPLEMENTED           |
 | Zcash viewing/scanning and reconciliation           | UNAVAILABLE (Phase 3) |
 | Zcash transaction construction/signing/broadcast    | UNAVAILABLE (Phase 4) |
 | Evidence artifacts                                  | PLANNED (Phase 5)     |
@@ -97,6 +101,6 @@ The canonical vocabulary is `IMPLEMENTED`, `SEEDED`, `PLANNED`, `BLOCKED`, and `
 
 ## Roadmap and limits
 
-Phase 1 establishes the obligation engine only. Subsequent phases implement the control engine, real read-only Zcash path, real non-custodial write path, evidence, security hardening, and launch hardening—in that order, with an explicit stop gate after each. See [implementation status](docs/architecture/implementation-status.md) for limitations and [ADRs](docs/decisions) for material decisions.
+Phase 2 establishes the control and approval engine only. Subsequent phases prove the real read-only Zcash path, real non-custodial write path, evidence, security hardening, and launch hardening—in that order, with an explicit stop gate after each. See [implementation status](docs/architecture/implementation-status.md) for limitations and [ADRs](docs/decisions) for material decisions.
 
 The authoritative product source is `obliq-context/Obliq_Master_Context.docx`; implementation-critical Zcash notes under `obliq-context/implementation-reference/` take precedence over the broader research archive. Context files are retained unchanged.

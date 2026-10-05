@@ -24,8 +24,8 @@ const principles = [
   ],
   [
     "Deterministic controls",
-    "Policy evaluation, approval invalidation and readiness gates are designed but not active in Phase 1.",
-    "PLANNED",
+    "Versioned policies, structured findings, approval invalidation and explainable readiness gates run server-side.",
+    "IMPLEMENTED",
   ],
   [
     "AI authority",
@@ -47,8 +47,8 @@ export default function SecurityPage() {
             </h1>
             <p className="text-muted mt-7 text-lg leading-8">
               The system separates business decisions, viewing capability and
-              cryptographic spending authority. Phase 1 preserves and documents
-              those boundaries before money-moving functionality exists.
+              cryptographic spending authority. Phase 2 enforces business
+              authorization while keeping money-moving functionality absent.
             </p>
           </div>
         </div>
@@ -87,13 +87,13 @@ export default function SecurityPage() {
         <div className="grid gap-5 md:grid-cols-3">
           <SecurityCard
             icon={<UserCheck />}
-            title="Human accountability"
-            text="AI may suggest, extract or flag. It cannot approve, alter policy, sign or broadcast."
+            title="Separation of duties"
+            text="Requirements check role eligibility server-side. Material tiers can prohibit the requester and require distinct approvers."
           />
           <SecurityCard
             icon={<Database />}
             title="Tenant boundary"
-            text="Tenant-owned tables carry organization_id. Server-side authorization is required; production identity remains planned."
+            text="Policies, findings, approvals and readiness records carry organization_id. Cross-tenant reads and actions are denied server-side."
           />
           <SecurityCard
             icon={<Eye />}
@@ -102,14 +102,16 @@ export default function SecurityPage() {
           />
         </div>
         <div className="mt-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
-          <p className="text-sm font-semibold">Controls not yet active</p>
+          <p className="text-sm font-semibold">Current limits</p>
           <p className="text-muted mt-2 text-sm leading-6">
             Uploaded files are validated by signature, size and MIME agreement,
             stored under generated private identifiers, and never exposed by a
-            public raw-file route. Manual payment destinations remain
-            UNVERIFIED. Production malware scanning, destination verification,
-            approval invalidation, quote expiry and settlement readiness remain
-            planned.
+            public raw-file route. Destination verification is a recorded manual
+            process, not cryptographic proof of receiver ownership. A
+            destination replacement or material obligation edit invalidates
+            authorization. Production malware scanning, authentication, rate
+            limiting and independent audit anchoring remain planned. Signing,
+            broadcast and reconciliation are unavailable.
           </p>
         </div>
       </section>

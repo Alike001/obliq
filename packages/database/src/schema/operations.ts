@@ -7,17 +7,23 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { organizations, users } from "./identity";
 import {
+  approvalDecision,
   approvalState,
+  controlFindingOutcome,
   createdAt,
   duplicateKind,
+  duplicateResolutionStatus,
   extractionMode,
   extractionStatus,
   id,
   obligationState,
+  policyDecisionResult,
+  readinessResult,
   recordStatus,
   verificationStatus,
 } from "./shared";
@@ -60,6 +66,9 @@ export const vendorDestinations = pgTable(
       .notNull()
       .default("UNVERIFIED"),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    verifiedBy: uuid("verified_by").references(() => users.id),
+    verificationMethod: text("verification_method"),
+    verificationNote: text("verification_note"),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
@@ -105,6 +114,9 @@ export const obligations = pgTable(
     sourceId: uuid("source_id")
       .notNull()
       .references(() => obligationSources.id),
+    destinationId: uuid("destination_id").references(
+      () => vendorDestinations.id,
+    ),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),
@@ -117,6 +129,47 @@ export const obligations = pgTable(
   (t) => [
     index("obligations_org_state_idx").on(t.organizationId, t.state),
     index("obligations_org_reference_idx").on(t.organizationId, t.reference),
+  ],
+);
+
+export const obligationVersions = pgTable(
+  "obligation_versions",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    obligationId: uuid("obligation_id")
+      .notNull()
+      .references(() => obligations.id),
+    version: integer("version").notNull(),
+    vendorId: uuid("vendor_id")
+      .notNull()
+      .references(() => vendors.id),
+    type: text("type").notNull(),
+    reference: text("reference").notNull(),
+    currency: text("currency").notNull(),
+    amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
+    dueAt: timestamp("due_at", { withTimezone: true }),
+    category: text("category"),
+    description: text("description").notNull(),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => obligationSources.id),
+    changedBy: uuid("changed_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("obligation_versions_obligation_version_unique").on(
+      t.obligationId,
+      t.version,
+    ),
+    index("obligation_versions_org_obligation_idx").on(
+      t.organizationId,
+      t.obligationId,
+    ),
   ],
 );
 
@@ -156,6 +209,12 @@ export const duplicateFindings = pgTable(
       .references(() => obligations.id),
     kind: duplicateKind("kind").notNull(),
     reasonsJson: jsonb("reasons_json").notNull(),
+    resolutionStatus: duplicateResolutionStatus("resolution_status")
+      .notNull()
+      .default("OPEN"),
+    resolvedBy: uuid("resolved_by").references(() => users.id),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    resolutionNote: text("resolution_note"),
     createdAt: createdAt(),
   },
   (t) => [
@@ -175,11 +234,39 @@ export const policies = pgTable(
       .references(() => organizations.id),
     name: text("name").notNull(),
     enabled: boolean("enabled").notNull().default(false),
-    ruleJson: jsonb("rule_json").notNull().default({}),
-    version: integer("version").notNull().default(1),
+    activeVersion: integer("active_version").notNull().default(1),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
     createdAt: createdAt(),
   },
   (t) => [index("policies_org_idx").on(t.organizationId)],
+);
+
+export const policyVersions = pgTable(
+  "policy_versions",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    policyId: uuid("policy_id")
+      .notNull()
+      .references(() => policies.id),
+    version: integer("version").notNull(),
+    configJson: jsonb("config_json").notNull(),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("policy_versions_policy_version_unique").on(
+      t.policyId,
+      t.version,
+    ),
+    index("policy_versions_org_policy_idx").on(t.organizationId, t.policyId),
+  ],
 );
 
 export const policyDecisions = pgTable(
@@ -192,17 +279,48 @@ export const policyDecisions = pgTable(
     obligationId: uuid("obligation_id")
       .notNull()
       .references(() => obligations.id),
-    policyId: uuid("policy_id")
+    policyVersionId: uuid("policy_version_id")
       .notNull()
-      .references(() => policies.id),
-    result: text("result").notNull(),
-    reasonsJson: jsonb("reasons_json").notNull().default([]),
+      .references(() => policyVersions.id),
+    obligationVersion: integer("obligation_version").notNull(),
+    destinationId: uuid("destination_id").references(
+      () => vendorDestinations.id,
+    ),
+    result: policyDecisionResult("result").notNull(),
+    inputHash: text("input_hash").notNull(),
     evaluatedAt: timestamp("evaluated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
   (t) => [
     index("policy_decisions_org_obligation_idx").on(
+      t.organizationId,
+      t.obligationId,
+    ),
+  ],
+);
+
+export const controlFindings = pgTable(
+  "control_findings",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    policyDecisionId: uuid("policy_decision_id")
+      .notNull()
+      .references(() => policyDecisions.id),
+    obligationId: uuid("obligation_id")
+      .notNull()
+      .references(() => obligations.id),
+    code: text("code").notNull(),
+    outcome: controlFindingOutcome("outcome").notNull(),
+    message: text("message").notNull(),
+    metadataJson: jsonb("metadata_json").notNull().default({}),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("control_findings_org_obligation_idx").on(
       t.organizationId,
       t.obligationId,
     ),
@@ -219,8 +337,15 @@ export const approvalRequirements = pgTable(
     obligationId: uuid("obligation_id")
       .notNull()
       .references(() => obligations.id),
-    roleOrActor: text("role_or_actor").notNull(),
-    thresholdGroup: text("threshold_group"),
+    policyDecisionId: uuid("policy_decision_id")
+      .notNull()
+      .references(() => policyDecisions.id),
+    obligationVersion: integer("obligation_version").notNull(),
+    role: text("role").notNull(),
+    requiredCount: integer("required_count").notNull(),
+    approvedCount: integer("approved_count").notNull().default(0),
+    prohibitCreator: boolean("prohibit_creator").notNull().default(false),
+    reason: text("reason").notNull(),
     state: approvalState("state").notNull().default("PENDING"),
     createdAt: createdAt(),
   },
@@ -245,12 +370,59 @@ export const approvals = pgTable(
     actorId: uuid("actor_id")
       .notNull()
       .references(() => users.id),
-    decision: text("decision").notNull(),
+    requirementId: uuid("requirement_id")
+      .notNull()
+      .references(() => approvalRequirements.id),
+    policyDecisionId: uuid("policy_decision_id")
+      .notNull()
+      .references(() => policyDecisions.id),
+    decision: approvalDecision("decision").notNull(),
+    capacityRole: text("capacity_role").notNull(),
     note: text("note"),
     obligationVersion: integer("obligation_version").notNull(),
+    invalidatedAt: timestamp("invalidated_at", { withTimezone: true }),
+    invalidationReason: text("invalidation_reason"),
     createdAt: createdAt(),
   },
   (t) => [
     index("approvals_org_obligation_idx").on(t.organizationId, t.obligationId),
+    uniqueIndex("approvals_decision_actor_unique").on(
+      t.policyDecisionId,
+      t.actorId,
+    ),
+  ],
+);
+
+export const settlementReadiness = pgTable(
+  "settlement_readiness",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    obligationId: uuid("obligation_id")
+      .notNull()
+      .references(() => obligations.id),
+    obligationVersion: integer("obligation_version").notNull(),
+    policyDecisionId: uuid("policy_decision_id")
+      .notNull()
+      .references(() => policyDecisions.id),
+    destinationId: uuid("destination_id").references(
+      () => vendorDestinations.id,
+    ),
+    result: readinessResult("result").notNull(),
+    reasonsJson: jsonb("reasons_json").notNull(),
+    evaluatedBy: uuid("evaluated_by")
+      .notNull()
+      .references(() => users.id),
+    evaluatedAt: timestamp("evaluated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("settlement_readiness_org_obligation_idx").on(
+      t.organizationId,
+      t.obligationId,
+    ),
   ],
 );

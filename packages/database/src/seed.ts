@@ -1,4 +1,5 @@
 import { createDatabase, schema } from "./index";
+import { createDefaultPolicy } from "./repositories";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl)
@@ -33,6 +34,8 @@ try {
       .onConflictDoNothing();
   });
   process.stdout.write(`Seeded development tenant ${organizationId}\n`);
+  await createDefaultPolicy(db, { organizationId, userId });
+  process.stdout.write("Seeded default versioned control policy\n");
 } finally {
   await close();
 }

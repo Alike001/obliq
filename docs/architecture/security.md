@@ -8,7 +8,7 @@ Viewing authority is separate from spending authority but remains a high-value p
 
 ## Tenant boundary
 
-Organizations, users, and memberships form the identity boundary. Financial records carry `organization_id`. Phase 1 repositories apply the organization predicate to reads and writes, and the server-only development session must resolve an active database membership. It remains development infrastructure, not production authentication.
+Organizations, users, and memberships form the identity boundary. Financial records carry `organization_id`. Repositories apply the organization predicate to reads and writes, and Phase 2 control commands also enforce Finance, Treasury, CFO, Owner or Policy Administrator capabilities as appropriate. The server-only development session must resolve an active database membership. It remains development infrastructure, not production authentication.
 
 ## Invoice and extraction boundary
 
@@ -18,7 +18,13 @@ The extraction fixture does not inspect document bytes or transmit them external
 
 ## Vendor and duplicate integrity
 
-Manual destinations are immutable historical records and remain `UNVERIFIED`. Replacement supersedes rather than overwrites history. Exact duplicate rules are deterministic and block creation; possible findings remain visible for human review.
+Destinations are immutable historical records. Authorized Treasury, CFO or Owner actors can record `VERIFIED_MANUALLY` with method and note; this does not claim cryptographic receiver ownership. Replacement supersedes rather than overwrites history and invalidates obligation authorization. Exact duplicate rules are deterministic and block creation; possible findings must be explicitly resolved before reevaluation.
+
+## Control and approval boundary
+
+Policy versions are immutable. Decisions bind an obligation version and exact destination version, and approval requirements derive from that decision. Role eligibility, requester restrictions and distinct-actor thresholds are checked in the database transaction. Material obligation edits and destination replacement invalidate approvals. Readiness returns structured reasons and rechecks current policy, obligation, destination, duplicates, findings and thresholds.
+
+`READY_TO_SETTLE` is business authorization only. It is not a Zcash signature, transaction, broadcast or settlement observation.
 
 ## Failure semantics
 

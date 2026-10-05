@@ -17,11 +17,11 @@ export const appSections = [
   ["Overview", "/app", BarChart3, "IMPLEMENTED"],
   ["Obligations", "/app/obligations", FileText, "IMPLEMENTED"],
   ["Vendors", "/app/vendors", Building2, "IMPLEMENTED"],
-  ["Approvals", "/app/approvals", CheckSquare, "PLANNED"],
+  ["Approvals", "/app/approvals", CheckSquare, "IMPLEMENTED"],
   ["Settlements", "/app/settlements", Landmark, "UNAVAILABLE"],
   ["Ledger", "/app/ledger", Library, "PLANNED"],
   ["Evidence", "/app/evidence", FileCheck2, "PLANNED"],
-  ["Policies", "/app/policies", SlidersHorizontal, "PLANNED"],
+  ["Policies", "/app/policies", SlidersHorizontal, "IMPLEMENTED"],
   ["Settings", "/app/settings", Settings, "PLANNED"],
 ] as const;
 
@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto border-t border-white/10 pt-5 text-[11px] leading-5 text-white/45">
-          Phase 1 · Obligation engine · No money movement
+          Phase 2 · Control engine · No money movement
         </div>
       </aside>
       <div>
