@@ -1,0 +1,8 @@
+obliq-context/
+node_modules/
+.next/
+coverage/
+packages/database/drizzle/
+package-lock.json
+.playwright-mcp/
+artifacts/

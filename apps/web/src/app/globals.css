@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-paper: #f5f4ef;
+  --color-panel: #fbfaf6;
+  --color-ink: #14211d;
+  --color-muted: #63706a;
+  --color-line: #d9ddd7;
+  --color-mint: #bfe8d0;
+  --color-forest: #173f33;
+  --font-sans: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+  --font-mono: "SFMono-Regular", "Cascadia Code", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+a {
+  text-underline-offset: 4px;
+}
+::selection {
+  background: var(--color-mint);
+  color: var(--color-ink);
+}
+:focus-visible {
+  outline: 3px solid #2c7a5b;
+  outline-offset: 3px;
+}
+
+.page-wrap {
+  width: min(1180px, calc(100% - 2rem));
+  margin-inline: auto;
+}
+.button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding-inline: 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 650;
+  transition: 0.2s ease;
+}
+.button-dark {
+  background: var(--color-ink);
+  color: white;
+}
+.button-dark:hover {
+  background: var(--color-forest);
+  transform: translateY(-1px);
+}
+.button-light {
+  border: 1px solid rgb(20 33 29 / 0.16);
+  background: rgb(255 255 255 / 0.5);
+  color: var(--color-ink);
+}
+.button-light:hover {
+  background: white;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #557067;
+}
+.display {
+  font-size: clamp(3rem, 7vw, 6.7rem);
+  font-weight: 540;
+  letter-spacing: -0.067em;
+  line-height: 0.93;
+}
+.section-title {
+  font-size: clamp(2rem, 4vw, 3.6rem);
+  font-weight: 550;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+.card {
+  border: 1px solid rgb(20 33 29 / 0.11);
+  border-radius: 1.25rem;
+  background: rgb(251 250 246 / 0.76);
+}
+.hairline {
+  border-color: rgb(20 33 29 / 0.11);
+}
+
+@media (max-width: 640px) {
+  .page-wrap {
+    width: min(100% - 1.25rem, 1180px);
+  }
+  .button {
+    min-height: 2.5rem;
+    padding-inline: 0.9rem;
+  }
+}
