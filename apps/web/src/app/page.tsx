@@ -47,7 +47,7 @@ export default function LandingPage() {
             <div className="mb-7 flex items-center gap-3">
               <StatusPill status="IMPLEMENTED" />
               <span className="text-muted text-xs">
-                Phase 0 product foundation
+                Phase 1 obligation engine
               </span>
             </div>
             <h1 className="display max-w-[780px]">

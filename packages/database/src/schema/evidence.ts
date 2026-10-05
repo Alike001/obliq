@@ -1,4 +1,12 @@
-import { index, jsonb, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import {
+  bigserial,
+  index,
+  jsonb,
+  pgTable,
+  text,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { organizations, users } from "./identity";
 import { obligations } from "./operations";
 import { settlements } from "./settlement";
@@ -44,6 +52,7 @@ export const auditEvents = pgTable(
   "audit_events",
   {
     id: id(),
+    chainSequence: bigserial("chain_sequence", { mode: "bigint" }).notNull(),
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
@@ -59,5 +68,10 @@ export const auditEvents = pgTable(
   },
   (t) => [
     index("audit_events_org_created_idx").on(t.organizationId, t.createdAt),
+    uniqueIndex("audit_events_chain_sequence_unique").on(t.chainSequence),
+    uniqueIndex("audit_events_org_payload_hash_unique").on(
+      t.organizationId,
+      t.payloadHash,
+    ),
   ],
 );

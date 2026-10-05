@@ -1,0 +1,783 @@
+import {
+  classifyDuplicate,
+  destinationInputSchema,
+  validateObligationInput,
+  vendorInputSchema,
+  type DestinationInput,
+  type VendorInput,
+} from "@obliq/domain";
+import { and, asc, desc, eq, ilike, ne, or, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
+import type { createDatabase } from "../index";
+import {
+  auditEvents,
+  duplicateFindings,
+  extractionRuns,
+  memberships,
+  obligationSources,
+  obligations,
+  vendorDestinations,
+  vendors,
+} from "../schema";
+
+export type Database = ReturnType<typeof createDatabase>["db"];
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+type Executor = Database | Transaction;
+
+export interface TenantActor {
+  organizationId: string;
+  userId: string;
+}
+
+export async function checkDatabaseConnection(db: Database) {
+  await db.execute(sql`select 1 as healthy`);
+  return true;
+}
+
+export async function requireActiveMembership(
+  db: Database,
+  actor: TenantActor,
+) {
+  const rows = await db
+    .select()
+    .from(memberships)
+    .where(
+      and(
+        eq(memberships.organizationId, actor.organizationId),
+        eq(memberships.userId, actor.userId),
+        eq(memberships.status, "ACTIVE"),
+      ),
+    )
+    .limit(1);
+  if (!rows[0]) throw new Error("No active organization membership");
+  return rows[0];
+}
+
+export interface AuditInput {
+  eventType: string;
+  subjectType: string;
+  subjectId: string;
+  payload?: Record<string, unknown>;
+}
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object") {
+    return `{${Object.entries(value)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
+      .join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export async function appendAuditEvent(
+  tx: Transaction,
+  actor: TenantActor,
+  input: AuditInput,
+) {
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`,
+  );
+  const previous = await tx
+    .select({ payloadHash: auditEvents.payloadHash })
+    .from(auditEvents)
+    .where(eq(auditEvents.organizationId, actor.organizationId))
+    .orderBy(desc(auditEvents.chainSequence))
+    .limit(1);
+  const previousHash = previous[0]?.payloadHash ?? null;
+  const payloadJson = input.payload ?? {};
+  const payloadHash = createHash("sha256")
+    .update(
+      canonical({
+        actorId: actor.userId,
+        actorType: "USER",
+        eventType: input.eventType,
+        organizationId: actor.organizationId,
+        payloadJson,
+        previousHash,
+        subjectId: input.subjectId,
+        subjectType: input.subjectType,
+      }),
+    )
+    .digest("hex");
+  const [event] = await tx
+    .insert(auditEvents)
+    .values({
+      organizationId: actor.organizationId,
+      actorType: "USER",
+      actorId: actor.userId,
+      eventType: input.eventType,
+      subjectType: input.subjectType,
+      subjectId: input.subjectId,
+      payloadHash,
+      previousHash,
+      payloadJson,
+    })
+    .returning();
+  return event;
+}
+
+export async function verifyAuditChain(db: Database, organizationId: string) {
+  const events = await db
+    .select()
+    .from(auditEvents)
+    .where(eq(auditEvents.organizationId, organizationId))
+    .orderBy(asc(auditEvents.chainSequence));
+  let previousHash: string | null = null;
+  for (const event of events) {
+    const expected: string = createHash("sha256")
+      .update(
+        canonical({
+          actorId: event.actorId,
+          actorType: event.actorType,
+          eventType: event.eventType,
+          organizationId: event.organizationId,
+          payloadJson: event.payloadJson,
+          previousHash,
+          subjectId: event.subjectId,
+          subjectType: event.subjectType,
+        }),
+      )
+      .digest("hex");
+    if (event.previousHash !== previousHash || event.payloadHash !== expected)
+      return {
+        valid: false,
+        eventCount: events.length,
+        invalidEventId: event.id,
+      };
+    previousHash = event.payloadHash;
+  }
+  return { valid: true, eventCount: events.length };
+}
+
+export async function createVendor(
+  db: Database,
+  actor: TenantActor,
+  input: VendorInput,
+) {
+  const value = vendorInputSchema.parse(input);
+  const result = await db.transaction(async (tx) => {
+    const [vendor] = await tx
+      .insert(vendors)
+      .values({ organizationId: actor.organizationId, ...value })
+      .returning();
+    if (!vendor) throw new Error("Vendor insert did not return a record");
+    await appendAuditEvent(tx, actor, {
+      eventType: "VENDOR_CREATED",
+      subjectType: "VENDOR",
+      subjectId: vendor.id,
+      payload: { displayName: vendor.displayName },
+    });
+    return vendor;
+  });
+  return result;
+}
+
+export function listVendors(db: Executor, organizationId: string) {
+  return db
+    .select()
+    .from(vendors)
+    .where(eq(vendors.organizationId, organizationId))
+    .orderBy(asc(vendors.displayName));
+}
+
+export async function getVendor(
+  db: Executor,
+  organizationId: string,
+  vendorId: string,
+) {
+  const rows = await db
+    .select()
+    .from(vendors)
+    .where(
+      and(eq(vendors.organizationId, organizationId), eq(vendors.id, vendorId)),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export async function updateVendor(
+  db: Database,
+  actor: TenantActor,
+  vendorId: string,
+  input: VendorInput,
+) {
+  const value = vendorInputSchema.parse(input);
+  return db.transaction(async (tx) => {
+    const [vendor] = await tx
+      .update(vendors)
+      .set({ ...value, updatedAt: new Date() })
+      .where(
+        and(
+          eq(vendors.organizationId, actor.organizationId),
+          eq(vendors.id, vendorId),
+        ),
+      )
+      .returning();
+    if (!vendor) return null;
+    await appendAuditEvent(tx, actor, {
+      eventType: "VENDOR_EDITED",
+      subjectType: "VENDOR",
+      subjectId: vendor.id,
+      payload: { version: vendor.updatedAt.toISOString() },
+    });
+    return vendor;
+  });
+}
+
+export async function addVendorDestination(
+  db: Database,
+  actor: TenantActor,
+  vendorId: string,
+  input: DestinationInput,
+) {
+  const value = destinationInputSchema.parse(input);
+  return db.transaction(async (tx) => {
+    const vendor = await getVendor(tx, actor.organizationId, vendorId);
+    if (!vendor) return null;
+    await tx
+      .update(vendorDestinations)
+      .set({ supersededAt: new Date(), verificationStatus: "SUPERSEDED" })
+      .where(
+        and(
+          eq(vendorDestinations.organizationId, actor.organizationId),
+          eq(vendorDestinations.vendorId, vendorId),
+          eq(vendorDestinations.verificationStatus, "UNVERIFIED"),
+        ),
+      );
+    const fingerprint = createHash("sha256")
+      .update(value.receiver)
+      .digest("hex");
+    const [destination] = await tx
+      .insert(vendorDestinations)
+      .values({
+        organizationId: actor.organizationId,
+        vendorId,
+        ...value,
+        fingerprint,
+        verificationStatus: "UNVERIFIED",
+      })
+      .returning();
+    if (!destination)
+      throw new Error("Destination insert did not return a record");
+    await appendAuditEvent(tx, actor, {
+      eventType: "VENDOR_DESTINATION_CHANGED",
+      subjectType: "VENDOR_DESTINATION",
+      subjectId: destination.id,
+      payload: { vendorId, fingerprint, verificationStatus: "UNVERIFIED" },
+    });
+    return destination;
+  });
+}
+
+export function listVendorDestinations(
+  db: Executor,
+  organizationId: string,
+  vendorId: string,
+) {
+  return db
+    .select()
+    .from(vendorDestinations)
+    .where(
+      and(
+        eq(vendorDestinations.organizationId, organizationId),
+        eq(vendorDestinations.vendorId, vendorId),
+      ),
+    )
+    .orderBy(desc(vendorDestinations.createdAt));
+}
+
+export interface SourceInput {
+  kind: "MANUAL" | "INVOICE_UPLOAD";
+  storageRef?: string;
+  contentHash?: string;
+  metadata: Record<string, unknown>;
+  extraction?: {
+    provider: string;
+    mode: "LIVE" | "SEEDED_FIXTURE";
+    status: "COMPLETED" | "FAILED";
+    result: unknown;
+  };
+}
+
+export async function createSource(
+  db: Database,
+  actor: TenantActor,
+  input: SourceInput,
+) {
+  return db.transaction(async (tx) => {
+    const [source] = await tx
+      .insert(obligationSources)
+      .values({
+        organizationId: actor.organizationId,
+        kind: input.kind,
+        storageRef: input.storageRef,
+        contentHash: input.contentHash,
+        metadataJson: input.metadata,
+      })
+      .returning();
+    if (!source) throw new Error("Source insert did not return a record");
+    await appendAuditEvent(tx, actor, {
+      eventType:
+        input.kind === "INVOICE_UPLOAD" ? "SOURCE_UPLOADED" : "SOURCE_CREATED",
+      subjectType: "OBLIGATION_SOURCE",
+      subjectId: source.id,
+      payload: { contentHash: input.contentHash, kind: input.kind },
+    });
+    if (input.extraction) {
+      await tx.insert(extractionRuns).values({
+        organizationId: actor.organizationId,
+        sourceId: source.id,
+        provider: input.extraction.provider,
+        mode: input.extraction.mode,
+        status: input.extraction.status,
+        resultJson: input.extraction.result,
+      });
+      await appendAuditEvent(tx, actor, {
+        eventType: "EXTRACTION_PERFORMED",
+        subjectType: "OBLIGATION_SOURCE",
+        subjectId: source.id,
+        payload: {
+          mode: input.extraction.mode,
+          provider: input.extraction.provider,
+        },
+      });
+    }
+    return source;
+  });
+}
+
+export async function getSourceReview(
+  db: Executor,
+  organizationId: string,
+  sourceId: string,
+) {
+  const rows = await db
+    .select({ source: obligationSources, extraction: extractionRuns })
+    .from(obligationSources)
+    .leftJoin(
+      extractionRuns,
+      and(
+        eq(extractionRuns.organizationId, organizationId),
+        eq(extractionRuns.sourceId, obligationSources.id),
+      ),
+    )
+    .where(
+      and(
+        eq(obligationSources.organizationId, organizationId),
+        eq(obligationSources.id, sourceId),
+      ),
+    )
+    .orderBy(desc(extractionRuns.createdAt))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export class ExactDuplicateError extends Error {
+  constructor(readonly candidateId: string) {
+    super("An exact duplicate obligation already exists");
+    this.name = "ExactDuplicateError";
+  }
+}
+
+export async function createObligation(
+  db: Database,
+  actor: TenantActor,
+  input: unknown,
+) {
+  const value = validateObligationInput(input);
+  const result = await db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`,
+    );
+    const vendor = await getVendor(tx, actor.organizationId, value.vendorId);
+    if (!vendor) throw new Error("Vendor is unavailable in this organization");
+    let sourceHash: string | null = null;
+    let sourceId = value.sourceId;
+    if (value.sourceId) {
+      const source = await getSourceReview(
+        tx,
+        actor.organizationId,
+        value.sourceId,
+      );
+      if (!source)
+        throw new Error("Source is unavailable in this organization");
+      sourceHash = source.source.contentHash;
+    }
+    const candidates = await tx
+      .select({
+        id: obligations.id,
+        vendorId: obligations.vendorId,
+        reference: obligations.reference,
+        currency: obligations.currency,
+        amountMinor: obligations.amountMinor,
+        sourceHash: obligationSources.contentHash,
+      })
+      .from(obligations)
+      .leftJoin(
+        obligationSources,
+        and(
+          eq(obligationSources.organizationId, actor.organizationId),
+          eq(obligationSources.id, obligations.sourceId),
+        ),
+      )
+      .where(eq(obligations.organizationId, actor.organizationId));
+    const findings = candidates.map((candidate) => ({
+      candidate,
+      finding: classifyDuplicate(
+        {
+          vendorId: value.vendorId,
+          reference: value.reference,
+          currency: value.currency,
+          amountMinor: value.amountMinor,
+          sourceHash,
+        },
+        candidate,
+      ),
+    }));
+    const exact = findings.find(({ finding }) => finding.kind === "EXACT");
+    if (exact) {
+      await appendAuditEvent(tx, actor, {
+        eventType: "DUPLICATE_DETECTED",
+        subjectType: "OBLIGATION",
+        subjectId: exact.candidate.id,
+        payload: {
+          kind: "EXACT",
+          reasons: exact.finding.reasons,
+          creationBlocked: true,
+        },
+      });
+      return { exactCandidateId: exact.candidate.id };
+    }
+    if (!sourceId) {
+      const [manualSource] = await tx
+        .insert(obligationSources)
+        .values({
+          organizationId: actor.organizationId,
+          kind: "MANUAL",
+          metadataJson: { entry: "human" },
+        })
+        .returning();
+      if (!manualSource)
+        throw new Error("Manual source insert did not return a record");
+      sourceId = manualSource.id;
+      await appendAuditEvent(tx, actor, {
+        eventType: "SOURCE_CREATED",
+        subjectType: "OBLIGATION_SOURCE",
+        subjectId: manualSource.id,
+        payload: { kind: "MANUAL" },
+      });
+    }
+    const [obligation] = await tx
+      .insert(obligations)
+      .values({
+        organizationId: actor.organizationId,
+        vendorId: value.vendorId,
+        type: value.type,
+        sourceId,
+        reference: value.reference,
+        currency: value.currency,
+        amountMinor: value.amountMinor,
+        dueAt: new Date(`${value.dueDate}T12:00:00.000Z`),
+        category: value.category,
+        description: value.description,
+        state: "UNDER_REVIEW",
+        createdBy: actor.userId,
+      })
+      .returning();
+    if (!obligation)
+      throw new Error("Obligation insert did not return a record");
+    await appendAuditEvent(tx, actor, {
+      eventType: "OBLIGATION_CREATED",
+      subjectType: "OBLIGATION",
+      subjectId: obligation.id,
+      payload: {
+        amountMinor: value.amountMinor.toString(),
+        currency: value.currency,
+      },
+    });
+    for (const { candidate, finding } of findings) {
+      if (finding.kind !== "POSSIBLE") continue;
+      await tx.insert(duplicateFindings).values({
+        organizationId: actor.organizationId,
+        obligationId: obligation.id,
+        candidateObligationId: candidate.id,
+        kind: "POSSIBLE",
+        reasonsJson: finding.reasons,
+      });
+      await appendAuditEvent(tx, actor, {
+        eventType: "DUPLICATE_DETECTED",
+        subjectType: "OBLIGATION",
+        subjectId: obligation.id,
+        payload: {
+          candidateId: candidate.id,
+          kind: "POSSIBLE",
+          reasons: finding.reasons,
+        },
+      });
+    }
+    await appendAuditEvent(tx, actor, {
+      eventType: "OBLIGATION_REVIEW_CONFIRMED",
+      subjectType: "OBLIGATION",
+      subjectId: obligation.id,
+      payload: { state: "UNDER_REVIEW" },
+    });
+    return { obligation };
+  });
+  if ("exactCandidateId" in result)
+    throw new ExactDuplicateError(result.exactCandidateId);
+  return result.obligation;
+}
+
+export async function updateObligation(
+  db: Database,
+  actor: TenantActor,
+  obligationId: string,
+  input: unknown,
+) {
+  const value = validateObligationInput(input);
+  return db.transaction(async (tx) => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`,
+    );
+    const existingRows = await tx
+      .select()
+      .from(obligations)
+      .where(
+        and(
+          eq(obligations.organizationId, actor.organizationId),
+          eq(obligations.id, obligationId),
+        ),
+      )
+      .limit(1);
+    const existing = existingRows[0];
+    if (!existing) return null;
+    if (!(await getVendor(tx, actor.organizationId, value.vendorId)))
+      throw new Error("Vendor is unavailable in this organization");
+    let sourceHash: string | null = null;
+    if (existing.sourceId) {
+      const source = await getSourceReview(
+        tx,
+        actor.organizationId,
+        existing.sourceId,
+      );
+      if (!source)
+        throw new Error("Source is unavailable in this organization");
+      sourceHash = source.source.contentHash;
+    }
+    const candidates = await tx
+      .select({
+        id: obligations.id,
+        vendorId: obligations.vendorId,
+        reference: obligations.reference,
+        currency: obligations.currency,
+        amountMinor: obligations.amountMinor,
+        sourceHash: obligationSources.contentHash,
+      })
+      .from(obligations)
+      .leftJoin(
+        obligationSources,
+        and(
+          eq(obligationSources.organizationId, actor.organizationId),
+          eq(obligationSources.id, obligations.sourceId),
+        ),
+      )
+      .where(
+        and(
+          eq(obligations.organizationId, actor.organizationId),
+          ne(obligations.id, obligationId),
+        ),
+      );
+    const findings = candidates.map((candidate) => ({
+      candidate,
+      finding: classifyDuplicate(
+        {
+          vendorId: value.vendorId,
+          reference: value.reference,
+          currency: value.currency,
+          amountMinor: value.amountMinor,
+          sourceHash,
+        },
+        candidate,
+      ),
+    }));
+    const exact = findings.find(({ finding }) => finding.kind === "EXACT");
+    if (exact) throw new ExactDuplicateError(exact.candidate.id);
+    const [updated] = await tx
+      .update(obligations)
+      .set({
+        vendorId: value.vendorId,
+        type: value.type,
+        reference: value.reference,
+        currency: value.currency,
+        amountMinor: value.amountMinor,
+        dueAt: new Date(`${value.dueDate}T12:00:00.000Z`),
+        category: value.category,
+        description: value.description,
+        version: existing.version + 1,
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(obligations.organizationId, actor.organizationId),
+          eq(obligations.id, obligationId),
+        ),
+      )
+      .returning();
+    if (!updated) return null;
+    await tx
+      .delete(duplicateFindings)
+      .where(
+        and(
+          eq(duplicateFindings.organizationId, actor.organizationId),
+          eq(duplicateFindings.obligationId, obligationId),
+        ),
+      );
+    for (const { candidate, finding } of findings) {
+      if (finding.kind !== "POSSIBLE") continue;
+      await tx.insert(duplicateFindings).values({
+        organizationId: actor.organizationId,
+        obligationId,
+        candidateObligationId: candidate.id,
+        kind: "POSSIBLE",
+        reasonsJson: finding.reasons,
+      });
+    }
+    await appendAuditEvent(tx, actor, {
+      eventType: "OBLIGATION_EDITED",
+      subjectType: "OBLIGATION",
+      subjectId: obligationId,
+      payload: { version: updated.version },
+    });
+    return updated;
+  });
+}
+
+export interface ObligationFilters {
+  search?: string;
+  state?: string;
+  vendorId?: string;
+}
+
+export function listObligations(
+  db: Executor,
+  organizationId: string,
+  filters: ObligationFilters = {},
+) {
+  const predicates = [eq(obligations.organizationId, organizationId)];
+  if (filters.state)
+    predicates.push(
+      eq(
+        obligations.state,
+        filters.state as (typeof obligations.state.enumValues)[number],
+      ),
+    );
+  if (filters.vendorId)
+    predicates.push(eq(obligations.vendorId, filters.vendorId));
+  if (filters.search)
+    predicates.push(
+      or(
+        ilike(obligations.reference, `%${filters.search}%`),
+        ilike(obligations.description, `%${filters.search}%`),
+        ilike(vendors.displayName, `%${filters.search}%`),
+      )!,
+    );
+  return db
+    .select({ obligation: obligations, vendor: vendors })
+    .from(obligations)
+    .leftJoin(
+      vendors,
+      and(
+        eq(vendors.organizationId, organizationId),
+        eq(vendors.id, obligations.vendorId),
+      ),
+    )
+    .where(and(...predicates))
+    .orderBy(asc(obligations.dueAt), desc(obligations.createdAt));
+}
+
+export async function getObligation(
+  db: Executor,
+  organizationId: string,
+  obligationId: string,
+) {
+  const rows = await db
+    .select({
+      obligation: obligations,
+      vendor: vendors,
+      source: obligationSources,
+    })
+    .from(obligations)
+    .leftJoin(
+      vendors,
+      and(
+        eq(vendors.organizationId, organizationId),
+        eq(vendors.id, obligations.vendorId),
+      ),
+    )
+    .leftJoin(
+      obligationSources,
+      and(
+        eq(obligationSources.organizationId, organizationId),
+        eq(obligationSources.id, obligations.sourceId),
+      ),
+    )
+    .where(
+      and(
+        eq(obligations.organizationId, organizationId),
+        eq(obligations.id, obligationId),
+      ),
+    )
+    .limit(1);
+  if (!rows[0]) return null;
+  const [duplicates, activity] = await Promise.all([
+    db
+      .select()
+      .from(duplicateFindings)
+      .where(
+        and(
+          eq(duplicateFindings.organizationId, organizationId),
+          eq(duplicateFindings.obligationId, obligationId),
+        ),
+      ),
+    db
+      .select()
+      .from(auditEvents)
+      .where(
+        and(
+          eq(auditEvents.organizationId, organizationId),
+          eq(auditEvents.subjectId, obligationId),
+        ),
+      )
+      .orderBy(desc(auditEvents.createdAt)),
+  ]);
+  return { ...rows[0], duplicates, activity };
+}
+
+export async function getDashboardMetrics(
+  db: Executor,
+  organizationId: string,
+) {
+  const rows = await db
+    .select({
+      openCount: sql<number>`count(*)::int`,
+      dueSoon: sql<number>`count(*) filter (where ${obligations.dueAt} >= now() and ${obligations.dueAt} <= now() + interval '14 days')::int`,
+    })
+    .from(obligations)
+    .where(eq(obligations.organizationId, organizationId));
+  const possible = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(duplicateFindings)
+    .where(eq(duplicateFindings.organizationId, organizationId));
+  const totals = await db
+    .select({
+      currency: obligations.currency,
+      amountMinor: sql<bigint>`sum(${obligations.amountMinor})::bigint`,
+    })
+    .from(obligations)
+    .where(eq(obligations.organizationId, organizationId))
+    .groupBy(obligations.currency)
+    .orderBy(asc(obligations.currency));
+  return { ...rows[0], totals, possibleDuplicates: possible[0]?.count ?? 0 };
+}

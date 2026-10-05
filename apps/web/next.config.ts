@@ -13,7 +13,16 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  transpilePackages: ["@obliq/domain", "@obliq/zcash"],
+  transpilePackages: [
+    "@obliq/ai",
+    "@obliq/database",
+    "@obliq/domain",
+    "@obliq/storage",
+    "@obliq/zcash",
+  ],
+  experimental: {
+    serverActions: { bodySizeLimit: "11mb" },
+  },
   headers() {
     return Promise.resolve([{ source: "/(.*)", headers: securityHeaders }]);
   },

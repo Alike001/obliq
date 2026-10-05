@@ -5,9 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./schema": "./src/schema/index.ts"
+    "./schema": "./src/schema/index.ts",
+    "./repositories": "./src/repositories/index.ts"
   },
   "dependencies": {
+    "@obliq/domain": "0.1.0",
     "drizzle-orm": "0.45.3",
     "postgres": "3.4.9"
   },

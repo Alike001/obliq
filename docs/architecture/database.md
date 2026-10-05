@@ -10,6 +10,8 @@ PostgreSQL is the persistence authority. Drizzle owns typed schema definitions a
 - Vendor destinations are versionable through immutable records and `superseded_at`.
 - Settlements contain non-null obligation and intent foreign keys.
 - Observations are append-oriented evidence, separate from settlement state.
-- Audit events include `payload_hash` and `previous_hash`, though chain generation is not implemented in Phase 0.
+- Audit events include canonical payload hashes, previous hashes and a monotonically increasing chain sequence. Organization-scoped transaction locks serialize appends, and verification recomputes the chain.
 
-Application queries must accept a server-derived `TenantContext` and scope every operation by organization. The schema supports this invariant but production authorization and PostgreSQL row-level security are planned hardening work.
+Application repositories accept a server-derived tenant actor and scope every Phase 1 read and write by organization. The development session resolves an active membership in PostgreSQL before access. Production identity and PostgreSQL row-level security remain hardening work.
+
+Local PostgreSQL binds to loopback port 5433 through Docker Compose. Migrations and integration tests run against the actual server. Database absence is a fatal configuration/runtime condition; there is no hidden alternate persistence implementation.

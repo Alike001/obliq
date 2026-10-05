@@ -7,7 +7,7 @@ export default defineConfig({
   dbCredentials: {
     url:
       process.env.DATABASE_URL ??
-      "postgresql://obliq:obliq@localhost:5432/obliq",
+      "postgresql://obliq:obliq@localhost:5433/obliq",
   },
   strict: true,
   verbose: true,

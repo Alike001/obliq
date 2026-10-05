@@ -8,6 +8,8 @@
 
 Do not use **verified** without evidence that can be inspected. A successful build verifies compilation; it does not verify Zcash settlement. A seeded dashboard is not proof of persisted financial operations.
 
-## Phase 0 limitations
+## Phase 1 limitations
 
-There is no production authentication, obligation CRUD, invoice storage, AI provider, policy engine, approval engine, signer, wallet, Zcash RPC, scanner, settlement execution, reconciliation, ledger workflow, evidence artifact, audit-chain generation, or public verification route. Database connectivity depends on deployment configuration and is not inferred merely from `DATABASE_URL` presence.
+Vendors, versioned unverified destinations, manual and invoice-backed obligations, deterministic duplicate checks, activity events and audit-chain verification are implemented against PostgreSQL. The dashboard uses organization data rather than financial fixtures.
+
+Extraction remains **SEEDED** through a labelled fixture provider that does not inspect document contents. Production authentication, object storage, malware scanning, live AI extraction, policy evaluation, approvals, signer/wallet integration, Zcash RPC/scanning, settlement, reconciliation, ledger settlement entries and evidence packages remain **PLANNED** or **UNAVAILABLE**. The public proof route performs a real database health query when configured but does not claim blockchain evidence.

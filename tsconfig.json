@@ -2,7 +2,9 @@
   "files": [],
   "references": [
     { "path": "./packages/domain" },
+    { "path": "./packages/ai" },
     { "path": "./packages/database" },
+    { "path": "./packages/storage" },
     { "path": "./packages/zcash" },
     { "path": "./apps/web" }
   ]

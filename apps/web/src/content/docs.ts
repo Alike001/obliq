@@ -29,7 +29,7 @@ export const docs: readonly DocPage[] = [
     slug: "overview",
     title: "Overview",
     status: "IMPLEMENTED",
-    description: "What Obliq is, who it serves, and what exists in Phase 0.",
+    description: "What Obliq is, who it serves, and what exists in Phase 1.",
     sections: [
       {
         id: "product",
@@ -43,12 +43,12 @@ export const docs: readonly DocPage[] = [
         id: "today",
         title: "What exists today",
         paragraphs: [
-          "Phase 0 establishes the repository, product design system, navigation, documentation, database schema, domain types, tenant boundary, and adapter contracts.",
+          "Phase 1 adds persisted, organization-scoped vendors, invoice sources, human-reviewed obligations, duplicate detection and audit history to the product foundation.",
         ],
         bullets: [
-          "Landing, app shell, docs, security and proof routes",
+          "Manual and invoice-backed obligation capture",
           "Exact integer money types and PostgreSQL bigint columns",
-          "Organization/user/membership schema and server-only development-session boundary",
+          "Server-enforced organization membership and tenant-scoped repositories",
           "Zcash interfaces with no fake implementation",
         ],
       },
@@ -56,12 +56,12 @@ export const docs: readonly DocPage[] = [
         id: "not-yet",
         title: "What does not exist yet",
         paragraphs: [
-          "No obligation CRUD, invoice processing, AI extraction, approvals, settlement, scanning, transaction execution, reconciliation, audit chain, or evidence generation is live.",
+          "Approvals, policy evaluation, settlement, scanning, transaction execution, reconciliation and evidence generation are not live.",
         ],
         callout: {
           tone: "warning",
           title: "Foundation status",
-          text: "Product screens may contain clearly labelled seeded examples. They are not persisted records or blockchain evidence.",
+          text: "Extraction suggestions come from a clearly labelled development fixture. They are not AI truth or blockchain evidence.",
         },
       },
     ],
@@ -142,7 +142,7 @@ export const docs: readonly DocPage[] = [
         id: "capture",
         title: "Capture",
         paragraphs: [
-          "Create an obligation from trusted manual input or a source document. Phase 1 scope; currently planned.",
+          "Create a persisted obligation from trusted manual input or a privately stored source document. Implemented in Phase 1 with mandatory human confirmation.",
         ],
       },
       {
@@ -197,14 +197,14 @@ export const docs: readonly DocPage[] = [
       },
       {
         id: "phase-zero",
-        title: "Phase 0 guarantee",
+        title: "Current guarantee",
         paragraphs: [
-          "No Zcash viewing or spending key is accepted, stored, rendered or sent client-side by the current implementation.",
+          "No Zcash viewing or spending key is accepted, stored, rendered or sent client-side by the current implementation. Invoice records are operationally private to the configured organization boundary, not encrypted end-to-end.",
         ],
         callout: {
           tone: "note",
           title: "No inflated claim",
-          text: "Phase 0 does not yet execute shielded transactions, so it does not claim that a customer payment is private or settled.",
+          text: "Phase 1 does not execute shielded transactions, so it does not claim that a customer payment is private or settled.",
         },
       },
     ],
@@ -315,27 +315,162 @@ export const docs: readonly DocPage[] = [
         id: "implemented",
         title: "Implemented",
         paragraphs: [
-          "Repository tooling, design system, public surfaces, application shell, documentation renderer, schema/migration foundation, exact money types, tenant guard, security headers and Zcash adapter contracts.",
+          "PostgreSQL-backed vendors, versioned unverified destinations, manual and invoice-backed obligations, exact money parsing, deterministic duplicate detection, private local document storage, organization-scoped audit events and server-side tenant repositories.",
         ],
       },
       {
         id: "seeded",
         title: "Seeded",
         paragraphs: [
-          "The application overview contains example vendors, totals and attention items. They are visual fixtures only and do not enter a production or proof path.",
+          "Invoice extraction uses a development fixture. It derives only a low-confidence filename reference and default currency, labels every suggestion for human review, and never enters a financial record without submission.",
         ],
       },
       {
         id: "planned",
         title: "Planned and unavailable",
         paragraphs: [
-          "Obligation CRUD, authentication provider integration, policy execution, approvals, signing, shielded settlement, viewing/scanning, reconciliation, ledger operations, evidence generation and audit-chain verification are not implemented.",
+          "Production authentication provider integration, policy execution, approvals, signing, shielded settlement, viewing/scanning, reconciliation, ledger settlement operations and evidence packages are not implemented.",
         ],
         callout: {
           tone: "warning",
           title: "Current proof boundary",
-          text: "There is no real settlement, network connection, transaction identifier or audit-chain result to verify in Phase 0.",
+          text: "There is no real settlement, network connection, transaction identifier or blockchain evidence to verify in Phase 1.",
         },
+      },
+    ],
+  },
+  {
+    slug: "obligations",
+    title: "Obligations",
+    status: "IMPLEMENTED",
+    description: "The persisted financial record at the center of Obliq.",
+    sections: [
+      {
+        id: "aggregate",
+        title: "Financial record",
+        paragraphs: [
+          "An obligation belongs to one organization and vendor and records a supported type, source, reference, exact amount, currency, due date, purpose, state, creator and version. Phase 1 supports VENDOR_INVOICE and CONTRACTOR_BILL only.",
+        ],
+      },
+      {
+        id: "state",
+        title: "Current state machine",
+        paragraphs: [
+          "Human-confirmed Phase 1 records stop at UNDER_REVIEW. Obliq deliberately does not assert APPROVAL_REQUIRED until the Phase 2 policy engine evaluates the record.",
+        ],
+        code: "DRAFT → UNDER_REVIEW → [Phase 2 control evaluation]",
+      },
+      {
+        id: "money",
+        title: "Exact money",
+        paragraphs: [
+          "User decimals are parsed without floating point and stored as PostgreSQL bigint minor units. Negative values, malformed input, excess precision and values beyond bigint range are rejected.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "vendors",
+    title: "Vendors",
+    status: "IMPLEMENTED",
+    description: "Organization-scoped counterparties and destination history.",
+    sections: [
+      {
+        id: "record",
+        title: "Counterparty record",
+        paragraphs: [
+          "Vendor records hold operational identity, category and optional finance-contact metadata. They are intentionally not a CRM.",
+        ],
+      },
+      {
+        id: "destinations",
+        title: "Payment destinations",
+        paragraphs: [
+          "Adding a destination creates an immutable historical row and supersedes the preceding active unverified row. Manual records remain UNVERIFIED; no wallet-control or cryptographic verification is claimed.",
+        ],
+        callout: {
+          tone: "warning",
+          title: "No wallet integration",
+          text: "A stored receiver is identity data only. It is not approved for payment and cannot move funds.",
+        },
+      },
+    ],
+  },
+  {
+    slug: "invoice-ingestion",
+    title: "Invoice ingestion",
+    status: "IMPLEMENTED",
+    description: "Private upload, extraction suggestions and human review.",
+    sections: [
+      {
+        id: "upload",
+        title: "Document handling",
+        paragraphs: [
+          "The server accepts PDF, PNG and JPEG up to the configured limit. It checks file signatures and declared MIME agreement, hashes content with SHA-256, generates a storage identifier and keeps the original filename as metadata only. There is no public raw-file route.",
+        ],
+      },
+      {
+        id: "review",
+        title: "Human confirmation",
+        paragraphs: [
+          "Upload leads to a dedicated review form. Suggestions are editable; no obligation exists until a user confirms and submits the record.",
+        ],
+      },
+      {
+        id: "ai",
+        title: "AI boundary",
+        paragraphs: [
+          "The provider contract has strict schemas, confidence, provenance and mandatory-review markers. The current provider is SEEDED_FIXTURE, not live AI, and does not inspect document content.",
+        ],
+        callout: {
+          tone: "note",
+          title: "No external disclosure",
+          text: "Phase 1 does not send uploaded documents to any external AI provider.",
+        },
+      },
+    ],
+  },
+  {
+    slug: "duplicate-detection",
+    title: "Duplicate detection",
+    status: "IMPLEMENTED",
+    description: "Deterministic exact and possible duplicate rules.",
+    sections: [
+      {
+        id: "exact",
+        title: "Exact duplicates",
+        paragraphs: [
+          "A matching document hash, or the same normalized vendor/reference/amount/currency tuple, is exact and blocked. AI does not participate in this decision.",
+        ],
+      },
+      {
+        id: "possible",
+        title: "Possible duplicates",
+        paragraphs: [
+          "Matching vendor plus normalized reference, vendor plus amount/currency, or normalized reference plus amount/currency creates a persisted POSSIBLE finding for human review.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "audit-history",
+    title: "Audit and activity history",
+    status: "IMPLEMENTED",
+    description: "Organization-scoped events and integrity chaining.",
+    sections: [
+      {
+        id: "events",
+        title: "Recorded activity",
+        paragraphs: [
+          "Vendor creation and edits, destination changes, source uploads, extraction, obligation creation, duplicate findings and review confirmation produce actor-attributed events.",
+        ],
+      },
+      {
+        id: "integrity",
+        title: "Hash chain",
+        paragraphs: [
+          "Events are serialized canonically and chained with SHA-256 under an organization-level transactional lock. Verification recomputes the chain. This supplies application-level tamper detection; it is not a blockchain proof or an evidence package.",
+        ],
       },
     ],
   },
@@ -349,10 +484,15 @@ export const docGroups: readonly DocGroup[] = [
   },
   {
     title: "Financial operations",
-    pages: ["product-lifecycle"],
+    pages: [
+      "product-lifecycle",
+      "obligations",
+      "vendors",
+      "invoice-ingestion",
+      "duplicate-detection",
+      "audit-history",
+    ],
     planned: [
-      "Obligations",
-      "Vendors",
       "Policies",
       "Approvals",
       "Settlements",

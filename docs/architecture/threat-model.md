@@ -1,13 +1,15 @@
 # Threat model
 
-| Threat                         | Phase-0 defense                                        | Later requirement                                          |
-| ------------------------------ | ------------------------------------------------------ | ---------------------------------------------------------- |
-| Compromised application server | No treasury spend authority or signer credential       | Secret isolation and least privilege                       |
-| Cross-tenant access            | Organization IDs throughout schema; domain guard       | Authenticated server membership checks and RLS evaluation  |
-| Compromised AI                 | No provider integration; suggestion-only type boundary | Data minimization, schema validation and audit             |
-| Destination substitution       | Versionable destination schema                         | Reverification and approval invalidation                   |
-| Viewing-key leak               | No viewing material accepted in Phase 0                | Dedicated secret storage and incident response             |
-| RPC/scanner outage             | Explicit `UNAVAILABLE` adapter result                  | Retry, telemetry and unknown-state operations              |
-| Evidence tampering             | Hash-chain fields reserved                             | Canonical serialization, chain generation and verification |
+| Threat                         | Phase-1 defense                                                                  | Later requirement                                      |
+| ------------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| Compromised application server | No treasury spend authority or signer credential                                 | Secret isolation and least privilege                   |
+| Cross-tenant access            | Active membership plus organization-scoped repositories and integration tests    | Production identity and RLS evaluation                 |
+| Compromised AI                 | Strict suggestions, mandatory human review; fixture sends no document externally | Provider data minimization and isolation               |
+| Malicious invoice              | Size, signature and MIME checks; private generated storage path                  | Malware scanning, quarantine and retention policy      |
+| Destination substitution       | Immutable history; manual records explicitly UNVERIFIED                          | Verification, reverification and approval invalidation |
+| Duplicate invoice              | Deterministic exact blocking and possible findings                               | Operational resolution workflow                        |
+| Viewing-key leak               | No viewing material accepted                                                     | Dedicated secret storage and incident response         |
+| RPC/scanner outage             | Explicit `UNAVAILABLE` adapter result                                            | Retry, telemetry and unknown-state operations          |
+| Audit tampering                | Canonical SHA-256 chain, transactional ordering and verification tests           | Independent anchoring and operational monitoring       |
 
 Threat-model changes require documentation and tests in the same phase.

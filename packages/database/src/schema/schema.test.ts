@@ -2,9 +2,13 @@ import { getTableColumns } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import {
   auditEvents,
+  duplicateFindings,
   evidencePackages,
   ledgerEntries,
   obligations,
+  obligationSources,
+  vendors,
+  vendorDestinations,
   settlements,
 } from "./index";
 
@@ -15,6 +19,10 @@ describe("database invariants", () => {
     ledgerEntries,
     evidencePackages,
     auditEvents,
+    vendors,
+    vendorDestinations,
+    obligationSources,
+    duplicateFindings,
   ])("tenant-owned financial tables carry organization_id", (table) =>
     expect(getTableColumns(table)).toHaveProperty("organizationId"),
   );

@@ -7,13 +7,15 @@ import {
   pgTable,
   text,
   timestamp,
-  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { organizations, users } from "./identity";
 import {
   approvalState,
   createdAt,
+  duplicateKind,
+  extractionMode,
+  extractionStatus,
   id,
   obligationState,
   recordStatus,
@@ -31,7 +33,12 @@ export const vendors = pgTable(
     displayName: text("display_name").notNull(),
     status: recordStatus("status").notNull().default("ACTIVE"),
     category: text("category"),
+    contactName: text("contact_name"),
+    contactEmail: text("contact_email"),
     createdAt: createdAt(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
   (t) => [index("vendors_org_idx").on(t.organizationId)],
 );
@@ -84,14 +91,20 @@ export const obligations = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    vendorId: uuid("vendor_id").references(() => vendors.id),
+    vendorId: uuid("vendor_id")
+      .notNull()
+      .references(() => vendors.id),
     type: text("type").notNull(),
     reference: text("reference").notNull(),
     currency: text("currency").notNull(),
     amountMinor: bigint("amount_minor", { mode: "bigint" }).notNull(),
     dueAt: timestamp("due_at", { withTimezone: true }),
+    category: text("category"),
+    description: text("description").notNull(),
     state: obligationState("state").notNull().default("DRAFT"),
-    sourceId: uuid("source_id").references(() => obligationSources.id),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => obligationSources.id),
     createdBy: uuid("created_by")
       .notNull()
       .references(() => users.id),
@@ -103,9 +116,52 @@ export const obligations = pgTable(
   },
   (t) => [
     index("obligations_org_state_idx").on(t.organizationId, t.state),
-    uniqueIndex("obligations_org_reference_unique").on(
+    index("obligations_org_reference_idx").on(t.organizationId, t.reference),
+  ],
+);
+
+export const extractionRuns = pgTable(
+  "extraction_runs",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    sourceId: uuid("source_id")
+      .notNull()
+      .references(() => obligationSources.id),
+    provider: text("provider").notNull(),
+    mode: extractionMode("mode").notNull(),
+    status: extractionStatus("status").notNull(),
+    resultJson: jsonb("result_json").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("extraction_runs_org_source_idx").on(t.organizationId, t.sourceId),
+  ],
+);
+
+export const duplicateFindings = pgTable(
+  "duplicate_findings",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    obligationId: uuid("obligation_id")
+      .notNull()
+      .references(() => obligations.id),
+    candidateObligationId: uuid("candidate_obligation_id")
+      .notNull()
+      .references(() => obligations.id),
+    kind: duplicateKind("kind").notNull(),
+    reasonsJson: jsonb("reasons_json").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("duplicate_findings_org_obligation_idx").on(
       t.organizationId,
-      t.reference,
+      t.obligationId,
     ),
   ],
 );

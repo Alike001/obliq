@@ -5,7 +5,7 @@ import { appSections } from "@/components/app-shell";
 
 export function generateStaticParams() {
   return appSections
-    .slice(1)
+    .filter(([, , , status]) => status !== "IMPLEMENTED")
     .map(([, href]) => ({ section: href.split("/").at(-1) }));
 }
 
@@ -29,7 +29,7 @@ export default async function FoundationSection({
         </div>
         <h1 className="mt-5 text-3xl font-medium tracking-[-.04em]">{label}</h1>
         <p className="text-muted mt-4 text-sm leading-6">
-          This product area is represented in the Phase 0 navigation and
+          This product area is represented in the product navigation and
           architecture, but its operational workflow has not been implemented.
           No actions on this surface can move or claim to move funds.
         </p>

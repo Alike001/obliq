@@ -2,6 +2,8 @@ import { CheckCircle2, CircleSlash2, GitCommitHorizontal } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { StatusPill } from "@/components/status-pill";
+import { checkDatabaseConnection } from "@obliq/database";
+import { getDatabase } from "@/lib/db";
 
 const capabilities = [
   [
@@ -10,14 +12,14 @@ const capabilities = [
     "Routes, design system, workspace boundaries and build pipeline",
   ],
   [
-    "Database schema",
+    "PostgreSQL persistence",
     "IMPLEMENTED",
-    "PostgreSQL schema and initial migration; runtime connection is deployment-dependent",
+    "Migrated repositories for vendors, sources, obligations and audit events",
   ],
   [
-    "Example application data",
+    "Development extraction provider",
     "SEEDED",
-    "Visual fixtures only; never used as settlement proof",
+    "Labelled fixture suggestions only; human review is mandatory",
   ],
   [
     "Zcash settlement",
@@ -30,9 +32,9 @@ const capabilities = [
     "No viewing key, scanner or network observer configured",
   ],
   [
-    "Audit chain",
-    "PLANNED",
-    "Schema exists; event generation and integrity verification do not",
+    "Audit chain foundation",
+    "IMPLEMENTED",
+    "Organization-local SHA-256 event chain with verification tests; not blockchain evidence",
   ],
   [
     "Evidence generation",
@@ -41,12 +43,21 @@ const capabilities = [
   ],
 ] as const;
 
-export default function ProofPage() {
+export const dynamic = "force-dynamic";
+export default async function ProofPage() {
   const commit =
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ??
     process.env.GIT_COMMIT_SHA?.slice(0, 12) ??
     "local-development";
-  const databaseConfigured = Boolean(process.env.DATABASE_URL);
+  let databaseRuntime = "NOT CONFIGURED";
+  if (process.env.DATABASE_URL) {
+    try {
+      await checkDatabaseConnection(getDatabase());
+      databaseRuntime = "CONNECTED";
+    } catch {
+      databaseRuntime = "UNAVAILABLE";
+    }
+  }
   return (
     <main>
       <SiteHeader />
@@ -57,9 +68,9 @@ export default function ProofPage() {
             Claims should be inspectable—or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/60">
-            Phase 0 reports product and build capability only. There is no
-            fabricated transaction, network connection, reconciliation result or
-            blockchain evidence.
+            Phase 1 reports persisted obligation capability and build state.
+            There is no fabricated transaction, network connection,
+            reconciliation result or blockchain evidence.
           </p>
         </div>
       </section>
@@ -104,11 +115,11 @@ export default function ProofPage() {
             />
             <ProofCard
               label="Database runtime"
-              value={databaseConfigured ? "CONFIGURED" : "NOT CONFIGURED"}
+              value={databaseRuntime}
               detail={
-                databaseConfigured
-                  ? "DATABASE_URL is present; connectivity is not asserted on this page."
-                  : "No DATABASE_URL is present in this runtime."
+                databaseRuntime === "CONNECTED"
+                  ? "A server-side SELECT 1 succeeded in this runtime."
+                  : "Persistence fails explicitly; there is no substitute store."
               }
             />
             <div className="card bg-panel p-5">

@@ -8,7 +8,17 @@ Viewing authority is separate from spending authority but remains a high-value p
 
 ## Tenant boundary
 
-Organizations, users, and memberships form the identity boundary. Financial records carry `organization_id`. Phase 0 includes a server-only development session abstraction that is disabled unless explicitly configured for development. It is not production authentication.
+Organizations, users, and memberships form the identity boundary. Financial records carry `organization_id`. Phase 1 repositories apply the organization predicate to reads and writes, and the server-only development session must resolve an active database membership. It remains development infrastructure, not production authentication.
+
+## Invoice and extraction boundary
+
+Invoice content is accepted only after a server-side size, signature and MIME-agreement check. Storage uses an organization scope and generated opaque name; the original filename is metadata and never a filesystem path. No public download route exists. Production malware scanning, object-storage isolation, retention rules and encryption operations remain planned.
+
+The extraction fixture does not inspect document bytes or transmit them externally. All structured output is a suggestion requiring human review. A future provider requires an explicit data-exposure review before integration.
+
+## Vendor and duplicate integrity
+
+Manual destinations are immutable historical records and remain `UNVERIFIED`. Replacement supersedes rather than overwrites history. Exact duplicate rules are deterministic and block creation; possible findings remain visible for human review.
 
 ## Failure semantics
 

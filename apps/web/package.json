@@ -9,6 +9,9 @@
   },
   "dependencies": {
     "@obliq/domain": "*",
+    "@obliq/database": "*",
+    "@obliq/ai": "*",
+    "@obliq/storage": "*",
     "@obliq/zcash": "*",
     "clsx": "2.1.1",
     "lucide-react": "1.52.0",

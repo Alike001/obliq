@@ -1,0 +1,2 @@
+ALTER TABLE "audit_events" ADD COLUMN "chain_sequence" bigserial NOT NULL;--> statement-breakpoint
+CREATE UNIQUE INDEX "audit_events_chain_sequence_unique" ON "audit_events" USING btree ("chain_sequence");

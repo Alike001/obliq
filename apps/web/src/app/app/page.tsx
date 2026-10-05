@@ -1,76 +1,106 @@
-import { AlertCircle, ArrowUpRight, Clock3, FileText } from "lucide-react";
+import { formatMinorUnits } from "@obliq/domain";
+import { getDashboardMetrics, listObligations } from "@obliq/database";
+import { ArrowUpRight, FilePlus2 } from "lucide-react";
+import Link from "next/link";
 import { StatusPill } from "@/components/status-pill";
+import { getDatabase } from "@/lib/db";
+import { getTenantContext } from "@/lib/session";
+export const dynamic = "force-dynamic";
 
-const metrics = [
-  ["Bills due", "$24,800", "3 example obligations"],
-  ["Awaiting approval", "4", "Seeded layout state"],
-  ["Settled this month", "—", "Not yet implemented"],
-  ["Needs attention", "2", "Example exceptions"],
-] as const;
-
-export default function AppOverviewPage() {
+export default async function AppOverviewPage() {
+  const tenant = await getTenantContext();
+  const db = getDatabase();
+  const [metrics, recent] = await Promise.all([
+    getDashboardMetrics(db, tenant.organizationId),
+    listObligations(db, tenant.organizationId),
+  ]);
+  const totalValue = metrics.totals.length
+    ? metrics.totals
+        .map((total) =>
+          formatMinorUnits(BigInt(total.amountMinor), total.currency),
+        )
+        .join(" · ")
+    : "—";
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
             <p className="eyebrow">Operations overview</p>
-            <h1 className="mt-3 text-3xl font-medium tracking-[-.04em]">
-              Good morning, finance team.
+            <h1 className="mt-3 text-3xl font-medium tracking-tight">
+              Obligation operations
             </h1>
             <p className="text-muted mt-2 text-sm">
-              A foundation-state view of the financial operations workspace.
+              Live metrics from this organization&apos;s persisted records.
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
-            <StatusPill status="SEEDED" /> All figures are layout examples
-          </div>
+          <Link href="/app/obligations/new" className="button button-dark">
+            <FilePlus2 size={16} />
+            Record obligation
+          </Link>
         </div>
         <section
           className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-4"
-          aria-label="Example metrics"
+          aria-label="Real obligation metrics"
         >
-          {metrics.map(([label, value, note]) => (
-            <article key={label} className="card bg-panel p-5">
-              <p className="text-muted text-xs">{label}</p>
-              <p className="mt-4 text-3xl font-medium tracking-tight">
-                {value}
-              </p>
-              <p className="text-muted mt-2 text-[11px]">{note}</p>
-            </article>
-          ))}
+          <Metric
+            label="Open obligations"
+            value={String(metrics.openCount ?? 0)}
+          />
+          <Metric label="Amount due by currency" value={totalValue} />
+          <Metric label="Due in 14 days" value={String(metrics.dueSoon ?? 0)} />
+          <Metric
+            label="Possible duplicates"
+            value={String(metrics.possibleDuplicates)}
+          />
         </section>
         <div className="mt-5 grid gap-5 xl:grid-cols-[1.4fr_.6fr]">
-          <section className="card bg-panel overflow-hidden">
-            <div className="hairline flex items-center justify-between border-b p-5">
+          <section className="card overflow-hidden">
+            <div className="hairline flex justify-between border-b p-5">
               <div>
-                <h2 className="font-semibold">Needs attention</h2>
-                <p className="text-muted mt-1 text-xs">
-                  Example queue for layout validation
-                </p>
+                <h2 className="font-semibold">Recent obligations</h2>
+                <p className="text-muted mt-1 text-xs">Persisted—not seeded</p>
               </div>
-              <AlertCircle size={18} className="text-amber-700" />
+              <Link
+                href="/app/obligations"
+                className="text-forest text-xs font-semibold"
+              >
+                View all
+              </Link>
             </div>
-            <div className="divide-ink/8 divide-y">
-              <QueueRow
-                title="Northstar Labs · INV-1042"
-                detail="Approval requirement would appear here"
-                amount="$8,400"
-              />
-              <QueueRow
-                title="Nodal Systems · SEC-091"
-                detail="Destination verification would appear here"
-                amount="$12,000"
-              />
-            </div>
+            {recent.length ? (
+              recent.slice(0, 5).map(({ obligation: o, vendor }) => (
+                <Link
+                  key={o.id}
+                  href={`/app/obligations/${o.id}`}
+                  className="hairline grid grid-cols-[1fr_auto] gap-3 border-t p-5"
+                >
+                  <div>
+                    <strong className="text-sm">
+                      {vendor?.displayName} · {o.reference}
+                    </strong>
+                    <p className="text-muted mt-1 text-xs">
+                      {o.state} · due {o.dueAt?.toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className="font-mono text-sm">
+                    {formatMinorUnits(o.amountMinor, o.currency)}
+                  </span>
+                </Link>
+              ))
+            ) : (
+              <p className="text-muted p-8 text-center text-sm">
+                No obligations yet.
+              </p>
+            )}
           </section>
-          <section className="card bg-panel p-5">
+          <section className="card p-5">
             <h2 className="font-semibold">System readiness</h2>
             <div className="mt-5 space-y-4">
-              <Readiness label="Product shell" status="IMPLEMENTED" />
-              <Readiness label="Database schema" status="IMPLEMENTED" />
-              <Readiness label="Zcash settlement" status="UNAVAILABLE" />
-              <Readiness label="Audit chain" status="PLANNED" />
+              <Ready label="Obligation persistence" status="IMPLEMENTED" />
+              <Ready label="Audit hash chain" status="IMPLEMENTED" />
+              <Ready label="Extraction fixture" status="SEEDED" />
+              <Ready label="Zcash settlement" status="UNAVAILABLE" />
             </div>
             <a
               href="/proof"
@@ -80,50 +110,33 @@ export default function AppOverviewPage() {
             </a>
           </section>
         </div>
-        <section className="card bg-panel mt-5 p-5">
-          <div className="flex items-start gap-3">
-            <FileText size={18} className="mt-0.5" />
-            <div>
-              <h2 className="text-sm font-semibold">What this screen proves</h2>
-              <p className="text-muted mt-1 max-w-3xl text-xs leading-5">
-                Responsive application navigation and finance-first information
-                hierarchy are implemented. No example record is persisted,
-                approved, paid, reconciled or presented as blockchain evidence.
-              </p>
-            </div>
-          </div>
-        </section>
       </div>
     </main>
   );
 }
-
-function QueueRow({
-  title,
-  detail,
-  amount,
+function Metric({
+  label,
+  value,
+  note,
 }: {
-  title: string;
-  detail: string;
-  amount: string;
+  label: string;
+  value: string;
+  note?: string;
 }) {
   return (
-    <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3 p-5">
-      <Clock3 size={16} className="text-muted" />
-      <div>
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-muted mt-1 text-xs">{detail}</p>
-      </div>
-      <span className="font-mono text-sm">{amount}</span>
-    </div>
+    <article className="card p-5">
+      <p className="text-muted text-xs">{label}</p>
+      <p className="mt-4 text-2xl font-medium tracking-tight">{value}</p>
+      {note && <p className="text-muted mt-2 text-[10px] leading-4">{note}</p>}
+    </article>
   );
 }
-function Readiness({
+function Ready({
   label,
   status,
 }: {
   label: string;
-  status: "IMPLEMENTED" | "PLANNED" | "UNAVAILABLE";
+  status: "IMPLEMENTED" | "SEEDED" | "UNAVAILABLE";
 }) {
   return (
     <div className="flex items-center justify-between gap-3">

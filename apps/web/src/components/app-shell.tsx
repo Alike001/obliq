@@ -15,8 +15,8 @@ import { StatusPill } from "./status-pill";
 
 export const appSections = [
   ["Overview", "/app", BarChart3, "IMPLEMENTED"],
-  ["Obligations", "/app/obligations", FileText, "PLANNED"],
-  ["Vendors", "/app/vendors", Building2, "PLANNED"],
+  ["Obligations", "/app/obligations", FileText, "IMPLEMENTED"],
+  ["Vendors", "/app/vendors", Building2, "IMPLEMENTED"],
   ["Approvals", "/app/approvals", CheckSquare, "PLANNED"],
   ["Settlements", "/app/settlements", Landmark, "UNAVAILABLE"],
   ["Ledger", "/app/ledger", Library, "PLANNED"],
@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto border-t border-white/10 pt-5 text-[11px] leading-5 text-white/45">
-          Phase 0 · No live financial operations
+          Phase 1 · Obligation engine · No money movement
         </div>
       </aside>
       <div>
@@ -65,10 +65,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <div className="hidden items-center gap-2 lg:flex">
             <span className="size-2 rounded-full bg-emerald-600" />
-            <span className="text-muted text-xs">Foundation environment</span>
+            <span className="text-muted text-xs">
+              Persisted development environment
+            </span>
           </div>
           <div className="flex items-center gap-3">
-            <StatusPill status="SEEDED" />
+            <StatusPill status="IMPLEMENTED" />
             <div className="bg-forest grid size-8 place-items-center rounded-full text-xs font-semibold text-white">
               OS
             </div>

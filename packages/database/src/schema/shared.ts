@@ -55,6 +55,15 @@ export const approvalState = pgEnum("approval_state", [
   "REJECTED",
   "INVALIDATED",
 ]);
+export const duplicateKind = pgEnum("duplicate_kind", ["POSSIBLE"]);
+export const extractionMode = pgEnum("extraction_mode", [
+  "LIVE",
+  "SEEDED_FIXTURE",
+]);
+export const extractionStatus = pgEnum("extraction_status", [
+  "COMPLETED",
+  "FAILED",
+]);
 
 export const id = () => uuid("id").primaryKey().defaultRandom();
 export const organizationId = () => uuid("organization_id").notNull();

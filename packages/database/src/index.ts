@@ -8,3 +8,4 @@ export function createDatabase(databaseUrl: string) {
 }
 
 export { schema };
+export * from "./repositories";

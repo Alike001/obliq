@@ -24,7 +24,7 @@ const principles = [
   ],
   [
     "Deterministic controls",
-    "Policy evaluation, approval invalidation and readiness gates are designed but not active in Phase 0.",
+    "Policy evaluation, approval invalidation and readiness gates are designed but not active in Phase 1.",
     "PLANNED",
   ],
   [
@@ -47,9 +47,8 @@ export default function SecurityPage() {
             </h1>
             <p className="text-muted mt-7 text-lg leading-8">
               The system separates business decisions, viewing capability and
-              cryptographic spending authority. Phase 0 establishes and
-              documents those boundaries before money-moving functionality
-              exists.
+              cryptographic spending authority. Phase 1 preserves and documents
+              those boundaries before money-moving functionality exists.
             </p>
           </div>
         </div>
@@ -105,9 +104,12 @@ export default function SecurityPage() {
         <div className="mt-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
           <p className="text-sm font-semibold">Controls not yet active</p>
           <p className="text-muted mt-2 text-sm leading-6">
-            Destination-change reverification, approval invalidation, quote
-            expiry, audit chaining and settlement readiness are architectural
-            requirements for later phases, not Phase 0 runtime guarantees.
+            Uploaded files are validated by signature, size and MIME agreement,
+            stored under generated private identifiers, and never exposed by a
+            public raw-file route. Manual payment destinations remain
+            UNVERIFIED. Production malware scanning, destination verification,
+            approval invalidation, quote expiry and settlement readiness remain
+            planned.
           </p>
         </div>
       </section>
