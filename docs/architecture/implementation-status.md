@@ -8,7 +8,7 @@
 
 Do not use **verified** without evidence that can be inspected. A successful build verifies compilation; it does not verify Zcash settlement. A seeded dashboard is not proof of persisted financial operations.
 
-## Phase 4 status and limitations
+## Phase 5 status and limitations
 
 Vendors, immutable destination history and manual verification provenance, obligations, duplicate resolution, immutable policy versions, structured control findings, persisted role-authorized approvals, approval invalidation, explainable readiness and audit-chain verification are implemented against PostgreSQL. The dashboard and approval inbox use organization data rather than financial fixtures.
 
@@ -31,5 +31,12 @@ proof. Production authentication, RLS, object storage, malware scanning,
 production observer secret custody/TLS/HA and independent audit anchoring remain
 **PLANNED**. Public-network operation is **BLOCKED** by the documented
 Zaino/Ironwood subtree-root limitation and missing funded operational
-qualification. Embedded wallet custody, ledger settlement entries and evidence
-packages remain **UNAVAILABLE** or **PLANNED**.
+qualification. Embedded wallet custody and ledger settlement entries remain
+**UNAVAILABLE** or **PLANNED**.
+
+Canonical application evidence, explicit server-enforced field disclosure,
+mandatory preview, immutable issuance, SHA-256 verification, high-entropy
+external identifiers, JSON download, revocation and supersession are
+**IMPLEMENTED**. Printable receipts use the exact canonical evidence model.
+Native PDF generation, independent attestation and zero-knowledge business
+proofs are **PLANNED** or **UNAVAILABLE** and are not claimed.

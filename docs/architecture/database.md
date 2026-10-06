@@ -5,7 +5,8 @@ PostgreSQL is the persistence authority. Drizzle owns typed schema definitions a
 ## Decisions
 
 - UUIDs are opaque record identifiers.
-- Every tenant-owned table carries `organization_id`, except child disclosures that inherit tenancy through an evidence package.
+- Every tenant-owned table, including evidence disclosures, carries
+  `organization_id`; repository reads and writes also scope by organization.
 - Fiat amounts use `bigint` minor units; ZEC amounts use integer zatoshis.
 - Vendor destinations are versionable through immutable records and `superseded_at`; manual verification records actor, method, note and timestamp.
 - Policies have immutable `policy_versions`; decisions bind policy, obligation and destination versions.
@@ -33,6 +34,12 @@ PostgreSQL is the persistence authority. Drizzle owns typed schema definitions a
   cannot produce a paid or unpaid conclusion.
 - Viewing authority and decrypted memo plaintext are excluded from PostgreSQL.
 - Audit events include canonical payload hashes, previous hashes and a monotonically increasing chain sequence. Organization-scoped transaction locks serialize appends, and verification recomputes the chain.
+- Evidence previews snapshot an exact eligible source and expire after 30
+  minutes. Issued packages persist immutable canonical JSON, SHA-256 hash,
+  disclosed-field manifest, provenance, classification and a 256-bit public
+  identifier. Status metadata can revoke or supersede an artifact without
+  rewriting it. A reconciliation regression automatically revokes active
+  evidence linked to that settlement.
 
 Application repositories accept a server-derived tenant actor and scope every read and write by organization. Control and settlement mutations check role capabilities and use organization-scoped advisory locks for concurrent policy, approval, execution and audit operations. Observation configuration and ingestion are restricted to Owner, CFO, or Treasury, and all queries remain organization scoped. The development session resolves an active membership in PostgreSQL before access. Production identity and PostgreSQL row-level security remain hardening work.
 

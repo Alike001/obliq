@@ -48,9 +48,10 @@ export default function SecurityPage() {
             <p className="text-muted mt-7 text-lg leading-8">
               The system separates business decisions, viewing capability and
               cryptographic spending authority. Phase 2 enforces business
-              authorization and read-only shielded reconciliation while keeping
-              spending authority outside the application. Phase 4 proves the
-              handoff on isolated regtest without embedding a wallet.
+              authorization while Phase 3 isolates read-only reconciliation and
+              Phase 4 keeps spending authority external. Phase 5 adds
+              server-authorized controlled disclosure without changing either
+              Zcash authority boundary.
             </p>
           </div>
         </div>
@@ -107,6 +108,11 @@ export default function SecurityPage() {
             title="Failure honesty"
             text="Node, scanner or viewing-authority failure creates an unavailable state. It never becomes paid or unpaid."
           />
+          <SecurityCard
+            icon={<Database />}
+            title="Controlled evidence"
+            text="A closed server-side allowlist and role checks constrain disclosure. Issued content is immutable and verified before display or download."
+          />
         </div>
         <div className="mt-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
           <p className="text-sm font-semibold">Current limits</p>
@@ -126,7 +132,12 @@ export default function SecurityPage() {
             public-network execution is BLOCKED. A compromised signer can spend
             its wallet, while compromise of both app and signer could substitute
             a transaction unless the human independently checks the Zallet PCZT
-            inspection.
+            inspection. Evidence links use 256-bit random identifiers but remain
+            bearer-like: anyone with a link can read its deliberately disclosed
+            fields. Responses use no-store, yet copied links or downloaded JSON
+            can still leak. Production rate limiting, secure delivery, recipient
+            expiry and cache-policy testing remain planned. Revoked and
+            superseded evidence remains historical and visibly non-current.
           </p>
         </div>
       </section>

@@ -16,7 +16,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
               Security
             </Link>
             <span className="bg-ink rounded-full px-3 py-1.5 text-xs text-white">
-              Docs · Phase 4
+              Docs · Phase 5
             </span>
           </div>
         </div>

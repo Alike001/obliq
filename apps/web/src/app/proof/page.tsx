@@ -79,9 +79,39 @@ const capabilities = [
     "Organization-local SHA-256 event chain with verification tests; not blockchain evidence",
   ],
   [
-    "Evidence generation",
+    "Evidence engine",
+    "IMPLEMENTED",
+    "Settled canonical records produce immutable application evidence",
+  ],
+  [
+    "Canonical hashing",
+    "IMPLEMENTED",
+    "Schema-versioned canonical JSON with SHA-256 tamper detection",
+  ],
+  [
+    "Controlled disclosure",
+    "IMPLEMENTED",
+    "Closed field allowlist, classifications and server-side role checks",
+  ],
+  [
+    "External evidence verification",
+    "IMPLEMENTED",
+    "256-bit public identifiers expose only deliberately issued claims",
+  ],
+  [
+    "Evidence JSON",
+    "IMPLEMENTED",
+    "Canonical JSON download derives from the exact verified artifact",
+  ],
+  [
+    "Native evidence PDF",
     "PLANNED",
-    "Schema exists; no artifact or verification path exists",
+    "Printable HTML exists; native PDF generation is not implemented",
+  ],
+  [
+    "ZK business proof",
+    "UNAVAILABLE",
+    "Application evidence is not represented as a zero-knowledge proof",
   ],
 ] as const;
 
@@ -120,10 +150,10 @@ export default async function ProofPage() {
             Claims should be inspectable—or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/60">
-            Phase 4 records a real end-to-end non-custodial settlement on
-            isolated Zcash regtest. External Zallet signing and broadcast are
-            reconciled by the UFVK-only observer. Public-network readiness
-            remains blocked and is not implied.
+            Phase 5 derives controlled financial evidence from canonical settled
+            records. It preserves the real Phase-4 regtest settlement and
+            UFVK-only reconciliation evidence. Public-network readiness remains
+            blocked, and application evidence is not a ZK claim.
           </p>
         </div>
       </section>
@@ -228,6 +258,10 @@ export default async function ProofPage() {
           <Boundary
             title="Viewing"
             text="A dedicated librustzcash observer imports a UFVK as view-only, decrypts shielded outputs, and reports sync uncertainty without financial inference."
+          />
+          <Boundary
+            title="Disclosure"
+            text="Evidence contains only selected allowlisted claims with explicit provenance. Its SHA-256 hash protects artifact integrity; it does not attest every business assertion."
           />
         </div>
       </section>

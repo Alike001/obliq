@@ -29,7 +29,7 @@ export const docs: readonly DocPage[] = [
     slug: "overview",
     title: "Overview",
     status: "IMPLEMENTED",
-    description: "What Obliq is, who it serves, and what exists in Phase 4.",
+    description: "What Obliq is, who it serves, and what exists in Phase 5.",
     sections: [
       {
         id: "product",
@@ -43,7 +43,7 @@ export const docs: readonly DocPage[] = [
         id: "today",
         title: "What exists today",
         paragraphs: [
-          "Phase 4 adds an exact, expiring settlement intent and a proven external Zallet PCZT signing handoff. Broadcast remains separate from observer-driven settlement.",
+          "Phase 5 adds immutable controlled financial evidence derived from settled canonical records. The exact external Zallet signing and observer-driven reconciliation boundaries remain unchanged.",
         ],
         bullets: [
           "Manual and invoice-backed obligation capture",
@@ -52,13 +52,14 @@ export const docs: readonly DocPage[] = [
           "Version-bound policy decisions, approvals and readiness records",
           "UFVK-only shielded observation proven on isolated Zcash regtest",
           "External Zallet shielded signing and broadcast proven on isolated regtest",
+          "Explicit-disclosure evidence, canonical JSON hashing and external verification",
         ],
       },
       {
         id: "not-yet",
         title: "What does not exist yet",
         paragraphs: [
-          "Live market pricing, embedded wallet integration, public-network operation and evidence packages are not live. The only quote source is explicitly controlled regtest input.",
+          "Live market pricing, embedded wallet integration, public-network operation, native PDF generation and zero-knowledge business proofs are not live. The only quote source is explicitly controlled regtest input.",
         ],
         callout: {
           tone: "warning",
@@ -114,9 +115,9 @@ export const docs: readonly DocPage[] = [
         id: "workspaces",
         title: "Workspace boundaries",
         paragraphs: [
-          "The web application owns presentation and server entry points. Domain owns invariant-bearing types. Database owns tenant-aware persistence. Zcash owns a signer-free observer contract, while a dedicated Rust process owns viewing-key import and scanning.",
+          "The web application owns presentation and server entry points. Domain owns invariant-bearing types. Database owns tenant-aware persistence. Evidence owns canonical disclosure and integrity rules. Zcash owns a signer-free observer contract, while a dedicated Rust process owns viewing-key import and scanning.",
         ],
-        code: "apps/web             product surfaces + server boundary\npackages/domain      money, states, tenant invariants\npackages/database    PostgreSQL business records\npackages/zcash       observer normalization + correlation\ntools/zcash-observer UFVK-only Rust scanner",
+        code: "apps/web             product surfaces + server boundary\npackages/domain      money, states, tenant invariants\npackages/evidence    canonical disclosure + hashing\npackages/database    PostgreSQL business records\npackages/zcash       observer normalization + correlation\ntools/zcash-observer UFVK-only Rust scanner",
       },
       {
         id: "flow",
@@ -126,10 +127,10 @@ export const docs: readonly DocPage[] = [
         ],
       },
       {
-        id: "planned",
-        title: "Planned package boundaries",
+        id: "boundaries",
+        title: "Package boundaries",
         paragraphs: [
-          "Policy is an executable framework-independent package. Ledger and evidence remain documented future boundaries; AI owns extraction suggestions only.",
+          "Policy and evidence are executable framework-independent packages. Ledger remains a documented future boundary; AI owns extraction suggestions only.",
         ],
       },
     ],
@@ -172,7 +173,7 @@ export const docs: readonly DocPage[] = [
         id: "prove",
         title: "Prove",
         paragraphs: [
-          "Create integrity-protected application evidence from canonical business and settlement records. This is not represented as a zero-knowledge proof. Phase 5 scope.",
+          "Create immutable, integrity-protected application evidence from canonical business and settlement records with explicit recipient disclosure. Implemented in Phase 5. This is not represented as a zero-knowledge proof.",
         ],
       },
     ],
@@ -331,7 +332,7 @@ export const docs: readonly DocPage[] = [
         id: "planned",
         title: "Planned and unavailable",
         paragraphs: [
-          "Production authentication, live market quotes, embedded wallet signing, public-network execution, ledger settlement entries and evidence packages are not implemented. Public-network operation is BLOCKED by the documented service limitation and lacks funded qualification.",
+          "Production authentication, live market quotes, embedded wallet signing, public-network execution, ledger settlement entries and native PDF evidence are not implemented. Controlled JSON evidence and external verification are implemented. Public-network operation is BLOCKED by the documented service limitation and lacks funded qualification.",
         ],
         callout: {
           tone: "warning",
@@ -618,6 +619,79 @@ export const docs: readonly DocPage[] = [
       },
     ],
   },
+  {
+    slug: "controlled-evidence",
+    title: "Controlled evidence",
+    status: "IMPLEMENTED",
+    description:
+      "Canonical artifacts, selective disclosure, verification and status semantics.",
+    sections: [
+      {
+        id: "model",
+        title: "Evidence model",
+        paragraphs: [
+          "EvidencePackage is an immutable snapshot derived from a canonically SETTLED obligation, its exact obligation version, SETTLED settlement and matching reconciliation observation. No user can manually type a paid claim into the artifact.",
+          "The package records a schema version, evidence version, issuer, creation time, disclosed-field manifest, canonical JSON artifact and SHA-256 content hash.",
+        ],
+        callout: {
+          tone: "warning",
+          title: "Not a ZK business proof",
+          text: "Obliq evidence is application-generated, integrity-protected financial evidence. Zcash proves protocol statements; it does not attest vendor names, invoices, approvals or accounting truth entered into Obliq.",
+        },
+      },
+      {
+        id: "provenance",
+        title: "Claim provenance",
+        paragraphs: [
+          "Every disclosed claim labels its source. Vendor, reference, category and business value come from the Obliq business record. Approval summaries come from Obliq authorization records. Payment status, settlement date, ZEC amount, network, confirmations and transaction reference come from Zcash reconciliation observations.",
+        ],
+      },
+      {
+        id: "classification",
+        title: "Disclosure classes",
+        paragraphs: [
+          "PUBLIC_SAFE, COUNTERPARTY, FINANCE and AUDIT fields form a closed server-side allowlist. The issuer name is required package metadata and appears in every preview. Sensitive FINANCE/AUDIT disclosure requires Owner, CFO or Accountant capacity. Viewing authority, spend authority, destinations, memo data, raw transactions, signer credentials and internal findings are NEVER_DISCLOSE and have no selectable key.",
+        ],
+        table: {
+          headers: ["Template", "Typical disclosure"],
+          rows: [
+            ["Minimal confirmation", "Reference, settled status, date"],
+            [
+              "Vendor receipt",
+              "Reference, vendor, business amount, status, date",
+            ],
+            [
+              "Accountant evidence",
+              "Finance and authorized chain-derived fields",
+            ],
+          ],
+        },
+      },
+      {
+        id: "integrity",
+        title: "Canonicalization and hashing",
+        paragraphs: [
+          "Objects are serialized with lexicographically sorted keys; arrays preserve order; values admit only JSON primitives, arrays and objects; numbers must be safe integers. Financial quantities are strings inside typed objects, avoiding floating point. SHA-256 covers the complete disclosed artifact, including ID, version, issuer, timestamp, manifest, classifications, provenance and claims.",
+          "Any change to amount, vendor, status, date, transaction reference, manifest or version causes verification failure.",
+        ],
+      },
+      {
+        id: "verification",
+        title: "External verification",
+        paragraphs: [
+          "The public route uses an independent 256-bit random URL-safe identifier rather than the internal UUID. It displays only embedded claims, current ACTIVE/SUPERSEDED/REVOKED status and hash result. Invalid identifiers reveal no organization data.",
+          "JSON is the canonical downloadable artifact. The printable HTML receipt renders the same verified model. Native PDF generation is PLANNED and not claimed.",
+        ],
+      },
+      {
+        id: "status",
+        title: "Revocation and supersession",
+        paragraphs: [
+          "Issued content is never rewritten. A successor is a new evidence ID and version; the old package becomes SUPERSEDED. Owner or CFO can REVOKE with a reason. Historical content remains visible with an explicit warning. A supported reconciliation regression or mismatch automatically revokes active evidence linked to that settlement.",
+        ],
+      },
+    ],
+  },
 ];
 
 export const docGroups: readonly DocGroup[] = [
@@ -639,13 +713,14 @@ export const docGroups: readonly DocGroup[] = [
       "settlement-execution",
       "reconciliation",
       "audit-history",
+      "controlled-evidence",
     ],
-    planned: ["Evidence"],
+    planned: [],
   },
   {
     title: "Privacy",
     pages: ["privacy-model"],
-    planned: ["What Zcash hides", "What Obliq knows", "Disclosure model"],
+    planned: ["What Zcash hides", "What Obliq knows"],
   },
   {
     title: "Zcash",

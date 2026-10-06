@@ -1,7 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
-const tracked = execFileSync("git", ["ls-files"], { encoding: "utf8" })
+const candidates = execFileSync(
+  "git",
+  ["ls-files", "--cached", "--others", "--exclude-standard"],
+  { encoding: "utf8" },
+)
   .trim()
   .split("\n")
   .filter(Boolean);
@@ -12,7 +16,7 @@ const patterns = [
   /\b(?:api[_-]?key|secret|password)\s*[=:]\s*["'][^"']{12,}/i,
 ];
 const findings = [];
-for (const file of tracked) {
+for (const file of candidates) {
   if (ignored.has(file) || file.startsWith("obliq-context/")) continue;
   let content;
   try {
@@ -27,5 +31,5 @@ if (findings.length) {
   process.exit(1);
 }
 console.log(
-  `Secret-pattern scan passed (${tracked.length} tracked files inspected).`,
+  `Secret-pattern scan passed (${candidates.length} tracked or untracked files inspected).`,
 );

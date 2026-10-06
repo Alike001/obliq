@@ -94,6 +94,11 @@ export const readinessResult = pgEnum("readiness_result", [
   "READY",
   "NOT_READY",
 ]);
+export const evidenceStatus = pgEnum("evidence_status", [
+  "ACTIVE",
+  "SUPERSEDED",
+  "REVOKED",
+]);
 
 export const id = () => uuid("id").primaryKey().defaultRandom();
 export const organizationId = () => uuid("organization_id").notNull();

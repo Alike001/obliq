@@ -11,18 +11,20 @@ Zcash adapter boundary
           ↓ exact external signing handoff
 User wallet / signer (never the Obliq backend)
           ↓ network evidence
-Read-only reconciliation boundary (planned, sensitive)
+Read-only reconciliation boundary (implemented on regtest, sensitive)
           ↓
-Ledger + controlled evidence (planned)
+Controlled evidence (implemented) + ledger (planned)
 ```
 
-Phase 1 added executable `packages/ai` and `packages/storage` boundaries. Phase 2 adds `packages/policy` for deterministic evaluation and explainable readiness. The database application layer persists immutable policy meaning and authorized actions. Ledger and evidence remain documented boundaries until their phases begin.
+Phase 1 added executable `packages/ai` and `packages/storage` boundaries. Phase 2 added `packages/policy`; Phases 3–4 proved separate read and external-write Zcash boundaries. Phase 5 adds `packages/evidence` for deterministic disclosure and hashing. The database application layer persists immutable policy meaning, authorized actions and issued evidence. Ledger remains planned.
 
 ## Runtime surfaces
 
 - `/` communicates the product and current build status.
 - `/app` exposes real organization-scoped vendors, obligations, invoice review and database-derived metrics.
-- `/docs` renders Phase-2 documentation with desktop and mobile navigation.
+- `/app/evidence` previews, issues, supersedes and revokes organization evidence.
+- `/verify/[evidenceId]` exposes only an issued package's selected fields.
+- `/docs` renders current implementation documentation with desktop and mobile navigation.
 - `/security` describes enforced and planned controls separately.
 - `/proof` reports real build/system capability states; it contains no mocked chain evidence.
 

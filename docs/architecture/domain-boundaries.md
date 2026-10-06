@@ -12,9 +12,14 @@ Evaluates deterministic, versioned rules and returns structured findings and app
 
 Will record private business accounting entries tied to obligations and, where applicable, settlements. Network state does not overwrite business truth without reconciliation evidence.
 
-## Evidence (planned)
+## Evidence
 
-Will derive integrity-protected artifacts from canonical records. Application evidence is not a zero-knowledge proof or a blockchain.
+Derives allowlisted, immutable artifacts from canonical settled records. It owns
+disclosure classifications, schema-versioned canonical JSON, SHA-256 integrity,
+high-entropy verification IDs and artifact verification. Database repositories
+own tenant/role authorization, preview-before-issue, revocation and
+supersession. Application evidence is not a zero-knowledge proof, blockchain
+proof or independent accounting attestation.
 
 ## AI (planned)
 

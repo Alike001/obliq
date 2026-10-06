@@ -20,7 +20,7 @@ export const appSections = [
   ["Approvals", "/app/approvals", CheckSquare, "IMPLEMENTED"],
   ["Settlements", "/app/settlements", Landmark, "IMPLEMENTED"],
   ["Ledger", "/app/ledger", Library, "PLANNED"],
-  ["Evidence", "/app/evidence", FileCheck2, "PLANNED"],
+  ["Evidence", "/app/evidence", FileCheck2, "IMPLEMENTED"],
   ["Policies", "/app/policies", SlidersHorizontal, "IMPLEMENTED"],
   ["Settings", "/app/settings", Settings, "PLANNED"],
 ] as const;
@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto border-t border-white/10 pt-5 text-[11px] leading-5 text-white/45">
-          Phase 4 · External signing · Backend has no spend authority
+          Phase 5 · Controlled evidence · Not a ZK business proof
         </div>
       </aside>
       <div>

@@ -63,12 +63,22 @@ export default async function ObligationDetail({
               authorization is separate from signing.
             </p>
           </div>
-          <Link
-            href={`/app/obligations/${id}/edit`}
-            className="button button-light"
-          >
-            Edit record
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {o.state === "SETTLED" && (
+              <Link
+                href={`/app/evidence?obligationId=${o.id}`}
+                className="button button-dark"
+              >
+                Create evidence
+              </Link>
+            )}
+            <Link
+              href={`/app/obligations/${id}/edit`}
+              className="button button-light"
+            >
+              Edit record
+            </Link>
+          </div>
         </div>
         {(notice.created || notice.updated) && (
           <p className="mt-6 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-950">

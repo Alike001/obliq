@@ -7,6 +7,7 @@
     { "path": "./packages/storage" },
     { "path": "./packages/policy" },
     { "path": "./packages/zcash" },
+    { "path": "./packages/evidence" },
     { "path": "./scripts" },
     { "path": "./apps/web" }
   ]

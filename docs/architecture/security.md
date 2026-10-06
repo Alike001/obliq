@@ -52,6 +52,25 @@ independent devices/operators and hardened signer operations.
 - Chain tip and fully-scanned height are distinct. A reachable but lagging observer cannot finalize reconciliation.
 - Receiver, opaque memo-reference and exact zatoshis must all match; amount alone cannot correlate a payment.
 
+## Evidence and disclosure boundary
+
+Evidence derives only from a `SETTLED` obligation, `SETTLED` settlement and
+matching reconciliation observation. The server accepts only enumerated field
+keys. Viewing material, destination data, memo data, signer credentials, raw
+transactions and internal policy findings have no disclosable field key.
+Finance users may create public-safe or counterparty receipts; Owner, CFO or
+Accountant capacity is required for FINANCE/AUDIT claims. Only Owner or CFO may
+revoke evidence.
+
+External verification uses a random 256-bit URL-safe identifier, never an
+internal package UUID. Anyone holding the link can read the selected fields, so
+links remain recipient-confidential. Responses and JSON downloads are dynamic
+and `no-store`; production rate limiting and link-delivery controls remain
+planned. Artifact content is immutable and SHA-256 checked before display or
+download. Revoked and superseded artifacts remain visible with an explicit
+warning. Confirmation regression or mismatch automatically revokes active
+evidence for the affected settlement.
+
 ## Secrets
 
 Never commit or log seed phrases, spending keys, viewing keys, wallet RPC credentials, database passwords, or provider API keys. Public client environment variables must contain non-sensitive presentation configuration only.

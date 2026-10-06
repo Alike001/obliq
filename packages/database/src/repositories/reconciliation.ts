@@ -8,6 +8,7 @@ import {
 import { and, desc, eq, sql } from "drizzle-orm";
 import type { createDatabase } from "../index";
 import {
+  evidencePackages,
   obligations,
   settlementObservations,
   settlementObservationTargets,
@@ -21,11 +22,43 @@ import {
 } from "./index";
 
 type Database = ReturnType<typeof createDatabase>["db"];
+type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 const observerOperatorRoles = ["OWNER", "CFO", "TREASURY"] as const;
 
 function requireObserverOperator(role: string) {
   if (!observerOperatorRoles.some((allowed) => allowed === role))
     throw new Error("Actor cannot operate shielded reconciliation");
+}
+
+async function revokeSettlementEvidence(
+  tx: Transaction,
+  actor: TenantActor,
+  settlementId: string,
+  reason: string,
+) {
+  const revoked = await tx
+    .update(evidencePackages)
+    .set({
+      status: "REVOKED",
+      statusChangedAt: new Date(),
+      statusChangedBy: actor.userId,
+      statusReason: reason,
+    })
+    .where(
+      and(
+        eq(evidencePackages.organizationId, actor.organizationId),
+        eq(evidencePackages.settlementId, settlementId),
+        eq(evidencePackages.status, "ACTIVE"),
+      ),
+    )
+    .returning({ id: evidencePackages.id });
+  for (const evidence of revoked)
+    await appendAuditEvent(tx, actor, {
+      eventType: "EVIDENCE_REVOKED",
+      subjectType: "EVIDENCE_PACKAGE",
+      subjectId: evidence.id,
+      payload: { reason, settlementId, automatic: true },
+    });
 }
 
 export interface CreateObservationTargetInput extends ObservationTarget {
@@ -316,6 +349,13 @@ export async function ingestShieldedObservation(
             eq(settlements.id, linkedSettlement.id),
           ),
         );
+      if (linkedSettlement.state === "SETTLED" && nextState !== "SETTLED")
+        await revokeSettlementEvidence(
+          tx,
+          actor,
+          linkedSettlement.id,
+          "Canonical settlement confirmation regressed",
+        );
       await tx
         .update(obligations)
         .set({ state: obligationState, updatedAt: new Date() })
@@ -344,6 +384,13 @@ export async function ingestShieldedObservation(
         });
     }
     if (linkedSettlement && finalResult.state === "MISMATCH") {
+      if (linkedSettlement.state === "SETTLED")
+        await revokeSettlementEvidence(
+          tx,
+          actor,
+          linkedSettlement.id,
+          "Canonical reconciliation changed to mismatch",
+        );
       await tx
         .update(settlements)
         .set({ state: "MISMATCH", errorCode: finalResult.reasons[0]?.code })

@@ -5,6 +5,5 @@
     "declaration": true,
     "outDir": "dist"
   },
-  "include": ["src/**/*.ts", "drizzle.config.ts"],
-  "references": [{ "path": "../evidence" }]
+  "include": ["src/**/*.ts"]
 }

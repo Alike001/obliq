@@ -8,12 +8,15 @@ import {
   createSource,
   createVendor,
   createDefaultPolicy,
+  changeEvidenceStatus,
   createPolicyVersion,
   createControlledRegtestQuote,
   decideApproval,
   evaluateObligationControls,
   evaluateSettlementReadiness,
   prepareSettlementIntent,
+  previewEvidence,
+  issueEvidence,
   recordExternalBroadcast,
   recordExternalSigning,
   requestExternalSignature,
@@ -396,4 +399,50 @@ export async function recordBroadcastReceiptAction(
   });
   revalidatePath(`/app/settlements/${settlementId}`);
   redirect(`/app/settlements/${settlementId}?broadcast=recorded`);
+}
+
+export async function previewEvidenceAction(formData: FormData) {
+  const actor = await getTenantContext();
+  const template = field(formData, "template");
+  if (
+    template !== "MINIMAL_PAYMENT_CONFIRMATION" &&
+    template !== "VENDOR_RECEIPT" &&
+    template !== "ACCOUNTANT_EVIDENCE"
+  )
+    throw new Error("Invalid evidence template");
+  const disclosedFields = formData
+    .getAll("disclosedFields")
+    .filter((value): value is string => typeof value === "string");
+  const supersedesPackageId = optional(formData, "supersedesPackageId");
+  const preview = await previewEvidence(getDatabase(), actor, {
+    obligationId: field(formData, "obligationId"),
+    template,
+    ...(disclosedFields.length > 0 ? { disclosedFields } : {}),
+    ...(supersedesPackageId ? { supersedesPackageId } : {}),
+  });
+  redirect(`/app/evidence/preview/${preview.id}`);
+}
+
+export async function issueEvidenceAction(previewId: string) {
+  const actor = await getTenantContext();
+  const evidence = await issueEvidence(getDatabase(), actor, previewId);
+  if (!evidence) throw new Error("Evidence preview is unavailable");
+  revalidatePath("/app/evidence");
+  redirect(`/app/evidence/${evidence.id}?issued=1`);
+}
+
+export async function revokeEvidenceAction(
+  evidenceId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  const evidence = await changeEvidenceStatus(
+    getDatabase(),
+    actor,
+    evidenceId,
+    field(formData, "reason"),
+  );
+  if (!evidence) throw new Error("Active evidence package is unavailable");
+  revalidatePath(`/app/evidence/${evidenceId}`);
+  redirect(`/app/evidence/${evidenceId}?revoked=1`);
 }

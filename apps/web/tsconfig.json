@@ -18,6 +18,7 @@
   "exclude": ["node_modules"],
   "references": [
     { "path": "../../packages/domain" },
+    { "path": "../../packages/evidence" },
     { "path": "../../packages/zcash" }
   ]
 }

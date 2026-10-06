@@ -1047,5 +1047,6 @@ export async function getDashboardMetrics(
 }
 
 export * from "./control";
+export * from "./evidence";
 export * from "./reconciliation";
 export * from "./settlement";

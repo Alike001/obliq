@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@obliq/domain": "*",
+    "@obliq/evidence": "*",
     "@obliq/policy": "*",
     "@obliq/database": "*",
     "@obliq/ai": "*",

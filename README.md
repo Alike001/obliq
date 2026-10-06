@@ -2,7 +2,7 @@
 
 Obliq is private financial operations software for crypto-native organizations. It is designed to help finance teams capture vendor and contractor obligations, apply deterministic controls and human approvals, settle privately with Zcash, reconcile settlement to the original business object, and create controlled financial evidence—without surrendering treasury spending authority.
 
-> **Phase 4 status:** a Phase-2-approved obligation completed a real non-custodial shielded settlement on official Z3 regtest. A separate Zallet PCZT ceremony signed and broadcast the exact intent; the UFVK-only observer reconciled it from one to three confirmations. Public-network readiness remains blocked.
+> **Phase 5 status:** settled canonical records can produce immutable, selectively disclosed JSON evidence with SHA-256 integrity, high-entropy public verification links, revocation and supersession. This is application evidence—not a zero-knowledge business proof. The underlying Zcash settlement remains verified on isolated regtest; public-network readiness remains blocked.
 
 ## The problem
 
@@ -24,13 +24,14 @@ packages/policy      Deterministic controls and settlement-readiness rules
 packages/ai          Strict extraction suggestion contract and labelled fixture
 packages/storage     Private invoice document storage abstraction
 packages/zcash       ZIP-321/intent types plus signer-free observer and redaction
+packages/evidence    Canonical artifacts, disclosure policy and integrity checks
 tools/zcash-observer Pinned UFVK-only librustzcash scanner
 docs/architecture    System boundaries and security model
 docs/decisions       Architecture decision records
 scripts              Repository quality checks
 ```
 
-Ledger and evidence become packages when implementation starts. The policy package is framework-independent and has no AI or network dependency.
+Ledger remains planned. Policy and evidence are framework-independent packages with no AI or network dependency.
 
 ## Local setup
 
@@ -84,6 +85,9 @@ cargo audit --file tools/zcash-observer/Cargo.lock
 - Node/scanner failure records infrastructure `UNAVAILABLE` without changing paid/unpaid state.
 - Controlled-regtest quotes and intent preparation are implemented. Signing remains external to Obliq; the application stores sanitized receipts only.
 - Broadcast is not settlement. The UFVK-only observer alone advances matching evidence through confirmation to `SETTLED`.
+- Evidence can only derive from a canonically `SETTLED` obligation and matching observation. Disclosure keys and sensitive-role capabilities are server enforced.
+- Issued evidence is immutable. Corrections supersede it; revocation preserves history. Public identifiers contain 256 bits of random entropy.
+- JSON is the canonical downloadable artifact. The receipt view derives from the same model. Native PDF generation remains planned and is not claimed.
 
 The current tenant boundary is a server-validated development membership, not production authentication. Row-level security, identity-provider integration, malware scanning, object storage, encryption/secret management, rate limiting and independent audit anchoring remain planned.
 
@@ -103,12 +107,13 @@ See [security architecture](docs/architecture/security.md), [threat model](docs/
 | UFVK-only shielded observation and reconciliation   | IMPLEMENTED (regtest) |
 | External Zallet PCZT signing/broadcast              | IMPLEMENTED (regtest) |
 | Public-network observer/execution operations        | BLOCKED               |
-| Evidence artifacts                                  | PLANNED (Phase 5)     |
+| Controlled evidence, JSON and external verification | IMPLEMENTED           |
+| Native PDF evidence generation                      | PLANNED               |
 
 The canonical vocabulary is `IMPLEMENTED`, `SEEDED`, `PLANNED`, `BLOCKED`, and `UNAVAILABLE`. “Verified” is reserved for evidence-backed results.
 
 ## Roadmap and limits
 
-Phase 4 establishes the evidence-backed read and external write paths on isolated regtest. Subsequent phases address evidence, security hardening, public-network qualification and launch hardening—in that order, with an explicit stop gate after each. See [implementation status](docs/architecture/implementation-status.md), [observer operations](docs/operations/zcash-observer.md), and [ADRs](docs/decisions) for material decisions.
+Phase 5 completes Capture → Control → Settle → Reconcile → Prove with application-generated controlled evidence. Subsequent phases address security hardening, public-network qualification and launch hardening—with an explicit stop gate after each. See [implementation status](docs/architecture/implementation-status.md), [observer operations](docs/operations/zcash-observer.md), and [ADRs](docs/decisions) for material decisions.
 
 The authoritative product source is `obliq-context/Obliq_Master_Context.docx`; implementation-critical Zcash notes under `obliq-context/implementation-reference/` take precedence over the broader research archive. Context files are retained unchanged.
