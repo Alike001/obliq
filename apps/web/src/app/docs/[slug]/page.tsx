@@ -29,7 +29,7 @@ export default async function DocArticle({
         <article className="mx-auto max-w-3xl">
           <div className="flex items-center gap-3">
             <StatusPill status={doc.status} />
-            <span className="text-muted text-xs">Phase 2 documentation</span>
+            <span className="text-muted text-xs">Phase 3 documentation</span>
           </div>
           <h1 className="mt-5 text-4xl font-medium tracking-[-.05em] sm:text-5xl">
             {doc.title}

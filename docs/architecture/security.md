@@ -4,7 +4,7 @@
 
 The backend has no field, environment variable, or adapter for a seed phrase, private spending key, or unrestricted signer credential. A future exact settlement intent crosses an adapter boundary to an authorized external wallet/signer.
 
-Viewing authority is separate from spending authority but remains a high-value privacy secret. It must be server-side, minimized, isolated, redacted from logs and proof pages, and covered by incident procedures before Phase 3.
+Viewing authority is separate from spending authority but remains a high-value privacy secret. The Rust observer imports a UFVK as `AccountPurpose::ViewOnly`; its API exposes only status and observations. The UFVK is injected out-of-band, never stored in PostgreSQL, rendered, logged, or returned through application APIs. The SQLite scan cache also requires encryption and isolation because it contains privacy-sensitive wallet state.
 
 ## Tenant boundary
 
@@ -32,6 +32,8 @@ Policy versions are immutable. Decisions bind an obligation version and exact de
 - Broadcast does not mean settlement.
 - Scanner or RPC failure means unavailable/unknown, not paid or unpaid.
 - Unsupported functionality is `PLANNED` or `UNAVAILABLE`, never simulated in proof paths.
+- Chain tip and fully-scanned height are distinct. A reachable but lagging observer cannot finalize reconciliation.
+- Receiver, opaque memo-reference and exact zatoshis must all match; amount alone cannot correlate a payment.
 
 ## Secrets
 

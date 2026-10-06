@@ -1,5 +1,10 @@
 import { formatMinorUnits } from "@obliq/domain";
-import { getControlView, getObligation } from "@obliq/database";
+import {
+  getControlView,
+  getObligation,
+  getObserverStatus,
+  listObligationObservations,
+} from "@obliq/database";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getDatabase } from "@/lib/db";
@@ -26,9 +31,11 @@ export default async function ObligationDetail({
   const { id } = await params;
   const notice = await searchParams;
   const tenant = await getTenantContext();
-  const [record, control] = await Promise.all([
+  const [record, control, observations, observerStatus] = await Promise.all([
     getObligation(getDatabase(), tenant.organizationId, id),
     getControlView(getDatabase(), tenant.organizationId, id),
+    listObligationObservations(getDatabase(), tenant.organizationId, id),
+    getObserverStatus(getDatabase(), tenant.organizationId, "regtest"),
   ]);
   if (!record) notFound();
   const { obligation: o, vendor, source, duplicates, activity } = record;
@@ -332,6 +339,54 @@ export default async function ObligationDetail({
               </button>
             </form>
           </div>
+        </section>
+        <section className="card mt-5 overflow-hidden">
+          <div className="hairline flex flex-wrap items-start justify-between gap-4 border-b p-5">
+            <div>
+              <h2 className="font-semibold">Shielded observation</h2>
+              <p className="text-muted mt-1 text-xs">
+                Read-only reconciliation evidence. This surface cannot create,
+                sign or broadcast a transaction.
+              </p>
+            </div>
+            <span className="rounded-full bg-stone-100 px-3 py-1 font-mono text-xs">
+              observer {observerStatus?.availability ?? "NOT CONFIGURED"}
+            </span>
+          </div>
+          {!observations.length ? (
+            <p className="text-muted p-6 text-sm">
+              No shielded output has been correlated with this obligation.
+              READY_TO_SETTLE is not evidence of payment.
+            </p>
+          ) : (
+            <div className="divide-y">
+              {observations.map((observation) => (
+                <div
+                  key={observation.id}
+                  className="grid gap-4 p-5 sm:grid-cols-[1fr_auto]"
+                >
+                  <div>
+                    <strong className="text-sm">
+                      {observation.state} · {observation.correlationStatus}
+                    </strong>
+                    <p className="text-muted mt-1 font-mono text-xs">
+                      {observation.network} · {observation.pool} · tx{" "}
+                      {observation.txid.slice(0, 12)}… · output{" "}
+                      {observation.outputIndex}
+                    </p>
+                  </div>
+                  <div className="sm:text-right">
+                    <p className="text-sm font-semibold">
+                      {observation.confirmations} confirmation(s)
+                    </p>
+                    <p className="text-muted mt-1 text-xs">
+                      height {observation.blockHeight?.toString() ?? "unknown"}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
         <section className="card mt-5 overflow-hidden">
           <div className="hairline border-b p-5">

@@ -29,7 +29,7 @@ export const docs: readonly DocPage[] = [
     slug: "overview",
     title: "Overview",
     status: "IMPLEMENTED",
-    description: "What Obliq is, who it serves, and what exists in Phase 2.",
+    description: "What Obliq is, who it serves, and what exists in Phase 3.",
     sections: [
       {
         id: "product",
@@ -43,21 +43,21 @@ export const docs: readonly DocPage[] = [
         id: "today",
         title: "What exists today",
         paragraphs: [
-          "Phase 2 adds versioned deterministic controls, structured findings, server-authorized human approvals and explainable settlement readiness to the persisted obligation engine.",
+          "Phase 3 adds a proven read-only shielded observation path, deterministic correlation, confirmation tracking and persisted reconciliation to the obligation engine.",
         ],
         bullets: [
           "Manual and invoice-backed obligation capture",
           "Exact integer money types and PostgreSQL bigint columns",
           "Server-enforced organization membership and tenant-scoped repositories",
           "Version-bound policy decisions, approvals and readiness records",
-          "Zcash interfaces with no fake implementation",
+          "UFVK-only shielded observation proven on isolated Zcash regtest",
         ],
       },
       {
         id: "not-yet",
         title: "What does not exist yet",
         paragraphs: [
-          "Zcash pricing, payment requests, wallet integration, signing, broadcast, scanning, reconciliation and evidence generation are not live.",
+          "Zcash pricing, payment requests, wallet integration, signing, broadcast, public-network observer operation and evidence packages are not live.",
         ],
         callout: {
           tone: "warning",
@@ -90,7 +90,7 @@ export const docs: readonly DocPage[] = [
         bullets: [
           "Humans approve business intent",
           "An external wallet or signer authorizes funds",
-          "A minimum read-only capability may later support reconciliation",
+          "A dedicated UFVK-only observer supports reconciliation",
         ],
       },
       {
@@ -113,9 +113,9 @@ export const docs: readonly DocPage[] = [
         id: "workspaces",
         title: "Workspace boundaries",
         paragraphs: [
-          "The web application owns presentation and server entry points. Domain owns invariant-bearing types. Database owns tenant-aware persistence definitions. Zcash owns protocol-facing ports without pretending adapters exist.",
+          "The web application owns presentation and server entry points. Domain owns invariant-bearing types. Database owns tenant-aware persistence. Zcash owns a signer-free observer contract, while a dedicated Rust process owns viewing-key import and scanning.",
         ],
-        code: "apps/web            product surfaces + server boundary\npackages/domain     money, states, tenant invariants\npackages/database   PostgreSQL schema + migrations\npackages/zcash      payment, signer, observer ports",
+        code: "apps/web             product surfaces + server boundary\npackages/domain      money, states, tenant invariants\npackages/database    PostgreSQL business records\npackages/zcash       observer normalization + correlation\ntools/zcash-observer UFVK-only Rust scanner",
       },
       {
         id: "flow",
@@ -164,7 +164,7 @@ export const docs: readonly DocPage[] = [
         id: "reconcile",
         title: "Reconcile",
         paragraphs: [
-          "Observe shielded payment evidence with minimum viewing authority and match it to the obligation. Scanner failure produces unknown or unavailable state—not unpaid. Phase 3–4 scope.",
+          "Observe shielded payment evidence with minimum viewing authority and match it to the obligation. Implemented on isolated regtest in Phase 3. Scanner failure produces unavailable state—not unpaid.",
         ],
       },
       {
@@ -193,19 +193,19 @@ export const docs: readonly DocPage[] = [
         id: "backend",
         title: "Backend knowledge",
         paragraphs: [
-          "Obliq necessarily holds operational application records. A later reconciliation component may hold the minimum read-only viewing capability required by the selected stack. Viewing material is a high-value privacy secret even though it cannot spend.",
+          "Obliq necessarily holds operational application records. The dedicated reconciliation process may hold a UFVK imported as view-only. Viewing material and its scan cache are high-value privacy assets even though they cannot spend.",
         ],
       },
       {
         id: "phase-zero",
         title: "Current guarantee",
         paragraphs: [
-          "No Zcash viewing or spending key is accepted, stored, rendered or sent client-side by the current implementation. Invoice records are operationally private to the configured organization boundary, not encrypted end-to-end.",
+          "No Zcash viewing or spending key is stored in PostgreSQL, rendered, or sent client-side. The observer receives a UFVK out-of-band. Invoice and reconciliation records are operationally private to the configured organization boundary, not encrypted end-to-end.",
         ],
         callout: {
           tone: "note",
           title: "No inflated claim",
-          text: "Phase 2 does not execute shielded transactions, so READY_TO_SETTLE does not claim that a customer payment is private or settled.",
+          text: "The regtest tracer proves the read path only. READY_TO_SETTLE still does not execute a transaction, and public-network operation is not yet qualified.",
         },
       },
     ],
@@ -220,7 +220,7 @@ export const docs: readonly DocPage[] = [
         id: "authority",
         title: "No backend spend authority",
         paragraphs: [
-          "The database schema and environment contract contain no seed phrase, spending key or signer credential. The Zcash boundary exposes only an external signing handoff interface.",
+          "The observer contract has status and observe methods only. It accepts no seed phrase or spending key and exposes no proposal, signing, broadcast, or execution method.",
         ],
       },
       {
@@ -271,7 +271,7 @@ export const docs: readonly DocPage[] = [
         id: "read-path",
         title: "Read-only reconciliation",
         paragraphs: [
-          "Phase 3 must prove the exact Orchard-capable observation path with real shielded payment evidence and no spend authority. Export support must not be confused with import-and-scan support.",
+          "Phase 3 proved UFVK import, shielded output and memo decryption, receiver correlation, and confirmation progression using librustzcash on official Z3 regtest. The active NU6.3 pool was Ironwood, so it is reported as Ironwood—not relabelled Orchard.",
         ],
       },
       {
@@ -316,7 +316,7 @@ export const docs: readonly DocPage[] = [
         id: "implemented",
         title: "Implemented",
         paragraphs: [
-          "PostgreSQL-backed vendors, versioned unverified destinations, manual and invoice-backed obligations, exact money parsing, deterministic duplicate detection, private local document storage, organization-scoped audit events and server-side tenant repositories.",
+          "PostgreSQL-backed vendors and obligations, deterministic controls and approvals, a UFVK-only shielded observer, three-signal correlation, idempotent confirmation persistence, and organization-scoped audit events.",
         ],
       },
       {
@@ -330,12 +330,12 @@ export const docs: readonly DocPage[] = [
         id: "planned",
         title: "Planned and unavailable",
         paragraphs: [
-          "Production authentication provider integration, signing, shielded settlement, viewing/scanning, reconciliation, ledger settlement operations and evidence packages are not implemented.",
+          "Production authentication provider integration, signing, shielded settlement execution, public-network observer operations, ledger settlement operations and evidence packages are not implemented.",
         ],
         callout: {
           tone: "warning",
           title: "Current proof boundary",
-          text: "There is no real settlement, network connection, transaction identifier or blockchain evidence to verify in Phase 2.",
+          text: "A real regtest read-path tracer exists. It is not mainnet evidence, does not prove payment execution, and does not give Obliq spending authority.",
         },
       },
     ],
@@ -513,7 +513,42 @@ export const docs: readonly DocPage[] = [
         callout: {
           tone: "warning",
           title: "Not a signature",
-          text: "READY_TO_SETTLE is business authorization. Phase 2 cannot construct, sign, broadcast or reconcile a Zcash transaction.",
+          text: "READY_TO_SETTLE is business authorization. Obliq still cannot construct, sign or broadcast a Zcash transaction. Phase 3 can reconcile only externally initiated shielded payments through its read-only observer.",
+        },
+      },
+    ],
+  },
+  {
+    slug: "reconciliation",
+    title: "Shielded reconciliation",
+    status: "IMPLEMENTED",
+    description:
+      "Read-only shielded observation, correlation and failure semantics.",
+    sections: [
+      {
+        id: "architecture",
+        title: "UFVK-only observer",
+        paragraphs: [
+          "A dedicated Rust observer imports a Unified Full Viewing Key with AccountPurpose::ViewOnly, maintains a separate SQLite scan cache, and consumes compact blocks plus full transaction enhancement data from a Zebra-backed service. Its API exposes no spending method.",
+        ],
+      },
+      {
+        id: "correlation",
+        title: "Three-signal correlation",
+        paragraphs: [
+          "A target binds one obligation to a unique shielded receiver fingerprint, a digest of a random opaque memo reference, and an exact integer zatoshi amount. Amount alone cannot identify a payment. Vendor names and invoice data never enter the memo.",
+        ],
+      },
+      {
+        id: "state",
+        title: "Confirmation and failure semantics",
+        paragraphs: [
+          "DETECTED, CONFIRMING, SETTLED and MISMATCH describe observed output evidence. Observer or node UNAVAILABLE is infrastructure state and never changes a financial conclusion to unpaid. Repeated ingestion is unique by organization, network, transaction and output index.",
+        ],
+        callout: {
+          tone: "warning",
+          title: "Regtest scope",
+          text: "The real tracer used isolated Z3 regtest and the current Ironwood pool. Mainnet/testnet service hardening, TLS, key custody and large-wallet subtree-root behavior remain planned.",
         },
       },
     ],
@@ -528,7 +563,7 @@ export const docs: readonly DocPage[] = [
         id: "events",
         title: "Recorded activity",
         paragraphs: [
-          "Vendor and destination actions, source and obligation changes, policy versions and evaluations, control findings, approval requests and decisions, invalidations, duplicate resolutions and readiness evaluations produce actor-attributed events.",
+          "Vendor and destination actions, obligation and policy changes, approvals, invalidations, reconciliation-target creation, shielded detection, confirmation progression and reconciliation produce actor-attributed events.",
         ],
       },
       {
@@ -558,9 +593,10 @@ export const docGroups: readonly DocGroup[] = [
       "duplicate-detection",
       "policies",
       "approvals",
+      "reconciliation",
       "audit-history",
     ],
-    planned: ["Settlements", "Reconciliation", "Evidence"],
+    planned: ["Settlement execution", "Evidence"],
   },
   {
     title: "Privacy",

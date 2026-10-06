@@ -31,9 +31,12 @@ jobs:
         with:
           node-version: 24
           cache: npm
+      - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
       - run: npm run db:migrate
       - run: npm run test:integration
       - run: npm run validate
+      - run: cargo fmt --check --manifest-path tools/zcash-observer/Cargo.toml
+      - run: cargo check --locked --manifest-path tools/zcash-observer/Cargo.toml
       - run: npm run security:secrets
       - run: npm audit --omit=dev --audit-level=high

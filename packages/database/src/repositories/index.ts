@@ -69,7 +69,7 @@ export async function checkDatabaseConnection(db: Database) {
 }
 
 export async function requireActiveMembership(
-  db: Database,
+  db: Executor,
   actor: TenantActor,
 ) {
   const rows = await db
@@ -967,3 +967,4 @@ export async function getDashboardMetrics(
 }
 
 export * from "./control";
+export * from "./reconciliation";

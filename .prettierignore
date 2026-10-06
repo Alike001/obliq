@@ -6,3 +6,4 @@ packages/database/drizzle/
 package-lock.json
 .playwright-mcp/
 artifacts/
+target/

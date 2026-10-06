@@ -15,6 +15,8 @@ import {
   policyDecisions,
   policyVersions,
   settlementReadiness,
+  settlementObservations,
+  settlementObservationTargets,
   vendors,
   vendorDestinations,
   settlements,
@@ -39,6 +41,8 @@ describe("database invariants", () => {
     approvalRequirements,
     approvals,
     settlementReadiness,
+    settlementObservations,
+    settlementObservationTargets,
   ])("tenant-owned financial tables carry organization_id", (table) =>
     expect(getTableColumns(table)).toHaveProperty("organizationId"),
   );
@@ -52,6 +56,14 @@ describe("database invariants", () => {
   it("money columns use bigint representation", () => {
     const amount = getTableColumns(obligations).amountMinor;
     expect(amount.dataType).toBe("bigint");
+  });
+
+  it("observation records require an obligation and contain no viewing key", () => {
+    const columns = getTableColumns(settlementObservations);
+    expect(columns.obligationId.notNull).toBe(true);
+    expect(columns.observedAmountZat.dataType).toBe("bigint");
+    expect(columns).not.toHaveProperty("viewingKey");
+    expect(columns).not.toHaveProperty("memoPlaintext");
   });
 
   it("binds approvals and readiness to immutable authorization inputs", () => {

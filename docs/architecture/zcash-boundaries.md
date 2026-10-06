@@ -16,8 +16,14 @@ The backend never holds unrestricted spending authority. Business approval is no
 
 ## Viewing and reconciliation
 
-Phase 3 must prove a real shielded receiving account, exact read-only mechanism, real shielded payment observation, obligation correlation, and confirmation evidence. The team must not infer Orchard scan support from conceptual key export support. If the chosen stack cannot demonstrate the path, work stops for redesign rather than using a transparent fallback.
+Phase 3 proved a real shielded receiving account, UFVK-only import, output and memo decryption, obligation correlation, and one-to-three confirmation progression on official Z3 regtest. The active NU6.3 pool was Ironwood. The observer uses librustzcash with `AccountPurpose::ViewOnly`, a separate SQLite scan cache, and a Zebra-backed compact-block service. Its TypeScript contract has status and observe methods only.
+
+PostgreSQL stores receiver and opaque-reference fingerprints, exact zatoshis,
+normalized output evidence, sync status and audit history. It does not store the
+UFVK or memo plaintext. Infrastructure failure is `UNAVAILABLE`, not unpaid.
+Production mainnet/testnet operations, TLS, cache encryption and Ironwood
+subtree-root compatibility at scale remain planned.
 
 ## Current source assumptions
 
-Checked 2026-10-05 against the official ZIP-321, ZIP-374, ZIP-312 and Zallet RPC documentation linked from the implementation reference. ZIP-321 is the payment-request specification; ZIP-374 and ZIP-312 remain draft-oriented architecture inputs, not Phase-0 runtime dependencies. Exact Zallet method behavior is intentionally unresolved until Phase 3.
+Checked 2026-10-06 against current Zallet, librustzcash, lightwalletd, Zebra and Z3 sources. Zallet `v0.1.0-beta.3` exports UFVK/UIVK values but does not implement the required Orchard/Unified watch-only import. The observer therefore uses `zcash_client_backend 0.24.0` and `zcash_client_sqlite 0.22.0`. See ADR 0006 for exact commits and rejected architectures.

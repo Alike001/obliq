@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { StatusPill } from "@/components/status-pill";
 import { checkDatabaseConnection, verifyAuditChain } from "@obliq/database";
 import { getDatabase } from "@/lib/db";
+import { phase3NetworkProof } from "@/content/phase3-proof";
 
 const capabilities = [
   [
@@ -42,14 +43,19 @@ const capabilities = [
     "Labelled fixture suggestions only; human review is mandatory",
   ],
   [
-    "Zcash settlement",
-    "UNAVAILABLE",
-    "No transaction construction, signing or broadcast adapter",
+    "Shielded observation",
+    "IMPLEMENTED",
+    "UFVK-only librustzcash observer proved against a real mined Z3 regtest output",
   ],
   [
-    "Reconciliation",
+    "Read-side reconciliation",
+    "IMPLEMENTED",
+    "Receiver + opaque memo + exact amount correlation with idempotent confirmation tracking",
+  ],
+  [
+    "Zcash settlement execution",
     "UNAVAILABLE",
-    "No viewing key, scanner or network observer configured",
+    "No transaction construction, signing or broadcast adapter",
   ],
   [
     "Audit chain",
@@ -98,10 +104,10 @@ export default async function ProofPage() {
             Claims should be inspectable—or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/60">
-            Phase 2 reports persisted controls, human approvals and readiness.
-            READY_TO_SETTLE is business authorization only. There is no
-            fabricated transaction, signature, reconciliation result or
-            blockchain evidence.
+            Phase 3 records a real shielded read-path tracer on isolated Zcash
+            regtest. It proves decryption and correlation with viewing authority
+            only; it does not claim public-network readiness or add any payment
+            execution capability.
           </p>
         </div>
       </section>
@@ -132,6 +138,18 @@ export default async function ProofPage() {
             </div>
           </div>
           <div className="space-y-5">
+            <ProofCard
+              label="Shielded tracer"
+              value="VERIFIED · REGTEST"
+              detail={`Ironwood output at height ${phase3NetworkProof.minedHeight}; ${phase3NetworkProof.confirmationEvidence.join(" → ")} confirmations; tx ${phase3NetworkProof.txid.slice(0, 12)}…`}
+              good
+            />
+            <ProofCard
+              label="Observer authority"
+              value="UFVK · READ ONLY"
+              detail="Imported as AccountPurpose::ViewOnly. The observer API has health and observation methods only. Viewing authority remains privacy-sensitive."
+              good
+            />
             <ProofCard
               label="Audit-chain runtime"
               value={auditRuntime}
@@ -173,7 +191,7 @@ export default async function ProofPage() {
         <div className="page-wrap grid gap-8 py-14 md:grid-cols-3">
           <Boundary
             title="Payment request"
-            text="ZIP-321 is selected as the future canonical standard; no request is generated today."
+            text="ZIP-321 remains selected for future execution. No request, quote or payment is generated in Phase 3."
           />
           <Boundary
             title="Signing"
@@ -181,7 +199,7 @@ export default async function ProofPage() {
           />
           <Boundary
             title="Viewing"
-            text="The read-only observer port can express UNAVAILABLE. No Orchard scanning capability is assumed."
+            text="A dedicated librustzcash observer imports a UFVK as view-only, decrypts shielded outputs, and reports sync uncertainty without financial inference."
           />
         </div>
       </section>

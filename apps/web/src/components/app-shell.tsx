@@ -55,7 +55,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto border-t border-white/10 pt-5 text-[11px] leading-5 text-white/45">
-          Phase 2 · Control engine · No money movement
+          Phase 3 · Read-only reconciliation · No money movement
         </div>
       </aside>
       <div>

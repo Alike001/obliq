@@ -19,8 +19,8 @@ const principles = [
   ],
   [
     "Viewing authority",
-    "A later reconciliation service may hold minimum read-only capability. It remains sensitive secret material.",
-    "PLANNED",
+    "A dedicated server-only observer may hold a UFVK imported as ViewOnly. It remains high-value privacy secret material.",
+    "IMPLEMENTED",
   ],
   [
     "Deterministic controls",
@@ -48,7 +48,8 @@ export default function SecurityPage() {
             <p className="text-muted mt-7 text-lg leading-8">
               The system separates business decisions, viewing capability and
               cryptographic spending authority. Phase 2 enforces business
-              authorization while keeping money-moving functionality absent.
+              authorization and read-only shielded reconciliation while keeping
+              money-moving functionality absent.
             </p>
           </div>
         </div>
@@ -98,7 +99,7 @@ export default function SecurityPage() {
           <SecurityCard
             icon={<Eye />}
             title="Failure honesty"
-            text="A scanner or RPC outage creates an unavailable state. It is never translated into paid or unpaid."
+            text="Node, scanner or viewing-authority failure creates an unavailable state. It never becomes paid or unpaid."
           />
         </div>
         <div className="mt-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
@@ -110,8 +111,11 @@ export default function SecurityPage() {
             process, not cryptographic proof of receiver ownership. A
             destination replacement or material obligation edit invalidates
             authorization. Production malware scanning, authentication, rate
-            limiting and independent audit anchoring remain planned. Signing,
-            broadcast and reconciliation are unavailable.
+            limiting, encrypted production scan-cache custody and independent
+            audit anchoring remain planned. The proven observer can reveal
+            account activity if its UFVK, memo plaintext, logs or correlation
+            metadata are compromised. Regtest proof does not qualify mainnet
+            operations. Signing and broadcast remain unavailable.
           </p>
         </div>
       </section>
@@ -146,8 +150,8 @@ function AuthorityDiagram() {
       <div className="grid gap-3 sm:grid-cols-2">
         <Node
           icon={<Eye />}
-          label="Future observer"
-          detail="Minimum read-only capability"
+          label="Read-only observer"
+          detail="UFVK; privacy access, no spend"
         />
         <Node icon={<Bot />} label="AI boundary" detail="Suggestions only" />
       </div>

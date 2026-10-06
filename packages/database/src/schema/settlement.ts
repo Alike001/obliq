@@ -6,11 +6,68 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { organizations } from "./identity";
 import { obligations, vendorDestinations } from "./operations";
 import { createdAt, id, settlementState } from "./shared";
+
+export const settlementObservationTargets = pgTable(
+  "settlement_observation_targets",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    obligationId: uuid("obligation_id")
+      .notNull()
+      .references(() => obligations.id),
+    network: text("network").notNull(),
+    receiverFingerprint: text("receiver_fingerprint").notNull(),
+    memoReferenceHash: text("memo_reference_hash").notNull(),
+    expectedAmountZat: bigint("expected_amount_zat", {
+      mode: "bigint",
+    }).notNull(),
+    requiredConfirmations: integer("required_confirmations").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex("observation_targets_org_obligation_unique").on(
+      t.organizationId,
+      t.obligationId,
+    ),
+    uniqueIndex("observation_targets_org_receiver_unique").on(
+      t.organizationId,
+      t.network,
+      t.receiverFingerprint,
+    ),
+  ],
+);
+
+export const zcashObserverStatuses = pgTable(
+  "zcash_observer_statuses",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    network: text("network").notNull(),
+    availability: text("availability").notNull(),
+    chainTipHeight: bigint("chain_tip_height", { mode: "bigint" }),
+    fullyScannedHeight: bigint("fully_scanned_height", { mode: "bigint" }),
+    reasonCode: text("reason_code"),
+    checkedAt: timestamp("checked_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("zcash_observer_statuses_org_network_unique").on(
+      t.organizationId,
+      t.network,
+    ),
+  ],
+);
 
 export const settlementIntents = pgTable(
   "settlement_intents",
@@ -99,12 +156,31 @@ export const settlementObservations = pgTable(
     organizationId: uuid("organization_id")
       .notNull()
       .references(() => organizations.id),
-    settlementId: uuid("settlement_id")
+    obligationId: uuid("obligation_id")
       .notNull()
-      .references(() => settlements.id),
-    kind: text("kind").notNull(),
+      .references(() => obligations.id),
+    settlementId: uuid("settlement_id").references(() => settlements.id),
+    targetId: uuid("target_id").references(
+      () => settlementObservationTargets.id,
+    ),
+    network: text("network").notNull(),
+    txid: text("txid").notNull(),
+    outputIndex: integer("output_index").notNull(),
+    pool: text("pool").notNull(),
+    observerSource: text("observer_source").notNull(),
     blockHeight: bigint("block_height", { mode: "bigint" }),
-    confirmations: integer("confirmations"),
+    confirmations: integer("confirmations").notNull(),
+    observedAmountZat: bigint("observed_amount_zat", {
+      mode: "bigint",
+    }).notNull(),
+    memoReferenceHash: text("memo_reference_hash"),
+    receiverFingerprint: text("receiver_fingerprint").notNull(),
+    correlationStatus: text("correlation_status").notNull(),
+    state: text("state").notNull(),
+    reasonsJson: jsonb("reasons_json").notNull().default([]),
+    firstObservedAt: timestamp("first_observed_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     observedAt: timestamp("observed_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -114,6 +190,17 @@ export const settlementObservations = pgTable(
     index("settlement_observations_org_settlement_idx").on(
       t.organizationId,
       t.settlementId,
+    ),
+    index("settlement_observations_org_obligation_idx").on(
+      t.organizationId,
+      t.obligationId,
+    ),
+    uniqueIndex("settlement_observations_chain_output_unique").on(
+      t.organizationId,
+      t.network,
+      t.txid,
+      t.pool,
+      t.outputIndex,
     ),
   ],
 );

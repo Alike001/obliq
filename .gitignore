@@ -2,6 +2,7 @@ node_modules/
 .next/
 coverage/
 dist/
+target/
 .env
 .env.local
 *.log
@@ -10,3 +11,6 @@ dist/
 artifacts/
 *.tsbuildinfo
 .data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
