@@ -2,7 +2,7 @@
 
 ## Authority separation
 
-The backend has no field, environment variable, or adapter for a seed phrase, private spending key, or unrestricted signer credential. A future exact settlement intent crosses an adapter boundary to an authorized external wallet/signer.
+The backend has no field, environment variable, or adapter for a seed phrase, private spending key, or unrestricted signer credential. An exact settlement intent crosses a one-way handoff to a human-operated external Zallet. Obliq never receives its RPC credential, PCZT, raw transaction, mnemonic, passphrase or spending key.
 
 Viewing authority is separate from spending authority but remains a high-value privacy secret. The Rust observer imports a UFVK as `AccountPurpose::ViewOnly`; its API exposes only status and observations. The UFVK is injected out-of-band, never stored in PostgreSQL, rendered, logged, or returned through application APIs. The SQLite scan cache also requires encryption and isolation because it contains privacy-sensitive wallet state.
 
@@ -25,6 +25,23 @@ Destinations are immutable historical records. Authorized Treasury, CFO or Owner
 Policy versions are immutable. Decisions bind an obligation version and exact destination version, and approval requirements derive from that decision. Role eligibility, requester restrictions and distinct-actor thresholds are checked in the database transaction. Material obligation edits and destination replacement invalidate approvals. Readiness returns structured reasons and rechecks current policy, obligation, destination, duplicates, findings and thresholds.
 
 `READY_TO_SETTLE` is business authorization only. It is not a Zcash signature, transaction, broadcast or settlement observation.
+
+## Settlement execution boundary
+
+Quotes expire and bind exact business minor units to exact zatoshis. The intent
+fingerprint binds obligation and policy versions, destination version and
+receiver, quote, network, privacy mode and opaque memo reference. Signing and
+broadcast receipt commands revalidate current authorization and reject stale or
+conflicting retries. Destination or obligation changes invalidate uncompleted
+intents. `SIGNED`, `BROADCAST`, `DETECTED`, `CONFIRMING` and `SETTLED` are
+separate states; the observer is the only component that can produce settlement
+evidence.
+
+The external signer remains a major trust boundary. Its RPC is privileged
+plaintext HTTP and must be loopback/private only. The operator must compare
+Zallet `pczt_inspect` output with the Obliq review surface. Compromise of both
+the application and signer can authorize malicious payment; production requires
+independent devices/operators and hardened signer operations.
 
 ## Failure semantics
 

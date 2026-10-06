@@ -9,6 +9,11 @@
 | Destination substitution       | Immutable history, authorized manual verification, replacement invalidation       | Cryptographic or independently attested verification |
 | Duplicate invoice              | Exact blocking; possible finding blocks readiness until explicit resolution       | Additional accounting-system correlation             |
 | Stale authorization            | Version-bound decisions and approval invalidation on material changes             | Operational monitoring and production identity       |
+| Stale quote or intent replay   | Expiry, canonical intent hash and fresh authorization checks before receipts      | Live quote source and monitored clock discipline     |
+| Transaction substitution       | Intent fingerprint, exact PCZT review and signed transaction receipt binding      | Independent signer display and operator procedure    |
+| Duplicate execution            | Organization locks plus unique quote/intent/sign/broadcast idempotency keys       | Distributed operational monitoring                   |
+| Broadcast timeout              | `BROADCAST_UNKNOWN`; observer evidence remains authoritative                      | Automated safe retry/rebroadcast runbook             |
+| External signer compromise     | Signer is isolated; Obliq has no RPC credential or spend key                      | Hardware isolation and multi-person signing policy   |
 | Approval collusion/reuse       | Role checks, requester restrictions, distinct actors and transactional locks      | Configurable enterprise identity and access reviews  |
 | Viewing-key leak               | UFVK isolated to server-only observer; redaction tests; no DB/browser/proof value | Secret manager, rotation and incident response       |
 | Observer compromise            | ViewOnly import and no spending API; separate scan cache                          | Process isolation, encrypted cache and access review |

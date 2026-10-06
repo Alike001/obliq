@@ -19,6 +19,8 @@ import {
   obligationSources,
   obligationVersions,
   obligations,
+  settlementIntents,
+  settlements,
   vendorDestinations,
   vendors,
 } from "../schema";
@@ -314,10 +316,35 @@ export async function addVendorDestination(
         and(
           eq(obligations.organizationId, actor.organizationId),
           eq(obligations.vendorId, vendorId),
-          sql`${obligations.state} in ('APPROVAL_REQUIRED','APPROVED','READY_TO_SETTLE','BLOCKED')`,
+          sql`${obligations.state} in ('APPROVAL_REQUIRED','APPROVED','READY_TO_SETTLE','SETTLEMENT_PREPARED','SIGNING','BLOCKED')`,
         ),
       );
     for (const item of affected) {
+      const invalidatedIntents = await tx
+        .update(settlementIntents)
+        .set({
+          state: "INVALIDATED",
+          invalidatedAt: new Date(),
+          invalidationReason: "Vendor destination changed",
+        })
+        .where(
+          and(
+            eq(settlementIntents.organizationId, actor.organizationId),
+            eq(settlementIntents.obligationId, item.id),
+            sql`${settlementIntents.invalidatedAt} is null`,
+          ),
+        )
+        .returning({ id: settlementIntents.id });
+      await tx
+        .update(settlements)
+        .set({ state: "INVALIDATED", errorCode: "DESTINATION_CHANGED" })
+        .where(
+          and(
+            eq(settlements.organizationId, actor.organizationId),
+            eq(settlements.obligationId, item.id),
+            sql`${settlements.state} not in ('SETTLED','INVALIDATED')`,
+          ),
+        );
       const invalidated = await tx
         .update(approvals)
         .set({
@@ -360,6 +387,16 @@ export async function addVendorDestination(
           eventType: "APPROVAL_INVALIDATED",
           subjectType: "APPROVAL",
           subjectId: approval.id,
+          payload: {
+            obligationId: item.id,
+            reason: "Vendor destination changed",
+          },
+        });
+      for (const intent of invalidatedIntents)
+        await appendAuditEvent(tx, actor, {
+          eventType: "SETTLEMENT_INTENT_INVALIDATED",
+          subjectType: "SETTLEMENT_INTENT",
+          subjectId: intent.id,
           payload: {
             obligationId: item.id,
             reason: "Vendor destination changed",
@@ -670,6 +707,17 @@ export async function updateObligation(
       .limit(1);
     const existing = existingRows[0];
     if (!existing) return null;
+    if (
+      [
+        "BROADCAST",
+        "CONFIRMING",
+        "SETTLED",
+        "RECONCILIATION_EXCEPTION",
+      ].includes(existing.state)
+    )
+      throw new Error(
+        "An obligation cannot be edited after transaction broadcast",
+      );
     if (!(await getVendor(tx, actor.organizationId, value.vendorId)))
       throw new Error("Vendor is unavailable in this organization");
     let sourceHash: string | null = null;
@@ -743,6 +791,31 @@ export async function updateObligation(
       )
       .returning();
     if (!updated) return null;
+    const invalidatedIntents = await tx
+      .update(settlementIntents)
+      .set({
+        state: "INVALIDATED",
+        invalidatedAt: new Date(),
+        invalidationReason: "Material obligation fields changed",
+      })
+      .where(
+        and(
+          eq(settlementIntents.organizationId, actor.organizationId),
+          eq(settlementIntents.obligationId, obligationId),
+          sql`${settlementIntents.invalidatedAt} is null`,
+        ),
+      )
+      .returning({ id: settlementIntents.id });
+    await tx
+      .update(settlements)
+      .set({ state: "INVALIDATED", errorCode: "OBLIGATION_CHANGED" })
+      .where(
+        and(
+          eq(settlements.organizationId, actor.organizationId),
+          eq(settlements.obligationId, obligationId),
+          sql`${settlements.state} not in ('SETTLED','INVALIDATED')`,
+        ),
+      );
     await tx.insert(obligationVersions).values({
       organizationId: actor.organizationId,
       obligationId: updated.id,
@@ -782,6 +855,13 @@ export async function updateObligation(
           ne(approvalRequirements.state, "INVALIDATED"),
         ),
       );
+    for (const intent of invalidatedIntents)
+      await appendAuditEvent(tx, actor, {
+        eventType: "SETTLEMENT_INTENT_INVALIDATED",
+        subjectType: "SETTLEMENT_INTENT",
+        subjectId: intent.id,
+        payload: { obligationId, reason: "Material obligation fields changed" },
+      });
     await tx
       .update(obligations)
       .set({ state: "UNDER_REVIEW", destinationId: null })
@@ -968,3 +1048,4 @@ export async function getDashboardMetrics(
 
 export * from "./control";
 export * from "./reconciliation";
+export * from "./settlement";

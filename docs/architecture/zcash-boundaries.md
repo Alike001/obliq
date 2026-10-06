@@ -2,17 +2,17 @@
 
 ## Payment request
 
-ZIP-321 is the canonical future request format where compatible. Requests must use exact amounts. Only an opaque obligation reference may be included in encrypted memo data; vendor names, invoice prose, categories, approvals, and secrets must not enter shareable URIs or plaintext metadata.
+ZIP-321 is the implemented canonical request format. Obliq supports a single shielded Unified Address payment with an exact zatoshi-derived decimal amount and opaque memo reference. Vendor names, invoice prose, categories, approvals, and secrets do not enter requests.
 
 ## Signing
 
-The intended boundary is:
+The implemented regtest boundary is:
 
 ```text
 readiness checks → version-bound intent → external signer → signed transaction → broadcast
 ```
 
-The backend never holds unrestricted spending authority. Business approval is not cryptographic authorization. PCZT and FROST may influence interfaces but remain draft, non-critical dependencies until proven end to end.
+The backend never holds unrestricted spending authority. Business approval is not cryptographic authorization. A separate human-operated Zallet v0.1.0-beta.3 creates, inspects, proves, signs and extracts a PCZT under `FullPrivacy`; only sanitized receipt metadata returns to Obliq. The privileged plaintext wallet RPC is never connected to the application. FROST is not implemented.
 
 ## Viewing and reconciliation
 
@@ -23,6 +23,17 @@ normalized output evidence, sync status and audit history. It does not store the
 UFVK or memo plaintext. Infrastructure failure is `UNAVAILABLE`, not unpaid.
 Production mainnet/testnet operations, TLS, cache encryption and Ironwood
 subtree-root compatibility at scale remain planned.
+
+## Quote, intent and execution state
+
+The only current quote source is `REGTEST_FIXED` / `CONTROLLED_REGTEST`; it is
+not market pricing. A quote binds exact business minor units and zatoshis and
+expires. A settlement intent immutably binds the current obligation, policy
+decision, destination receiver, quote, network, privacy mode and opaque memo.
+Signing and broadcast commands recheck these values under an organization lock.
+Retries use database uniqueness constraints. `BROADCAST_UNKNOWN` preserves
+timeout uncertainty, and only the Phase-3 observer may advance a broadcast to
+`DETECTED`, `CONFIRMING`, and `SETTLED`.
 
 ## Current source assumptions
 

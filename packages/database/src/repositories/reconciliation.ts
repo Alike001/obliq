@@ -11,6 +11,7 @@ import {
   obligations,
   settlementObservations,
   settlementObservationTargets,
+  settlements,
   zcashObserverStatuses,
 } from "../schema";
 import {
@@ -88,28 +89,119 @@ export async function ingestShieldedObservation(
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtext(${actor.organizationId}))`,
     );
-    const targets = await tx
-      .select()
+    const byTransaction = await tx
+      .select({ target: settlementObservationTargets })
       .from(settlementObservationTargets)
+      .innerJoin(
+        settlements,
+        and(
+          eq(settlements.organizationId, actor.organizationId),
+          eq(settlements.id, settlementObservationTargets.settlementId),
+        ),
+      )
       .where(
         and(
           eq(settlementObservationTargets.organizationId, actor.organizationId),
           eq(settlementObservationTargets.network, observation.network),
-          eq(
-            settlementObservationTargets.receiverFingerprint,
-            observation.receiverFingerprint,
-          ),
+          eq(settlements.txRefPrivate, observation.txid),
         ),
       )
       .limit(1);
-    const target = targets[0];
+    let target = byTransaction[0]?.target;
+    if (!target) {
+      const receiverTargets = await tx
+        .select()
+        .from(settlementObservationTargets)
+        .where(
+          and(
+            eq(
+              settlementObservationTargets.organizationId,
+              actor.organizationId,
+            ),
+            eq(settlementObservationTargets.network, observation.network),
+            eq(
+              settlementObservationTargets.receiverFingerprint,
+              observation.receiverFingerprint,
+            ),
+          ),
+        );
+      const observedMemoHash = observation.memoReference
+        ? memoReferenceHash(observation.memoReference)
+        : null;
+      target = observedMemoHash
+        ? (receiverTargets.find(
+            (candidate) =>
+              candidate.memoReferenceHash === observedMemoHash &&
+              candidate.expectedAmountZat === observation.amountZat,
+          ) ??
+          receiverTargets.find(
+            (candidate) => candidate.memoReferenceHash === observedMemoHash,
+          ))
+        : undefined;
+      if (!target && receiverTargets.length === 1) target = receiverTargets[0];
+      if (!target && receiverTargets.length > 1)
+        return {
+          outcome: "UNMATCHED" as const,
+          reason: "AMBIGUOUS_RECEIVER",
+        };
+    }
     if (!target)
       return { outcome: "UNMATCHED" as const, reason: "UNKNOWN_RECEIVER" };
 
     const result = reconcileObservation(
-      { ...target, network: observation.network },
+      {
+        ...target,
+        network: observation.network,
+        // A signed transaction receipt binds the exact authorized transaction.
+        // Current Ironwood tooling returns a reduced recipient UA on decryption,
+        // so it is not byte-identical to the ZIP-321 Unified Address.
+        ...(target.settlementId
+          ? { receiverFingerprint: observation.receiverFingerprint }
+          : {}),
+      },
       observation,
     );
+    const linkedSettlement = target.settlementId
+      ? (
+          await tx
+            .select()
+            .from(settlements)
+            .where(
+              and(
+                eq(settlements.organizationId, actor.organizationId),
+                eq(settlements.id, target.settlementId),
+              ),
+            )
+            .limit(1)
+        )[0]
+      : null;
+    const finalResult =
+      linkedSettlement && !linkedSettlement.txRefPrivate
+        ? {
+            correlation: "UNKNOWN_REFERENCE" as const,
+            state: "MISMATCH" as const,
+            reasons: [
+              {
+                code: "TRANSACTION_NOT_AUTHORIZED",
+                message:
+                  "The settlement has no authorized signed transaction reference.",
+              },
+            ],
+          }
+        : linkedSettlement?.txRefPrivate &&
+            linkedSettlement.txRefPrivate !== observation.txid
+          ? {
+              correlation: "UNKNOWN_REFERENCE" as const,
+              state: "MISMATCH" as const,
+              reasons: [
+                {
+                  code: "TRANSACTION_MISMATCH",
+                  message:
+                    "The observed output is not from the transaction authorized for this settlement.",
+                },
+              ],
+            }
+          : result;
     const existing = await tx
       .select()
       .from(settlementObservations)
@@ -139,6 +231,7 @@ export async function ingestShieldedObservation(
       .values({
         organizationId: actor.organizationId,
         obligationId: target.obligationId,
+        settlementId: target.settlementId,
         targetId: target.id,
         network: observation.network,
         txid: observation.txid,
@@ -150,9 +243,9 @@ export async function ingestShieldedObservation(
         observedAmountZat: observation.amountZat,
         memoReferenceHash: memoHash,
         receiverFingerprint: observation.receiverFingerprint,
-        correlationStatus: result.correlation,
-        state: result.state,
-        reasonsJson: result.reasons,
+        correlationStatus: finalResult.correlation,
+        state: finalResult.state,
+        reasonsJson: finalResult.reasons,
         observedAt: observation.observedAt,
         evidenceJson: {
           observerSource: observation.observerSource,
@@ -170,9 +263,9 @@ export async function ingestShieldedObservation(
         set: {
           blockHeight: BigInt(observation.minedHeight),
           confirmations: observation.confirmations,
-          correlationStatus: result.correlation,
-          state: result.state,
-          reasonsJson: result.reasons,
+          correlationStatus: finalResult.correlation,
+          state: finalResult.state,
+          reasonsJson: finalResult.reasons,
           observedAt: observation.observedAt,
         },
       })
@@ -204,6 +297,71 @@ export async function ingestShieldedObservation(
           state: stored.state,
         },
       });
+    }
+    if (linkedSettlement && finalResult.correlation === "MATCHED") {
+      const nextState = finalResult.state as
+        "DETECTED" | "CONFIRMING" | "SETTLED";
+      const obligationState =
+        nextState === "DETECTED" ? "BROADCAST" : nextState;
+      await tx
+        .update(settlements)
+        .set({
+          state: nextState,
+          detectedAt: linkedSettlement.detectedAt ?? new Date(),
+          settledAt: nextState === "SETTLED" ? new Date() : null,
+        })
+        .where(
+          and(
+            eq(settlements.organizationId, actor.organizationId),
+            eq(settlements.id, linkedSettlement.id),
+          ),
+        );
+      await tx
+        .update(obligations)
+        .set({ state: obligationState, updatedAt: new Date() })
+        .where(
+          and(
+            eq(obligations.organizationId, actor.organizationId),
+            eq(obligations.id, target.obligationId),
+          ),
+        );
+      if (changed)
+        await appendAuditEvent(tx, actor, {
+          eventType:
+            nextState === "SETTLED"
+              ? "PAYMENT_SETTLED"
+              : nextState === "CONFIRMING"
+                ? "PAYMENT_CONFIRMATION_CHANGED"
+                : "PAYMENT_DETECTED",
+          subjectType: "SETTLEMENT",
+          subjectId: linkedSettlement.id,
+          payload: {
+            obligationId: target.obligationId,
+            txid: observation.txid,
+            confirmations: observation.confirmations,
+            state: nextState,
+          },
+        });
+    }
+    if (linkedSettlement && finalResult.state === "MISMATCH") {
+      await tx
+        .update(settlements)
+        .set({ state: "MISMATCH", errorCode: finalResult.reasons[0]?.code })
+        .where(
+          and(
+            eq(settlements.organizationId, actor.organizationId),
+            eq(settlements.id, linkedSettlement.id),
+          ),
+        );
+      await tx
+        .update(obligations)
+        .set({ state: "RECONCILIATION_EXCEPTION", updatedAt: new Date() })
+        .where(
+          and(
+            eq(obligations.organizationId, actor.organizationId),
+            eq(obligations.id, target.obligationId),
+          ),
+        );
     }
     return { outcome: "STORED" as const, observation: stored, changed };
   });

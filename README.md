@@ -2,7 +2,7 @@
 
 Obliq is private financial operations software for crypto-native organizations. It is designed to help finance teams capture vendor and contractor obligations, apply deterministic controls and human approvals, settle privately with Zcash, reconcile settlement to the original business object, and create controlled financial evidence—without surrendering treasury spending authority.
 
-> **Phase 3 status:** the read-only reconciliation tracer passed on official Z3 regtest. A UFVK-only observer decrypted and correlated a real shielded Ironwood output and tracked it from one to three confirmations. This does not add payment execution or claim public-network readiness.
+> **Phase 4 status:** a Phase-2-approved obligation completed a real non-custodial shielded settlement on official Z3 regtest. A separate Zallet PCZT ceremony signed and broadcast the exact intent; the UFVK-only observer reconciled it from one to three confirmations. Public-network readiness remains blocked.
 
 ## The problem
 
@@ -12,7 +12,7 @@ The product lifecycle is **Capture → Control → Settle → Reconcile → Prov
 
 ## Why Zcash
 
-Shielded Zcash settlement is the privacy primitive that keeps the central promise meaningful. ZIP-321 is the planned canonical payment-request format. Phase 3 proved the read path with current official tooling and read authority only. Signing remains deliberately absent until its own tracer phase. There is no transparent fallback presented as private.
+Shielded Zcash settlement is the privacy primitive that keeps the central promise meaningful. ZIP-321 is the canonical payment-request format. Phase 4 proved an external Zallet PCZT signing path and the Phase-3 read-only observer reconciled it end to end on isolated regtest. Public-network operation remains blocked. There is no transparent fallback presented as private.
 
 ## Repository
 
@@ -23,7 +23,7 @@ packages/database    PostgreSQL/Drizzle schema and migration ownership
 packages/policy      Deterministic controls and settlement-readiness rules
 packages/ai          Strict extraction suggestion contract and labelled fixture
 packages/storage     Private invoice document storage abstraction
-packages/zcash       Signer-free observer types, correlation and redaction
+packages/zcash       ZIP-321/intent types plus signer-free observer and redaction
 tools/zcash-observer Pinned UFVK-only librustzcash scanner
 docs/architecture    System boundaries and security model
 docs/decisions       Architecture decision records
@@ -82,7 +82,8 @@ cargo audit --file tools/zcash-observer/Cargo.lock
 - The observer imports a UFVK as `ViewOnly` and exposes no proposal, signing or broadcast method.
 - Viewing authority is never stored in PostgreSQL, logged, rendered, or sent client-side; its scan cache remains privacy-sensitive.
 - Node/scanner failure records infrastructure `UNAVAILABLE` without changing paid/unpaid state.
-- Zcash construction, signing, broadcast and settlement execution remain `UNAVAILABLE`.
+- Controlled-regtest quotes and intent preparation are implemented. Signing remains external to Obliq; the application stores sanitized receipts only.
+- Broadcast is not settlement. The UFVK-only observer alone advances matching evidence through confirmation to `SETTLED`.
 
 The current tenant boundary is a server-validated development membership, not production authentication. Row-level security, identity-provider integration, malware scanning, object storage, encryption/secret management, rate limiting and independent audit anchoring remain planned.
 
@@ -100,14 +101,14 @@ See [security architecture](docs/architecture/security.md), [threat model](docs/
 | Production authentication and RBAC                  | PLANNED               |
 | Versioned policies, approvals and readiness         | IMPLEMENTED           |
 | UFVK-only shielded observation and reconciliation   | IMPLEMENTED (regtest) |
-| Public-network observer operations                  | PLANNED               |
-| Zcash transaction construction/signing/broadcast    | UNAVAILABLE (Phase 4) |
+| External Zallet PCZT signing/broadcast              | IMPLEMENTED (regtest) |
+| Public-network observer/execution operations        | BLOCKED               |
 | Evidence artifacts                                  | PLANNED (Phase 5)     |
 
 The canonical vocabulary is `IMPLEMENTED`, `SEEDED`, `PLANNED`, `BLOCKED`, and `UNAVAILABLE`. “Verified” is reserved for evidence-backed results.
 
 ## Roadmap and limits
 
-Phase 3 establishes the evidence-backed read path only. Subsequent phases prove the real non-custodial write path, evidence, security hardening, and launch hardening—in that order, with an explicit stop gate after each. See [implementation status](docs/architecture/implementation-status.md), [observer operations](docs/operations/zcash-observer.md), and [ADRs](docs/decisions) for material decisions.
+Phase 4 establishes the evidence-backed read and external write paths on isolated regtest. Subsequent phases address evidence, security hardening, public-network qualification and launch hardening—in that order, with an explicit stop gate after each. See [implementation status](docs/architecture/implementation-status.md), [observer operations](docs/operations/zcash-observer.md), and [ADRs](docs/decisions) for material decisions.
 
 The authoritative product source is `obliq-context/Obliq_Master_Context.docx`; implementation-critical Zcash notes under `obliq-context/implementation-reference/` take precedence over the broader research archive. Context files are retained unchanged.

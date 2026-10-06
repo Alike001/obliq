@@ -5,6 +5,7 @@ import { StatusPill } from "@/components/status-pill";
 import { checkDatabaseConnection, verifyAuditChain } from "@obliq/database";
 import { getDatabase } from "@/lib/db";
 import { phase3NetworkProof } from "@/content/phase3-proof";
+import { phase4NetworkProof } from "@/content/phase4-proof";
 
 const capabilities = [
   [
@@ -53,9 +54,24 @@ const capabilities = [
     "Receiver + opaque memo + exact amount correlation with idempotent confirmation tracking",
   ],
   [
-    "Zcash settlement execution",
-    "UNAVAILABLE",
-    "No transaction construction, signing or broadcast adapter",
+    "Public-network settlement",
+    "BLOCKED",
+    "Zaino/Ironwood subtree-root compatibility and funded operational qualification remain unresolved",
+  ],
+  [
+    "Settlement intent",
+    "IMPLEMENTED",
+    "Expiring quote plus immutable obligation/policy/destination/ZIP-321 binding",
+  ],
+  [
+    "External shielded signing",
+    "IMPLEMENTED",
+    "Human-operated Zallet PCZT ceremony; application receives sanitized receipts only",
+  ],
+  [
+    "Shielded broadcast",
+    "IMPLEMENTED",
+    "Verified on isolated regtest; broadcast remains distinct from settlement",
   ],
   [
     "Audit chain",
@@ -104,10 +120,10 @@ export default async function ProofPage() {
             Claims should be inspectable—or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/60">
-            Phase 3 records a real shielded read-path tracer on isolated Zcash
-            regtest. It proves decryption and correlation with viewing authority
-            only; it does not claim public-network readiness or add any payment
-            execution capability.
+            Phase 4 records a real end-to-end non-custodial settlement on
+            isolated Zcash regtest. External Zallet signing and broadcast are
+            reconciled by the UFVK-only observer. Public-network readiness
+            remains blocked and is not implied.
           </p>
         </div>
       </section>
@@ -139,6 +155,18 @@ export default async function ProofPage() {
           </div>
           <div className="space-y-5">
             <ProofCard
+              label="End-to-end settlement"
+              value="VERIFIED · REGTEST"
+              detail={`Intent ${phase4NetworkProof.intentHash.slice(0, 12)}…; tx ${phase4NetworkProof.txid.slice(0, 12)}…; height ${phase4NetworkProof.minedHeight}; ${phase4NetworkProof.confirmationEvidence.join(" → ")} confirmations; final state ${phase4NetworkProof.finalState}.`}
+              good
+            />
+            <ProofCard
+              label="External signer"
+              value="VERIFIED · FULL PRIVACY"
+              detail="Zallet created, inspected, proved, signed and extracted an Ironwood PCZT outside Obliq. No RPC credential, PCZT, raw transaction or key entered the app."
+              good
+            />
+            <ProofCard
               label="Shielded tracer"
               value="VERIFIED · REGTEST"
               detail={`Ironwood output at height ${phase3NetworkProof.minedHeight}; ${phase3NetworkProof.confirmationEvidence.join(" → ")} confirmations; tx ${phase3NetworkProof.txid.slice(0, 12)}…`}
@@ -159,7 +187,7 @@ export default async function ProofPage() {
             <ProofCard
               label="Server spend authority"
               value="NONE"
-              detail="No spending-key field, secret or signer adapter exists."
+              detail="No spending-key field, seed, wallet credential, PCZT or raw transaction is accepted by the application."
               good
             />
             <ProofCard
@@ -191,11 +219,11 @@ export default async function ProofPage() {
         <div className="page-wrap grid gap-8 py-14 md:grid-cols-3">
           <Boundary
             title="Payment request"
-            text="ZIP-321 remains selected for future execution. No request, quote or payment is generated in Phase 3."
+            text="Canonical one-payment ZIP-321 requests bind exact zatoshis and an opaque memo reference. The current quote source is controlled regtest, not market pricing."
           />
           <Boundary
             title="Signing"
-            text="An external-signer port exists. No wallet, key material, signature or broadcast implementation exists."
+            text="A human-operated Zallet PCZT ceremony performs cryptographic authorization. Only sanitized signing and broadcast receipts return to Obliq."
           />
           <Boundary
             title="Viewing"

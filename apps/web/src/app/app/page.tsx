@@ -103,7 +103,10 @@ export default async function AppOverviewPage() {
               <Ready label="Settlement readiness" status="IMPLEMENTED" />
               <Ready label="Audit hash chain" status="IMPLEMENTED" />
               <Ready label="Extraction fixture" status="SEEDED" />
-              <Ready label="Zcash settlement" status="UNAVAILABLE" />
+              <Ready
+                label="External settlement · regtest"
+                status="IMPLEMENTED"
+              />
             </div>
             <a
               href="/proof"

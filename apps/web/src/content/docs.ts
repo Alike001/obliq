@@ -29,7 +29,7 @@ export const docs: readonly DocPage[] = [
     slug: "overview",
     title: "Overview",
     status: "IMPLEMENTED",
-    description: "What Obliq is, who it serves, and what exists in Phase 3.",
+    description: "What Obliq is, who it serves, and what exists in Phase 4.",
     sections: [
       {
         id: "product",
@@ -43,7 +43,7 @@ export const docs: readonly DocPage[] = [
         id: "today",
         title: "What exists today",
         paragraphs: [
-          "Phase 3 adds a proven read-only shielded observation path, deterministic correlation, confirmation tracking and persisted reconciliation to the obligation engine.",
+          "Phase 4 adds an exact, expiring settlement intent and a proven external Zallet PCZT signing handoff. Broadcast remains separate from observer-driven settlement.",
         ],
         bullets: [
           "Manual and invoice-backed obligation capture",
@@ -51,13 +51,14 @@ export const docs: readonly DocPage[] = [
           "Server-enforced organization membership and tenant-scoped repositories",
           "Version-bound policy decisions, approvals and readiness records",
           "UFVK-only shielded observation proven on isolated Zcash regtest",
+          "External Zallet shielded signing and broadcast proven on isolated regtest",
         ],
       },
       {
         id: "not-yet",
         title: "What does not exist yet",
         paragraphs: [
-          "Zcash pricing, payment requests, wallet integration, signing, broadcast, public-network observer operation and evidence packages are not live.",
+          "Live market pricing, embedded wallet integration, public-network operation and evidence packages are not live. The only quote source is explicitly controlled regtest input.",
         ],
         callout: {
           tone: "warning",
@@ -157,7 +158,7 @@ export const docs: readonly DocPage[] = [
         id: "settle",
         title: "Settle",
         paragraphs: [
-          "Prepare an exact, expiring settlement intent and hand it to an authorized external signer. Broadcast is not settlement. Phase 4 scope.",
+          "Prepare an exact, expiring settlement intent and hand its ZIP-321 request to an authorized external Zallet operator for deliberate PCZT review and signing. Implemented on isolated regtest. Broadcast is not settlement.",
         ],
       },
       {
@@ -205,7 +206,7 @@ export const docs: readonly DocPage[] = [
         callout: {
           tone: "note",
           title: "No inflated claim",
-          text: "The regtest tracer proves the read path only. READY_TO_SETTLE still does not execute a transaction, and public-network operation is not yet qualified.",
+          text: "The end-to-end tracer proves external write and read paths on regtest only. Public-network operation is BLOCKED and not launch-qualified.",
         },
       },
     ],
@@ -264,7 +265,7 @@ export const docs: readonly DocPage[] = [
         id: "requests",
         title: "Payment requests",
         paragraphs: [
-          "ZIP-321 is the canonical request format where compatible. A request will carry an exact amount and may carry an opaque encrypted obligation reference. Sensitive invoice prose must never enter shareable URIs or plaintext chain metadata.",
+          "ZIP-321 is the canonical request format. The implemented one-payment subset carries an exact ZEC amount and opaque memo reference. Vendor names, invoice prose, approvals and policy data never enter the request.",
         ],
       },
       {
@@ -278,7 +279,7 @@ export const docs: readonly DocPage[] = [
         id: "advanced",
         title: "PCZT and FROST",
         paragraphs: [
-          "These draft specifications inform separation of responsibilities but are not competition-critical dependencies. Obliq will not claim either integration until an exact implementation works end to end.",
+          "Zallet's implemented PCZT RPCs are used inside the external signer ceremony, but PCZT is never exposed to the Obliq application. FROST and arbitrary multisig remain unavailable and are not dependencies.",
         ],
         callout: {
           tone: "warning",
@@ -316,7 +317,7 @@ export const docs: readonly DocPage[] = [
         id: "implemented",
         title: "Implemented",
         paragraphs: [
-          "PostgreSQL-backed vendors and obligations, deterministic controls and approvals, a UFVK-only shielded observer, three-signal correlation, idempotent confirmation persistence, and organization-scoped audit events.",
+          "PostgreSQL-backed vendors and obligations, deterministic controls and approvals, immutable settlement quotes/intents, external Zallet signing receipts, UFVK-only observation, three-signal correlation, idempotent execution/confirmation persistence, and organization-scoped audit events.",
         ],
       },
       {
@@ -330,12 +331,12 @@ export const docs: readonly DocPage[] = [
         id: "planned",
         title: "Planned and unavailable",
         paragraphs: [
-          "Production authentication provider integration, signing, shielded settlement execution, public-network observer operations, ledger settlement operations and evidence packages are not implemented.",
+          "Production authentication, live market quotes, embedded wallet signing, public-network execution, ledger settlement entries and evidence packages are not implemented. Public-network operation is BLOCKED by the documented service limitation and lacks funded qualification.",
         ],
         callout: {
           tone: "warning",
           title: "Current proof boundary",
-          text: "A real regtest read-path tracer exists. It is not mainnet evidence, does not prove payment execution, and does not give Obliq spending authority.",
+          text: "A real regtest end-to-end tracer exists. It proves external signing, broadcast and read-only reconciliation, not mainnet readiness. Obliq still has no spending authority.",
         },
       },
     ],
@@ -513,8 +514,50 @@ export const docs: readonly DocPage[] = [
         callout: {
           tone: "warning",
           title: "Not a signature",
-          text: "READY_TO_SETTLE is business authorization. Obliq still cannot construct, sign or broadcast a Zcash transaction. Phase 3 can reconcile only externally initiated shielded payments through its read-only observer.",
+          text: "READY_TO_SETTLE is business authorization. An external Zallet operator separately reviews and signs the exact Phase-4 intent; Obliq cannot sign independently.",
         },
+      },
+    ],
+  },
+  {
+    slug: "settlement-execution",
+    title: "Shielded settlement execution",
+    status: "IMPLEMENTED",
+    description:
+      "Exact intent preparation and external cryptographic authorization.",
+    sections: [
+      {
+        id: "quote",
+        title: "Quote boundary",
+        paragraphs: [
+          "Business money remains integer minor units and ZEC remains integer zatoshis. The implemented source is REGTEST_FIXED/CONTROLLED_REGTEST and is never described as live pricing. Quotes expire and cannot be silently reused.",
+        ],
+      },
+      {
+        id: "intent",
+        title: "Immutable intent",
+        paragraphs: [
+          "The intent binds organization, obligation and version, policy decision, approvals, vendor, exact destination version and receiver, both money representations, quote provenance and expiry, network, privacy mode, opaque memo reference and a canonical SHA-256 fingerprint. Material changes invalidate it.",
+        ],
+      },
+      {
+        id: "signing",
+        title: "Human-reviewed external signing",
+        paragraphs: [
+          "The review surface shows business amount, zatoshis, quote, destination fingerprint, network, privacy mode, approval binding and intent fingerprint. A human then uses isolated Zallet PCZT create, inspect, prove, sign and extract RPCs. Only a sanitized receipt returns to Obliq.",
+        ],
+        callout: {
+          tone: "warning",
+          title: "Authority boundary",
+          text: "The Zallet RPC is privileged and remains local to the signer operator. Giving its credential to Obliq would violate the non-custodial architecture.",
+        },
+      },
+      {
+        id: "state",
+        title: "Broadcast and settlement",
+        paragraphs: [
+          "AWAITING_SIGNATURE, SIGNED, BROADCAST, DETECTED, CONFIRMING and SETTLED are distinct. Broadcast timeout is BROADCAST_UNKNOWN. Only matching read-only observer evidence can reach SETTLED.",
+        ],
       },
     ],
   },
@@ -593,10 +636,11 @@ export const docGroups: readonly DocGroup[] = [
       "duplicate-detection",
       "policies",
       "approvals",
+      "settlement-execution",
       "reconciliation",
       "audit-history",
     ],
-    planned: ["Settlement execution", "Evidence"],
+    planned: ["Evidence"],
   },
   {
     title: "Privacy",

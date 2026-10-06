@@ -50,6 +50,20 @@
       "when": 1791265332929,
       "tag": "0006_gifted_network",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791274768004,
+      "tag": "0007_smart_roulette",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791284523255,
+      "tag": "0008_glamorous_apocalypse",
+      "breakpoints": true
     }
   ]
 }

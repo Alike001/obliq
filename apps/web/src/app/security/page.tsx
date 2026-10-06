@@ -49,7 +49,8 @@ export default function SecurityPage() {
               The system separates business decisions, viewing capability and
               cryptographic spending authority. Phase 2 enforces business
               authorization and read-only shielded reconciliation while keeping
-              money-moving functionality absent.
+              spending authority outside the application. Phase 4 proves the
+              handoff on isolated regtest without embedding a wallet.
             </p>
           </div>
         </div>
@@ -92,6 +93,11 @@ export default function SecurityPage() {
             text="Requirements check role eligibility server-side. Material tiers can prohibit the requester and require distinct approvers."
           />
           <SecurityCard
+            icon={<KeyRound />}
+            title="External signer isolation"
+            text="The privileged Zallet RPC stays local to its operator. Obliq receives only an intent-bound transaction reference and hashes—not PCZTs, raw transactions, credentials or keys."
+          />
+          <SecurityCard
             icon={<Database />}
             title="Tenant boundary"
             text="Policies, findings, approvals and readiness records carry organization_id. Cross-tenant reads and actions are denied server-side."
@@ -111,11 +117,16 @@ export default function SecurityPage() {
             process, not cryptographic proof of receiver ownership. A
             destination replacement or material obligation edit invalidates
             authorization. Production malware scanning, authentication, rate
-            limiting, encrypted production scan-cache custody and independent
-            audit anchoring remain planned. The proven observer can reveal
-            account activity if its UFVK, memo plaintext, logs or correlation
-            metadata are compromised. Regtest proof does not qualify mainnet
-            operations. Signing and broadcast remain unavailable.
+            limiting, hardware-backed signer operations, live quote integrity,
+            encrypted production scan-cache custody and independent audit
+            anchoring remain planned. The proven observer can reveal account
+            activity if its UFVK, memo plaintext, logs or correlation metadata
+            are compromised. Regtest proof does not qualify mainnet operations.
+            External signing and broadcast are verified on regtest only;
+            public-network execution is BLOCKED. A compromised signer can spend
+            its wallet, while compromise of both app and signer could substitute
+            a transaction unless the human independently checks the Zallet PCZT
+            inspection.
           </p>
         </div>
       </section>

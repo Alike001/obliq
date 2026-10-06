@@ -8,7 +8,7 @@
 
 Do not use **verified** without evidence that can be inspected. A successful build verifies compilation; it does not verify Zcash settlement. A seeded dashboard is not proof of persisted financial operations.
 
-## Phase 3 status and limitations
+## Phase 4 status and limitations
 
 Vendors, immutable destination history and manual verification provenance, obligations, duplicate resolution, immutable policy versions, structured control findings, persisted role-authorized approvals, approval invalidation, explainable readiness and audit-chain verification are implemented against PostgreSQL. The dashboard and approval inbox use organization data rather than financial fixtures.
 
@@ -17,10 +17,19 @@ idempotent observation persistence and confirmation-state progression are
 **IMPLEMENTED**. The inspected evidence is a real isolated-regtest tracer, not
 mainnet evidence. The proof route reports that exact scope.
 
+Exact controlled-regtest quotes, immutable version-bound settlement intents,
+canonical ZIP-321 requests, external Zallet PCZT review/signing, sanitized
+signing receipts, broadcast receipts and observer-authoritative settlement are
+**IMPLEMENTED** and exercised end to end on isolated regtest. Obliq has no
+Zallet RPC credential and accepts no PCZT, raw transaction, mnemonic,
+passphrase or spending key. Live market pricing and public-network execution
+are not implemented.
+
 Extraction remains **SEEDED** through a labelled fixture provider. Manual
 destination verification is operational evidence, not cryptographic ownership
 proof. Production authentication, RLS, object storage, malware scanning,
 production observer secret custody/TLS/HA and independent audit anchoring remain
-**PLANNED**. Signer/wallet integration, transaction construction, broadcast,
-settlement execution, ledger settlement entries and evidence packages remain
-**UNAVAILABLE** or **PLANNED**.
+**PLANNED**. Public-network operation is **BLOCKED** by the documented
+Zaino/Ironwood subtree-root limitation and missing funded operational
+qualification. Embedded wallet custody, ledger settlement entries and evidence
+packages remain **UNAVAILABLE** or **PLANNED**.

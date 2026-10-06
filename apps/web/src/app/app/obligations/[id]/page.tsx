@@ -2,15 +2,18 @@ import { formatMinorUnits } from "@obliq/domain";
 import {
   getControlView,
   getObligation,
+  getObligationSettlement,
   getObserverStatus,
   listObligationObservations,
 } from "@obliq/database";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { randomUUID } from "node:crypto";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import {
   approvalDecisionAction,
+  createSettlementIntentAction,
   evaluateControlsAction,
   readinessAction,
   resolveDuplicateAction,
@@ -31,12 +34,14 @@ export default async function ObligationDetail({
   const { id } = await params;
   const notice = await searchParams;
   const tenant = await getTenantContext();
-  const [record, control, observations, observerStatus] = await Promise.all([
-    getObligation(getDatabase(), tenant.organizationId, id),
-    getControlView(getDatabase(), tenant.organizationId, id),
-    listObligationObservations(getDatabase(), tenant.organizationId, id),
-    getObserverStatus(getDatabase(), tenant.organizationId, "regtest"),
-  ]);
+  const [record, control, settlement, observations, observerStatus] =
+    await Promise.all([
+      getObligation(getDatabase(), tenant.organizationId, id),
+      getControlView(getDatabase(), tenant.organizationId, id),
+      getObligationSettlement(getDatabase(), tenant.organizationId, id),
+      listObligationObservations(getDatabase(), tenant.organizationId, id),
+      getObserverStatus(getDatabase(), tenant.organizationId, "regtest"),
+    ]);
   if (!record) notFound();
   const { obligation: o, vendor, source, duplicates, activity } = record;
   return (
@@ -128,8 +133,8 @@ export default async function ObligationDetail({
               />
             </div>
             <p className="text-muted mt-5 text-xs leading-5">
-              Phase 2 may authorize preparation only. No pricing, payment
-              request, signing, broadcast or settlement action exists.
+              Business authorization never constitutes a wallet signature. Phase
+              4 requires a separate external Zallet ceremony.
             </p>
           </section>
         </div>
@@ -325,8 +330,8 @@ export default async function ObligationDetail({
               )}{" "}
               {o.state === "READY_TO_SETTLE" && (
                 <p className="mt-3 font-semibold text-emerald-800">
-                  READY TO SETTLE · Phase 2 stops here. No payment action
-                  exists.
+                  READY TO SETTLE · An exact intent may be prepared. Obliq still
+                  cannot sign independently.
                 </p>
               )}
             </div>
@@ -339,6 +344,48 @@ export default async function ObligationDetail({
               </button>
             </form>
           </div>
+          {o.state === "READY_TO_SETTLE" && !settlement && (
+            <form
+              action={createSettlementIntentAction.bind(null, id)}
+              className="mt-6 border-t pt-5"
+            >
+              <input type="hidden" name="idempotencyKey" value={randomUUID()} />
+              <label className="text-xs font-semibold" htmlFor="zatoshiAmount">
+                Controlled regtest quote — exact zatoshi amount
+              </label>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <input
+                  id="zatoshiAmount"
+                  name="zatoshiAmount"
+                  inputMode="numeric"
+                  pattern="[1-9][0-9]*"
+                  required
+                  className="min-h-11 flex-1 rounded-lg border px-3 font-mono text-sm"
+                  placeholder="25000000"
+                />
+                <button className="button button-dark">
+                  Prepare exact intent
+                </button>
+              </div>
+              <p className="text-muted mt-2 text-xs">
+                SEEDED/CONTROLLED: this is not live market pricing. The quote
+                expires after 15 minutes.
+              </p>
+            </form>
+          )}
+          {settlement && (
+            <div className="mt-6 border-t pt-5">
+              <p className="text-sm font-semibold">
+                Settlement {settlement.settlement.state}
+              </p>
+              <Link
+                href={`/app/settlements/${settlement.settlement.id}`}
+                className="button button-light mt-3"
+              >
+                Open signing review
+              </Link>
+            </div>
+          )}
         </section>
         <section className="card mt-5 overflow-hidden">
           <div className="hairline flex flex-wrap items-start justify-between gap-4 border-b p-5">

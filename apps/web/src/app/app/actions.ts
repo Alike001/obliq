@@ -9,9 +9,14 @@ import {
   createVendor,
   createDefaultPolicy,
   createPolicyVersion,
+  createControlledRegtestQuote,
   decideApproval,
   evaluateObligationControls,
   evaluateSettlementReadiness,
+  prepareSettlementIntent,
+  recordExternalBroadcast,
+  recordExternalSigning,
+  requestExternalSignature,
   resolveDuplicateFinding,
   updateObligation,
   verifyDestinationManually,
@@ -293,4 +298,102 @@ export async function resolveDuplicateAction(
   );
   revalidatePath(`/app/obligations/${obligationId}`);
   redirect(`/app/obligations/${obligationId}?duplicate=resolved`);
+}
+
+export async function createSettlementIntentAction(
+  obligationId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  const zatoshiAmount = BigInt(field(formData, "zatoshiAmount"));
+  const quote = await createControlledRegtestQuote(getDatabase(), actor, {
+    obligationId,
+    zatoshiAmount,
+    idempotencyKey: field(formData, "idempotencyKey"),
+  });
+  const intent = await prepareSettlementIntent(getDatabase(), actor, {
+    quoteId: quote.id,
+    idempotencyKey: `${field(formData, "idempotencyKey")}:intent`,
+  });
+  if (!intent) throw new Error("Settlement intent could not be prepared");
+  revalidatePath("/app/settlements");
+  redirect(`/app/settlements?prepared=${intent.id}`);
+}
+
+export async function requestExternalSignatureAction(
+  settlementId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  await requestExternalSignature(
+    getDatabase(),
+    actor,
+    settlementId,
+    field(formData, "signerRequestId"),
+  );
+  revalidatePath(`/app/settlements/${settlementId}`);
+  redirect(`/app/settlements/${settlementId}?signing=requested`);
+}
+
+export async function recordSigningReceiptAction(
+  settlementId: string,
+  signerRequestId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  await recordExternalSigning(getDatabase(), actor, {
+    settlementId,
+    signerRequestId,
+    outcome: "AUTHORIZED",
+    signerType: "ZALLET_PCZT",
+    signerVersion: field(formData, "signerVersion"),
+    txid: field(formData, "txid").toLowerCase(),
+    signedTxHash: field(formData, "signedTxHash").toLowerCase(),
+  });
+  revalidatePath(`/app/settlements/${settlementId}`);
+  redirect(`/app/settlements/${settlementId}?signing=recorded`);
+}
+
+export async function recordSigningFailureAction(
+  settlementId: string,
+  signerRequestId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  const outcome = field(formData, "outcome");
+  if (
+    outcome !== "REJECTED" &&
+    outcome !== "UNAVAILABLE" &&
+    outcome !== "FAILED"
+  )
+    throw new Error("Invalid signing outcome");
+  const errorCode = optional(formData, "errorCode");
+  await recordExternalSigning(getDatabase(), actor, {
+    settlementId,
+    signerRequestId,
+    outcome,
+    ...(errorCode ? { errorCode } : {}),
+  });
+  revalidatePath(`/app/settlements/${settlementId}`);
+  redirect(`/app/settlements/${settlementId}?signing=closed`);
+}
+
+export async function recordBroadcastReceiptAction(
+  settlementId: string,
+  formData: FormData,
+) {
+  const actor = await getTenantContext();
+  const outcome = field(formData, "outcome");
+  if (outcome !== "BROADCAST" && outcome !== "UNKNOWN" && outcome !== "FAILED")
+    throw new Error("Invalid broadcast outcome");
+  const errorCode = optional(formData, "errorCode");
+  await recordExternalBroadcast(getDatabase(), actor, {
+    settlementId,
+    broadcastRequestId: field(formData, "broadcastRequestId"),
+    txid: field(formData, "txid").toLowerCase(),
+    outcome,
+    ...(errorCode ? { errorCode } : {}),
+  });
+  revalidatePath(`/app/settlements/${settlementId}`);
+  redirect(`/app/settlements/${settlementId}?broadcast=recorded`);
 }
