@@ -140,6 +140,30 @@ export const evidenceDisclosures = pgTable(
   ],
 );
 
+export const evidenceAccessEvents = pgTable(
+  "evidence_access_events",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    evidencePackageId: uuid("evidence_package_id")
+      .notNull()
+      .references(() => evidencePackages.id),
+    action: text("action").notNull(),
+    subjectFingerprint: text("subject_fingerprint").notNull(),
+    outcome: text("outcome").notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index("evidence_access_org_created_idx").on(t.organizationId, t.createdAt),
+    index("evidence_access_package_created_idx").on(
+      t.evidencePackageId,
+      t.createdAt,
+    ),
+  ],
+);
+
 export const auditEvents = pgTable(
   "audit_events",
   {

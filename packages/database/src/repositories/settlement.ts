@@ -454,11 +454,21 @@ export async function requestExternalSignature(
     await tx
       .update(settlements)
       .set({ signerRequestId })
-      .where(eq(settlements.id, settlementId));
+      .where(
+        and(
+          eq(settlements.id, settlementId),
+          eq(settlements.organizationId, actor.organizationId),
+        ),
+      );
     await tx
       .update(obligations)
       .set({ state: "SIGNING", updatedAt: new Date() })
-      .where(eq(obligations.id, execution.intent.obligationId));
+      .where(
+        and(
+          eq(obligations.id, execution.intent.obligationId),
+          eq(obligations.organizationId, actor.organizationId),
+        ),
+      );
     if (!execution.settlement.signerRequestId)
       await appendAuditEvent(tx, actor, {
         eventType: "SIGNING_REQUESTED",
@@ -530,7 +540,12 @@ export async function recordExternalSigning(
       await tx
         .update(settlementIntents)
         .set({ state: "SIGNED" })
-        .where(eq(settlementIntents.id, execution.intent.id));
+        .where(
+          and(
+            eq(settlementIntents.id, execution.intent.id),
+            eq(settlementIntents.organizationId, actor.organizationId),
+          ),
+        );
       const [stored] = await tx
         .update(settlements)
         .set({
@@ -542,7 +557,12 @@ export async function recordExternalSigning(
           signedAt: new Date(),
           errorCode: null,
         })
-        .where(eq(settlements.id, input.settlementId))
+        .where(
+          and(
+            eq(settlements.id, input.settlementId),
+            eq(settlements.organizationId, actor.organizationId),
+          ),
+        )
         .returning();
       await appendAuditEvent(tx, actor, {
         eventType: "SIGNING_AUTHORIZED",
@@ -570,11 +590,21 @@ export async function recordExternalSigning(
     await tx
       .update(settlementIntents)
       .set({ state })
-      .where(eq(settlementIntents.id, execution.intent.id));
+      .where(
+        and(
+          eq(settlementIntents.id, execution.intent.id),
+          eq(settlementIntents.organizationId, actor.organizationId),
+        ),
+      );
     const [stored] = await tx
       .update(settlements)
       .set({ state, errorCode: input.errorCode ?? input.outcome })
-      .where(eq(settlements.id, input.settlementId))
+      .where(
+        and(
+          eq(settlements.id, input.settlementId),
+          eq(settlements.organizationId, actor.organizationId),
+        ),
+      )
       .returning();
     await tx
       .update(obligations)
@@ -585,7 +615,12 @@ export async function recordExternalSigning(
             : "SETTLEMENT_FAILED",
         updatedAt: new Date(),
       })
-      .where(eq(obligations.id, execution.intent.obligationId));
+      .where(
+        and(
+          eq(obligations.id, execution.intent.obligationId),
+          eq(obligations.organizationId, actor.organizationId),
+        ),
+      );
     await appendAuditEvent(tx, actor, {
       eventType:
         input.outcome === "REJECTED" ? "SIGNING_REJECTED" : "SIGNING_FAILED",
@@ -652,7 +687,12 @@ export async function recordExternalBroadcast(
     await tx
       .update(settlementIntents)
       .set({ state })
-      .where(eq(settlementIntents.id, execution.intent.id));
+      .where(
+        and(
+          eq(settlementIntents.id, execution.intent.id),
+          eq(settlementIntents.organizationId, actor.organizationId),
+        ),
+      );
     const [stored] = await tx
       .update(settlements)
       .set({
@@ -661,7 +701,12 @@ export async function recordExternalBroadcast(
         broadcastAt: new Date(),
         errorCode: input.errorCode ?? null,
       })
-      .where(eq(settlements.id, input.settlementId))
+      .where(
+        and(
+          eq(settlements.id, input.settlementId),
+          eq(settlements.organizationId, actor.organizationId),
+        ),
+      )
       .returning();
     await tx
       .update(obligations)
@@ -674,7 +719,12 @@ export async function recordExternalBroadcast(
               : "SIGNING",
         updatedAt: new Date(),
       })
-      .where(eq(obligations.id, execution.intent.obligationId));
+      .where(
+        and(
+          eq(obligations.id, execution.intent.obligationId),
+          eq(obligations.organizationId, actor.organizationId),
+        ),
+      );
     await appendAuditEvent(tx, actor, {
       eventType:
         input.outcome === "BROADCAST"
@@ -725,7 +775,8 @@ export function listSettlements(db: Database, organizationId: string) {
       ),
     )
     .where(eq(settlements.organizationId, organizationId))
-    .orderBy(desc(settlements.createdAt));
+    .orderBy(desc(settlements.createdAt))
+    .limit(100);
 }
 
 export async function getSettlement(

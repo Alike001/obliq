@@ -25,7 +25,10 @@ import {
   verifyDestinationManually,
 } from "@obliq/database";
 import {
+  DevelopmentNoopScanner,
+  HttpDocumentScanner,
   LocalDocumentStorage,
+  S3PrivateDocumentStorage,
   defaultMaxUploadBytes,
   validateInvoiceDocument,
 } from "@obliq/storage";
@@ -33,9 +36,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { resolve } from "node:path";
 import { getDatabase } from "@/lib/db";
-import { getTenantContext } from "@/lib/session";
+import { getTenantContext as resolveTenantContext } from "@/lib/session";
+import { rateLimitRequest } from "@/lib/request-security";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 import { defaultPolicyConfig } from "@obliq/policy";
 import { parseMoneyInput } from "@obliq/domain";
+import {
+  boundedToken,
+  opaqueId,
+  positiveInteger,
+} from "@/lib/input-validation";
 
 function field(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -45,8 +55,23 @@ function optional(formData: FormData, name: string) {
   return field(formData, name).trim() || undefined;
 }
 
+async function mutationActor(
+  scope = "mutation",
+  limit = 120,
+  windowSeconds = 60,
+) {
+  const actor = await resolveTenantContext();
+  await rateLimitRequest(
+    `app:${scope}`,
+    `${actor.organizationId}:${actor.userId}`,
+    limit,
+    windowSeconds,
+  );
+  return actor;
+}
+
 export async function createVendorAction(formData: FormData) {
-  const actor = await getTenantContext();
+  const actor = await mutationActor();
   const vendor = await createVendor(getDatabase(), actor, {
     legalName: field(formData, "legalName"),
     displayName: field(formData, "displayName"),
@@ -62,7 +87,8 @@ export async function addDestinationAction(
   vendorId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(vendorId, "vendor identifier");
+  const actor = await mutationActor();
   const destination = await addVendorDestination(
     getDatabase(),
     actor,
@@ -78,7 +104,8 @@ export async function addDestinationAction(
 }
 
 async function persistObligation(formData: FormData, sourceId?: string) {
-  const actor = await getTenantContext();
+  if (sourceId) opaqueId(sourceId, "source identifier");
+  const actor = await mutationActor();
   try {
     const obligation = await createObligation(getDatabase(), actor, {
       vendorId: field(formData, "vendorId"),
@@ -109,6 +136,7 @@ export async function createReviewedObligationAction(
   sourceId: string,
   formData: FormData,
 ) {
+  opaqueId(sourceId, "source identifier");
   return persistObligation(formData, sourceId);
 }
 
@@ -116,7 +144,8 @@ export async function updateObligationAction(
   obligationId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(obligationId, "obligation identifier");
+  const actor = await mutationActor();
   try {
     const obligation = await updateObligation(
       getDatabase(),
@@ -144,7 +173,7 @@ export async function updateObligationAction(
 }
 
 export async function uploadInvoiceAction(formData: FormData) {
-  const actor = await getTenantContext();
+  const actor = await mutationActor("invoice-upload", 10, 3600);
   const file = formData.get("invoice");
   if (!(file instanceof File)) throw new Error("Select an invoice file");
   const bytes = new Uint8Array(await file.arrayBuffer());
@@ -152,18 +181,49 @@ export async function uploadInvoiceAction(formData: FormData) {
     process.env.OBLIQ_MAX_UPLOAD_BYTES ?? defaultMaxUploadBytes,
   );
   const validated = validateInvoiceDocument(bytes, file.type, maxBytes);
-  const storage = new LocalDocumentStorage(
-    resolve(
-      /* turbopackIgnore: true */ process.env.OBLIQ_UPLOAD_DIR ??
-        ".data/uploads",
-    ),
-  );
+  const runtime = getRuntimeSecurityConfig();
+  const storage =
+    runtime.storageMode === "s3-private"
+      ? new S3PrivateDocumentStorage({
+          bucket: process.env.OBLIQ_STORAGE_BUCKET ?? "",
+          region: process.env.OBLIQ_STORAGE_REGION ?? "",
+          ...(process.env.OBLIQ_STORAGE_ENDPOINT
+            ? { endpoint: process.env.OBLIQ_STORAGE_ENDPOINT }
+            : {}),
+          ...(process.env.OBLIQ_STORAGE_KMS_KEY_ID
+            ? { kmsKeyId: process.env.OBLIQ_STORAGE_KMS_KEY_ID }
+            : {}),
+        })
+      : new LocalDocumentStorage(
+          resolve(
+            /* turbopackIgnore: true */ process.env.OBLIQ_UPLOAD_DIR ??
+              ".data/uploads",
+          ),
+        );
+  const scanner =
+    runtime.storageMode === "s3-private"
+      ? new HttpDocumentScanner(
+          process.env.OBLIQ_DOCUMENT_SCANNER_URL ?? "",
+          process.env.OBLIQ_DOCUMENT_SCANNER_TOKEN ?? "",
+        )
+      : new DevelopmentNoopScanner();
   const stored = await storage.put({
     organizationId: actor.organizationId,
     bytes,
+    mediaType: validated.mediaType,
+    contentHash: validated.contentHash,
   });
   let sourceId: string;
   try {
+    const scan = await scanner.scan({
+      storageRef: stored.storageRef,
+      contentHash: validated.contentHash,
+      mediaType: validated.mediaType,
+    });
+    if (scan.status === "REJECTED")
+      throw new Error("Invoice document was rejected by security scanning");
+    if (runtime.deploymentMode === "production" && scan.status !== "CLEAN")
+      throw new Error("Production invoice requires a clean scan result");
     const extraction = await new DevelopmentFixtureExtractor().extract({
       originalFilename: file.name,
       mediaType: validated.mediaType,
@@ -177,7 +237,16 @@ export async function uploadInvoiceAction(formData: FormData) {
         originalFilename: file.name.slice(0, 255),
         mediaType: validated.mediaType,
         sizeBytes: bytes.length,
+        scanProvider: scan.scanner,
       },
+      storageMode:
+        runtime.storageMode === "s3-private"
+          ? "S3_PRIVATE"
+          : "LOCAL_DEVELOPMENT",
+      scanStatus: scan.status,
+      quarantinedAt: new Date(),
+      ...(scan.status === "CLEAN" ? { scannedAt: scan.scannedAt } : {}),
+      retentionUntil: new Date(Date.now() + 90 * 24 * 60 * 60_000),
       extraction: {
         provider: extraction.provider,
         mode: extraction.mode,
@@ -194,7 +263,7 @@ export async function uploadInvoiceAction(formData: FormData) {
 }
 
 export async function createDefaultPolicyAction() {
-  const actor = await getTenantContext();
+  const actor = await mutationActor();
   await createDefaultPolicy(getDatabase(), actor);
   revalidatePath("/app/policies");
   redirect("/app/policies?created=1");
@@ -204,7 +273,8 @@ export async function createPolicyVersionAction(
   policyId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(policyId, "policy identifier");
+  const actor = await mutationActor();
   const currency = field(formData, "currency").toUpperCase();
   const lower = parseMoneyInput(field(formData, "lowerThreshold"), currency);
   const upper = parseMoneyInput(field(formData, "upperThreshold"), currency);
@@ -236,7 +306,8 @@ export async function createPolicyVersionAction(
 }
 
 export async function evaluateControlsAction(obligationId: string) {
-  const actor = await getTenantContext();
+  opaqueId(obligationId, "obligation identifier");
+  const actor = await mutationActor();
   await evaluateObligationControls(getDatabase(), actor, obligationId);
   revalidatePath(`/app/obligations/${obligationId}`);
   redirect(`/app/obligations/${obligationId}?controls=evaluated`);
@@ -247,7 +318,9 @@ export async function approvalDecisionAction(
   obligationId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(requirementId, "approval requirement identifier");
+  opaqueId(obligationId, "obligation identifier");
+  const actor = await mutationActor();
   const decision = field(formData, "decision");
   if (decision !== "APPROVE" && decision !== "REJECT")
     throw new Error("Invalid approval decision");
@@ -264,7 +337,8 @@ export async function approvalDecisionAction(
 }
 
 export async function readinessAction(obligationId: string) {
-  const actor = await getTenantContext();
+  opaqueId(obligationId, "obligation identifier");
+  const actor = await mutationActor();
   await evaluateSettlementReadiness(getDatabase(), actor, obligationId);
   revalidatePath(`/app/obligations/${obligationId}`);
   redirect(`/app/obligations/${obligationId}?readiness=evaluated`);
@@ -275,7 +349,9 @@ export async function verifyDestinationAction(
   destinationId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(vendorId, "vendor identifier");
+  opaqueId(destinationId, "destination identifier");
+  const actor = await mutationActor();
   await verifyDestinationManually(
     getDatabase(),
     actor,
@@ -292,7 +368,9 @@ export async function resolveDuplicateAction(
   findingId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(obligationId, "obligation identifier");
+  opaqueId(findingId, "duplicate finding identifier");
+  const actor = await mutationActor();
   await resolveDuplicateFinding(
     getDatabase(),
     actor,
@@ -307,16 +385,24 @@ export async function createSettlementIntentAction(
   obligationId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
-  const zatoshiAmount = BigInt(field(formData, "zatoshiAmount"));
+  opaqueId(obligationId, "obligation identifier");
+  const actor = await mutationActor();
+  const zatoshiAmount = positiveInteger(
+    field(formData, "zatoshiAmount"),
+    "zatoshi amount",
+  );
+  const idempotencyKey = boundedToken(
+    field(formData, "idempotencyKey"),
+    "idempotency key",
+  );
   const quote = await createControlledRegtestQuote(getDatabase(), actor, {
     obligationId,
     zatoshiAmount,
-    idempotencyKey: field(formData, "idempotencyKey"),
+    idempotencyKey,
   });
   const intent = await prepareSettlementIntent(getDatabase(), actor, {
     quoteId: quote.id,
-    idempotencyKey: `${field(formData, "idempotencyKey")}:intent`,
+    idempotencyKey: `${idempotencyKey}:intent`,
   });
   if (!intent) throw new Error("Settlement intent could not be prepared");
   revalidatePath("/app/settlements");
@@ -327,12 +413,13 @@ export async function requestExternalSignatureAction(
   settlementId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(settlementId, "settlement identifier");
+  const actor = await mutationActor();
   await requestExternalSignature(
     getDatabase(),
     actor,
     settlementId,
-    field(formData, "signerRequestId"),
+    boundedToken(field(formData, "signerRequestId"), "signer request"),
   );
   revalidatePath(`/app/settlements/${settlementId}`);
   redirect(`/app/settlements/${settlementId}?signing=requested`);
@@ -343,7 +430,9 @@ export async function recordSigningReceiptAction(
   signerRequestId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(settlementId, "settlement identifier");
+  signerRequestId = boundedToken(signerRequestId, "signer request");
+  const actor = await mutationActor();
   await recordExternalSigning(getDatabase(), actor, {
     settlementId,
     signerRequestId,
@@ -362,7 +451,9 @@ export async function recordSigningFailureAction(
   signerRequestId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(settlementId, "settlement identifier");
+  signerRequestId = boundedToken(signerRequestId, "signer request");
+  const actor = await mutationActor();
   const outcome = field(formData, "outcome");
   if (
     outcome !== "REJECTED" &&
@@ -385,14 +476,18 @@ export async function recordBroadcastReceiptAction(
   settlementId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(settlementId, "settlement identifier");
+  const actor = await mutationActor();
   const outcome = field(formData, "outcome");
   if (outcome !== "BROADCAST" && outcome !== "UNKNOWN" && outcome !== "FAILED")
     throw new Error("Invalid broadcast outcome");
   const errorCode = optional(formData, "errorCode");
   await recordExternalBroadcast(getDatabase(), actor, {
     settlementId,
-    broadcastRequestId: field(formData, "broadcastRequestId"),
+    broadcastRequestId: boundedToken(
+      field(formData, "broadcastRequestId"),
+      "broadcast request",
+    ),
     txid: field(formData, "txid").toLowerCase(),
     outcome,
     ...(errorCode ? { errorCode } : {}),
@@ -402,7 +497,7 @@ export async function recordBroadcastReceiptAction(
 }
 
 export async function previewEvidenceAction(formData: FormData) {
-  const actor = await getTenantContext();
+  const actor = await mutationActor();
   const template = field(formData, "template");
   if (
     template !== "MINIMAL_PAYMENT_CONFIRMATION" &&
@@ -424,7 +519,8 @@ export async function previewEvidenceAction(formData: FormData) {
 }
 
 export async function issueEvidenceAction(previewId: string) {
-  const actor = await getTenantContext();
+  opaqueId(previewId, "evidence preview identifier");
+  const actor = await mutationActor();
   const evidence = await issueEvidence(getDatabase(), actor, previewId);
   if (!evidence) throw new Error("Evidence preview is unavailable");
   revalidatePath("/app/evidence");
@@ -435,7 +531,8 @@ export async function revokeEvidenceAction(
   evidenceId: string,
   formData: FormData,
 ) {
-  const actor = await getTenantContext();
+  opaqueId(evidenceId, "evidence identifier");
+  const actor = await mutationActor();
   const evidence = await changeEvidenceStatus(
     getDatabase(),
     actor,

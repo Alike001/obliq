@@ -1,18 +1,35 @@
 import "server-only";
 
 import type { OrganizationId, TenantContext, UserId } from "@obliq/domain";
-import { requireActiveMembership } from "@obliq/database";
+import {
+  requireActiveMembership,
+  resolveDatabaseSession,
+} from "@obliq/database";
+import { cookies } from "next/headers";
 import { getDatabase } from "./db";
+import { securityPepper } from "./request-security";
+import { getRuntimeSecurityConfig } from "./runtime-config";
 
 /**
- * Phase-0 development session boundary. This is server-only by convention and
- * must be replaced by authenticated, server-validated membership lookup before production.
+ * Development identity is explicit and unavailable in production. OIDC mode
+ * resolves an opaque, hashed database session and rechecks active membership.
  */
 export async function getTenantContext(): Promise<TenantContext> {
-  if (process.env.OBLIQ_SESSION_MODE !== "development") {
-    throw new Error(
-      "Development session is unavailable outside development mode",
+  const runtime = getRuntimeSecurityConfig();
+  if (runtime.authMode === "oidc") {
+    const token = (await cookies()).get(sessionCookieName())?.value;
+    if (!token) throw new AuthenticationRequiredError();
+    const result = await resolveDatabaseSession(
+      getDatabase(),
+      token,
+      securityPepper(),
     );
+    if (!result) throw new AuthenticationRequiredError();
+    return {
+      userId: result.session.userId as UserId,
+      organizationId: result.session.organizationId as OrganizationId,
+      role: result.membership.role,
+    };
   }
   const userId = process.env.OBLIQ_DEV_USER_ID;
   const organizationId = process.env.OBLIQ_DEV_ORGANIZATION_ID;
@@ -24,4 +41,17 @@ export async function getTenantContext(): Promise<TenantContext> {
   };
   const membership = await requireActiveMembership(getDatabase(), context);
   return { ...context, role: membership.role };
+}
+
+export class AuthenticationRequiredError extends Error {
+  constructor() {
+    super("Authentication required");
+    this.name = "AuthenticationRequiredError";
+  }
+}
+
+export function sessionCookieName() {
+  return process.env.NODE_ENV === "production"
+    ? "__Host-obliq_session"
+    : "obliq_session";
 }

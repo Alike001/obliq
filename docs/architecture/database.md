@@ -40,7 +40,15 @@ PostgreSQL is the persistence authority. Drizzle owns typed schema definitions a
   identifier. Status metadata can revoke or supersede an artifact without
   rewriting it. A reconciliation regression automatically revokes active
   evidence linked to that settlement.
+- OIDC issuer/subject mappings reference existing users. Sessions store only a
+  keyed token hash and exact user/organization membership; challenges are
+  single-use and expiring. PostgreSQL rate-limit buckets update atomically
+  across web instances.
+- Invoice sources record local/S3 storage mode, quarantine, strict scan state
+  and retention timestamp. Production application code accepts only CLEAN.
+- Public evidence access records contain package/organization, action, outcome
+  and a keyed request-subject fingerprint—not disclosed claims.
 
-Application repositories accept a server-derived tenant actor and scope every read and write by organization. Control and settlement mutations check role capabilities and use organization-scoped advisory locks for concurrent policy, approval, execution and audit operations. Observation configuration and ingestion are restricted to Owner, CFO, or Treasury, and all queries remain organization scoped. The development session resolves an active membership in PostgreSQL before access. Production identity and PostgreSQL row-level security remain hardening work.
+Application repositories accept a server-derived tenant actor and scope every read and write by organization. Control and settlement mutations check role capabilities and use organization-scoped advisory locks for concurrent policy, approval, execution and audit operations. Observation configuration and ingestion are restricted to Owner, CFO, or Treasury, and all queries remain organization scoped. Production OIDC sessions and development identity both resolve an active membership in PostgreSQL. RLS is not active; ADR 0009 records the transaction-local context prerequisite and compensating controls.
 
 Local PostgreSQL binds to loopback port 5433 through Docker Compose. Migrations and integration tests run against the actual server. Database absence is a fatal configuration/runtime condition; there is no hidden alternate persistence implementation.

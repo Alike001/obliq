@@ -4,7 +4,7 @@ import {
   evaluateReadiness,
   policyConfigSchema,
 } from "@obliq/policy";
-import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ne, or, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import type { createDatabase } from "../index";
 import {
@@ -233,7 +233,8 @@ export async function listPolicies(db: Database, organizationId: string) {
       ),
     )
     .where(eq(policies.organizationId, organizationId))
-    .orderBy(asc(policies.createdAt));
+    .orderBy(asc(policies.createdAt))
+    .limit(100);
 }
 export async function listPolicyVersions(
   db: Database,
@@ -1033,6 +1034,12 @@ export async function getControlView(
 
 export async function listApprovalInbox(db: Database, actor: TenantActor) {
   const role = await actorRole(db, actor);
+  const eligibleRequirement =
+    role === "OWNER"
+      ? undefined
+      : role === "APPROVER"
+        ? eq(approvalRequirements.role, "FINANCE")
+        : or(eq(approvalRequirements.role, role));
   const rows = await db
     .select({
       requirement: approvalRequirements,
@@ -1053,17 +1060,16 @@ export async function listApprovalInbox(db: Database, actor: TenantActor) {
         eq(approvalRequirements.organizationId, actor.organizationId),
         eq(approvalRequirements.state, "PENDING"),
         eq(obligations.state, "APPROVAL_REQUIRED"),
+        eligibleRequirement,
+        or(
+          eq(approvalRequirements.prohibitCreator, false),
+          ne(obligations.createdBy, actor.userId),
+        ),
       ),
     )
-    .orderBy(asc(obligations.dueAt));
-  return rows.filter(
-    (row) =>
-      eligibleFor(role, row.requirement.role) &&
-      !(
-        row.requirement.prohibitCreator &&
-        row.obligation.createdBy === actor.userId
-      ),
-  );
+    .orderBy(asc(obligations.dueAt))
+    .limit(100);
+  return rows;
 }
 
 export async function auditChainStatus(db: Database, organizationId: string) {

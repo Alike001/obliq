@@ -71,6 +71,13 @@
       "when": 1791302204089,
       "tag": "0009_clever_winter_soldier",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791305217581,
+      "tag": "0010_normal_hulk",
+      "breakpoints": true
     }
   ]
 }

@@ -136,6 +136,7 @@ suite("PostgreSQL repositories", () => {
       storageRef: `${organizationA}/safe.bin`,
       contentHash: "a".repeat(64),
       metadata: { originalFilename: "invoice.pdf" },
+      scanStatus: "DEVELOPMENT_UNSCANNED",
     });
     expect(
       await getSourceReview(connection.db, organizationB, source.id),
@@ -208,6 +209,17 @@ suite("PostgreSQL repositories", () => {
         description: "Cross-tenant edit",
       }),
     ).toBeNull();
+  });
+
+  it("fails uploaded invoice persistence closed without an accepted scan state", async () => {
+    await expect(
+      createSource(connection.db, actorA, {
+        kind: "INVOICE_UPLOAD",
+        storageRef: `${organizationA}/quarantine.bin`,
+        contentHash: "c".repeat(64),
+        metadata: {},
+      }),
+    ).rejects.toThrow("scan boundary");
   });
 
   it("creates and verifies an organization-local audit hash chain", async () => {

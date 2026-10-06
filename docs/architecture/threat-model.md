@@ -3,9 +3,9 @@
 | Threat                         | Current defense                                                                    | Later requirement                                    |
 | ------------------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------- |
 | Compromised application server | No treasury spend authority or signer credential                                   | Secret isolation and least privilege                 |
-| Cross-tenant access            | Active membership plus organization-scoped repositories and integration tests      | Production identity and RLS evaluation               |
+| Cross-tenant access            | OIDC identity, active membership, scoped repositories and adversarial tests        | RLS after transaction-local tenant context           |
 | Compromised AI                 | Strict suggestions, mandatory human review; fixture sends no document externally   | Provider data minimization and isolation             |
-| Malicious invoice              | Size, signature and MIME checks; private generated storage path                    | Malware scanning, quarantine and retention policy    |
+| Malicious invoice              | Signature/MIME/size checks; private quarantine; production requires scanner CLEAN  | Scanner operations and content-disarm evaluation     |
 | Destination substitution       | Immutable history, authorized manual verification, replacement invalidation        | Cryptographic or independently attested verification |
 | Duplicate invoice              | Exact blocking; possible finding blocks readiness until explicit resolution        | Additional accounting-system correlation             |
 | Stale authorization            | Version-bound decisions and approval invalidation on material changes              | Operational monitoring and production identity       |
@@ -15,18 +15,32 @@
 | Broadcast timeout              | `BROADCAST_UNKNOWN`; observer evidence remains authoritative                       | Automated safe retry/rebroadcast runbook             |
 | External signer compromise     | Signer is isolated; Obliq has no RPC credential or spend key                       | Hardware isolation and multi-person signing policy   |
 | Approval collusion/reuse       | Role checks, requester restrictions, distinct actors and transactional locks       | Configurable enterprise identity and access reviews  |
-| Viewing-key leak               | UFVK isolated to server-only observer; redaction tests; no DB/browser/proof value  | Secret manager, rotation and incident response       |
-| Observer compromise            | ViewOnly import and no spending API; separate scan cache                           | Process isolation, encrypted cache and access review |
+| Viewing-key leak               | UFVK isolated to observer; redaction; cache mode 0600; incident runbook            | Deployment secret manager and rotation exercise      |
+| Observer compromise            | ViewOnly import, no spending API, network match and separate scan cache            | Host isolation, encrypted volume and access review   |
 | RPC/node manipulation          | Fully-scanned height tracked separately; exact correlation tuple                   | Authenticated TLS, multi-source/monitoring strategy  |
 | RPC/scanner outage             | Persisted `UNAVAILABLE` leaves financial state unchanged                           | Retry, telemetry and unknown-state operations        |
 | Memo/log privacy leakage       | Opaque memo only; business DB stores its digest; allowlisted evidence fields       | Structured-log enforcement and retention policy      |
 | Reconciliation false positive  | Receiver + memo + exact zatoshis required; amount alone rejected                   | Public-network operational qualification             |
 | Audit tampering                | Canonical SHA-256 chain, transactional ordering and verification tests             | Independent anchoring and operational monitoring     |
 | Evidence over-disclosure       | Closed field allowlist, classification and server role checks                      | Periodic capability review                           |
-| Evidence ID enumeration        | Independent 256-bit random public identifier; internal UUID is never the route key | Rate limiting and abuse monitoring                   |
-| Public-link leakage            | Artifact contains only deliberate fields; no-store responses; visible status       | Secure link delivery and recipient expiry options    |
+| Evidence ID enumeration        | 256-bit public ID, PostgreSQL rate limit, no indexing, fingerprinted access record | Abuse alerting and recipient-bound access option     |
+| Public-link leakage            | Deliberate fields only; no-store/no-referrer/nosniff/noindex; visible status       | Secure delivery and recipient expiry option          |
 | Stale evidence                 | Source rechecked at issuance; chain regression revokes active linked packages      | Public-network reorg qualification                   |
 | Artifact tampering             | Canonical JSON and SHA-256 verification before display/download                    | Independent signing or anchoring                     |
 | Download/cache leakage         | Private no-store JSON response and nosniff header                                  | Production CDN/browser policy testing                |
 
 Threat-model changes require documentation and tests in the same phase.
+
+## Implemented asset and authority trace
+
+| Asset                        | Read                                               | Modify / authorize                                             | Storage and tenant boundary                                     | Compromise impact / residual risk                                             |
+| ---------------------------- | -------------------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Financial/vendor/policy data | active organization members by capability          | server commands recheck membership, role, resource and version | PostgreSQL `organization_id`; no RLS yet                        | disclosure or fraudulent workflow if app and DB role are compromised          |
+| Invoice files                | application ingestion only; no public raw route    | finance upload; production scanner must return CLEAN           | private generated quarantine object under organization prefix   | malicious content/scanner compromise; deletion automation remains operational |
+| Destinations                 | finance roles                                      | Treasury/CFO/Owner verification; immutable replacement         | PostgreSQL organization and vendor relationship                 | manual verification can be socially engineered                                |
+| Approvals/intents            | eligible roles / finance readers                   | policy-derived commands and external signer operator           | PostgreSQL version/hash binding and idempotency                 | collusion or compromise of both app and signer                                |
+| Viewing authority/cache      | isolated observer service identity                 | secret operator only                                           | secret manager plus private encrypted host volume in production | treasury privacy loss; UFVK cannot spend                                      |
+| Signer authority             | external treasury operator                         | external human authorization only                              | isolated Zallet host; absent from Obliq                         | fund loss if signer and review are compromised                                |
+| Evidence packages/links      | authorized roles; bearer link sees selected claims | evidence roles; Owner/CFO revoke                               | immutable DB artifact, random public ID, server enforcement     | deliberate fields leak if link is forwarded                                   |
+| Audit chain                  | authorized application/proof organization          | append-only application transactions                           | organization-local PostgreSQL hash chain                        | DB owner can rewrite and recompute; no independent anchor                     |
+| Auth/session state           | server only                                        | OIDC callback/logout; provisioned mapping                      | hashed token in PostgreSQL, secure HTTP-only cookie             | identity-provider or session theft until expiry/revocation                    |

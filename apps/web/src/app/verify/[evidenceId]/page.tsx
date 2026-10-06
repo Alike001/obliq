@@ -1,10 +1,20 @@
-import { verifyPublicEvidence } from "@obliq/database";
+import {
+  RateLimitExceededError,
+  recordEvidenceAccess,
+  verifyPublicEvidence,
+} from "@obliq/database";
+import { writeOperationalLog } from "@obliq/security";
+import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { EvidenceArtifact } from "@/components/evidence-artifact";
 import { getDatabase } from "@/lib/db";
+import { rateLimitRequest, requestSubject } from "@/lib/request-security";
 
 export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default async function VerifyEvidencePage({
   params,
@@ -12,7 +22,27 @@ export default async function VerifyEvidencePage({
   params: Promise<{ evidenceId: string }>;
 }) {
   const { evidenceId } = await params;
-  const result = await verifyPublicEvidence(getDatabase(), evidenceId);
+  const subject = await requestSubject();
+  let rateLimited = false;
+  let result: Awaited<ReturnType<typeof verifyPublicEvidence>> = null;
+  try {
+    await rateLimitRequest("evidence:verify", subject, 60, 60);
+    result = await verifyPublicEvidence(getDatabase(), evidenceId);
+    if (result)
+      await recordEvidenceAccess(getDatabase(), {
+        organizationId: result.evidence.organizationId,
+        evidencePackageId: result.evidence.id,
+        action: "VERIFY",
+        subjectFingerprint: subject,
+        outcome: result.integrityValid
+          ? result.evidence.status
+          : "INTEGRITY_FAILURE",
+      });
+    else writeOperationalLog("warn", "evidence.verify.not_found", { subject });
+  } catch (error) {
+    if (error instanceof RateLimitExceededError) rateLimited = true;
+    else throw error;
+  }
   return (
     <main>
       <SiteHeader />
@@ -22,7 +52,14 @@ export default async function VerifyEvidencePage({
           <h1 className="mt-4 text-4xl font-medium tracking-tight">
             Controlled payment evidence
           </h1>
-          {!result ? (
+          {rateLimited ? (
+            <div className="card mt-8 border-amber-300 p-8" role="status">
+              <h2 className="font-semibold">Too many verification requests</h2>
+              <p className="text-muted mt-3 text-sm leading-6">
+                Wait before trying this verification link again.
+              </p>
+            </div>
+          ) : !result ? (
             <div className="card mt-8 border-red-200 p-8">
               <h2 className="font-semibold">Evidence not found</h2>
               <p className="text-muted mt-3 text-sm leading-6">

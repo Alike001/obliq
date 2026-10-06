@@ -19,6 +19,7 @@
   "references": [
     { "path": "../../packages/domain" },
     { "path": "../../packages/evidence" },
+    { "path": "../../packages/security" },
     { "path": "../../packages/zcash" }
   ]
 }

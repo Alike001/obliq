@@ -8,11 +8,15 @@ Viewing authority is separate from spending authority but remains a high-value p
 
 ## Tenant boundary
 
-Organizations, users, and memberships form the identity boundary. Financial records carry `organization_id`. Repositories apply the organization predicate to reads and writes, and Phase 2 control commands also enforce Finance, Treasury, CFO, Owner or Policy Administrator capabilities as appropriate. The server-only development session must resolve an active database membership. It remains development infrastructure, not production authentication.
+Organizations, users, and memberships form the identity boundary. Financial records carry `organization_id`. Repositories apply the organization predicate to reads and writes, and control commands enforce Finance, Treasury, CFO, Owner or Policy Administrator capabilities as appropriate.
+
+Production uses OIDC authorization code with PKCE, state and nonce checks. Issuer/subject identities are pre-provisioned and never derive roles from client claims. Random session tokens are stored only as keyed hashes, expire after eight hours and are revocable; every request rechecks active membership. Cookies are HTTP-only, SameSite and Secure in production. Development identity is an explicit separate mode that production rejects. Server Actions use framework origin checks and logout adds an explicit same-origin check.
+
+PostgreSQL RLS is not claimed. ADR 0009 records why the current pool lacks safe transaction-local tenant identity and the compensating scoped repository, membership, capability and integration-test controls.
 
 ## Invoice and extraction boundary
 
-Invoice content is accepted only after a server-side size, signature and MIME-agreement check. Storage uses an organization scope and generated opaque name; the original filename is metadata and never a filesystem path. No public download route exists. Production malware scanning, object-storage isolation, retention rules and encryption operations remain planned.
+Invoice content is accepted only after a server-side size, signature and MIME-agreement check. Production stores bytes under a generated organization-scoped quarantine key in private S3-compatible storage with server-side encryption and no public URL. A separately authenticated HTTPS scanner must return CLEAN before an invoice source is created; unavailable or malformed scanner output fails closed. Development local files and `DEVELOPMENT_UNSCANNED` are visibly separate. Retention is recorded; deletion remains an audited operational procedure.
 
 The extraction fixture does not inspect document bytes or transmit them externally. All structured output is a suggestion requiring human review. A future provider requires an explicit data-exposure review before integration.
 
@@ -64,9 +68,10 @@ revoke evidence.
 
 External verification uses a random 256-bit URL-safe identifier, never an
 internal package UUID. Anyone holding the link can read the selected fields, so
-links remain recipient-confidential. Responses and JSON downloads are dynamic
-and `no-store`; production rate limiting and link-delivery controls remain
-planned. Artifact content is immutable and SHA-256 checked before display or
+links remain recipient-confidential. Responses and JSON downloads are dynamic,
+no-store, no-referrer, nosniff and noindex. PostgreSQL-backed limits protect
+verification/download and access records retain only a subject fingerprint and
+outcome. Artifact content is immutable and SHA-256 checked before display or
 download. Revoked and superseded artifacts remain visible with an explicit
 warning. Confirmation regression or mismatch automatically revokes active
 evidence for the affected settlement.
@@ -74,3 +79,5 @@ evidence for the affected settlement.
 ## Secrets
 
 Never commit or log seed phrases, spending keys, viewing keys, wallet RPC credentials, database passwords, or provider API keys. Public client environment variables must contain non-sensitive presentation configuration only.
+
+Structured operational logging recursively redacts secret-bearing keys and known Zcash viewing/spending patterns. Runtime proof and health output use an allowlist of modes/statuses. The observer sidecar reports its network identity; application/observer mismatch fails closed. The current CSP deliberately permits inline Next.js scripts/styles; it still denies external scripts, objects, frames and base sources. A nonce-based CSP remains future browser-hardening work.

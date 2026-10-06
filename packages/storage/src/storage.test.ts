@@ -1,12 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   LocalDocumentStorage,
+  HttpDocumentScanner,
+  S3PrivateDocumentStorage,
   detectInvoiceMediaType,
   validateInvoiceDocument,
 } from "./index";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("invoice document validation", () => {
   const pdf = new TextEncoder().encode("%PDF-1.7 safe fixture");
@@ -32,6 +36,60 @@ describe("invoice document validation", () => {
   });
 });
 
+describe("production document boundaries", () => {
+  it("rejects plaintext storage and scanner endpoints", () => {
+    expect(
+      () =>
+        new S3PrivateDocumentStorage({
+          bucket: "private",
+          region: "local",
+          endpoint: "http://storage.internal",
+        }),
+    ).toThrow("HTTPS");
+    expect(
+      () => new HttpDocumentScanner("http://scanner.internal", "x".repeat(32)),
+    ).toThrow("HTTPS");
+  });
+
+  it("accepts only strict clean or rejected scanner responses", async () => {
+    const scanner = new HttpDocumentScanner(
+      "https://scanner.internal/scan",
+      "x".repeat(32),
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ status: "CLEAN", scanner: "clamav" }), {
+          status: 200,
+        }),
+      ),
+    );
+    await expect(
+      scanner.scan({
+        storageRef: "s3://private/quarantine/object",
+        contentHash: "a".repeat(64),
+        mediaType: "application/pdf",
+      }),
+    ).resolves.toMatchObject({ status: "CLEAN", scanner: "clamav" });
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ status: "MAYBE", scanner: "unknown" }), {
+          status: 200,
+        }),
+      ),
+    );
+    await expect(
+      scanner.scan({
+        storageRef: "s3://private/quarantine/object",
+        contentHash: "a".repeat(64),
+        mediaType: "application/pdf",
+      }),
+    ).rejects.toThrow("Malformed");
+  });
+});
+
 describe("local document storage", () => {
   it("uses generated organization-scoped identifiers and blocks traversal", async () => {
     const root = await mkdtemp(join(tmpdir(), "obliq-storage-"));
@@ -41,6 +99,9 @@ describe("local document storage", () => {
       const stored = await storage.put({
         organizationId: "00000000-0000-4000-8000-000000000002",
         bytes,
+        mediaType: "application/pdf",
+        contentHash: validateInvoiceDocument(bytes, "application/pdf")
+          .contentHash,
       });
       expect(stored.storageRef).toMatch(
         /^00000000-0000-4000-8000-000000000002\/[0-9a-f-]+\.bin$/,

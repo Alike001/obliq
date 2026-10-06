@@ -49,9 +49,10 @@ export default function SecurityPage() {
               The system separates business decisions, viewing capability and
               cryptographic spending authority. Phase 2 enforces business
               authorization while Phase 3 isolates read-only reconciliation and
-              Phase 4 keeps spending authority external. Phase 5 adds
-              server-authorized controlled disclosure without changing either
-              Zcash authority boundary.
+              Phase 4 keeps spending authority external, Phase 5 adds controlled
+              disclosure, and Phase 6 hardens identity, storage, abuse and
+              deployment boundaries without changing either Zcash authority
+              boundary.
             </p>
           </div>
         </div>
@@ -101,7 +102,7 @@ export default function SecurityPage() {
           <SecurityCard
             icon={<Database />}
             title="Tenant boundary"
-            text="Policies, findings, approvals and readiness records carry organization_id. Cross-tenant reads and actions are denied server-side."
+            text="OIDC resolves a pre-provisioned identity and active membership. Financial records carry organization_id; cross-tenant reads and actions are denied server-side. RLS is not claimed."
           />
           <SecurityCard
             icon={<Eye />}
@@ -111,7 +112,12 @@ export default function SecurityPage() {
           <SecurityCard
             icon={<Database />}
             title="Controlled evidence"
-            text="A closed server-side allowlist and role checks constrain disclosure. Issued content is immutable and verified before display or download."
+            text="A closed server-side allowlist and role checks constrain disclosure. Random links are rate-limited, non-indexed and no-store; issued content is immutable and verified before display or download."
+          />
+          <SecurityCard
+            icon={<Server />}
+            title="Quarantined uploads"
+            text="Production stores generated private objects and requires an authenticated scanner CLEAN result. Unknown or unavailable scanning fails ingestion closed."
           />
         </div>
         <div className="mt-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
@@ -119,24 +125,29 @@ export default function SecurityPage() {
           <p className="text-muted mt-2 text-sm leading-6">
             Uploaded files are validated by signature, size and MIME agreement,
             stored under generated private identifiers, and never exposed by a
-            public raw-file route. Destination verification is a recorded manual
+            public raw-file route. Production mode requires private quarantine
+            storage and a real scanner CLEAN result; local unscanned storage is
+            development-only. Destination verification is a recorded manual
             process, not cryptographic proof of receiver ownership. A
             destination replacement or material obligation edit invalidates
-            authorization. Production malware scanning, authentication, rate
-            limiting, hardware-backed signer operations, live quote integrity,
-            encrypted production scan-cache custody and independent audit
-            anchoring remain planned. The proven observer can reveal account
-            activity if its UFVK, memo plaintext, logs or correlation metadata
-            are compromised. Regtest proof does not qualify mainnet operations.
-            External signing and broadcast are verified on regtest only;
-            public-network execution is BLOCKED. A compromised signer can spend
-            its wallet, while compromise of both app and signer could substitute
-            a transaction unless the human independently checks the Zallet PCZT
-            inspection. Evidence links use 256-bit random identifiers but remain
+            authorization. OIDC/session and shared rate-limit architectures are
+            implemented, but provider credentials and production infrastructure
+            are not bundled. Hardware-backed signer operations, live quote
+            integrity, observer HA and independent audit anchoring remain
+            planned. The proven observer can reveal account activity if its
+            UFVK, memo plaintext, logs or correlation metadata are compromised.
+            Regtest proof does not qualify mainnet operations. External signing
+            and broadcast are verified on regtest only; public-network execution
+            is BLOCKED. The earlier Zaino subtree-root defect is fixed upstream,
+            but Obliq public sync, reorg recovery and a funded shielded flow
+            remain unproved. A compromised signer can spend its wallet, while
+            compromise of both app and signer could substitute a transaction
+            unless the human independently checks the Zallet PCZT inspection.
+            Evidence links use 256-bit random identifiers but remain
             bearer-like: anyone with a link can read its deliberately disclosed
-            fields. Responses use no-store, yet copied links or downloaded JSON
-            can still leak. Production rate limiting, secure delivery, recipient
-            expiry and cache-policy testing remain planned. Revoked and
+            fields. Responses use no-store/no-referrer/noindex and shared rate
+            limits, yet copied links or downloaded JSON can still leak. Secure
+            delivery and recipient-bound expiry remain planned. Revoked and
             superseded evidence remains historical and visibly non-current.
           </p>
         </div>

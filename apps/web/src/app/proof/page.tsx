@@ -6,8 +6,24 @@ import { checkDatabaseConnection, verifyAuditChain } from "@obliq/database";
 import { getDatabase } from "@/lib/db";
 import { phase3NetworkProof } from "@/content/phase3-proof";
 import { phase4NetworkProof } from "@/content/phase4-proof";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
 const capabilities = [
+  [
+    "Production identity boundary",
+    "IMPLEMENTED",
+    "OIDC authorization-code flow with PKCE, nonce/state validation, provisioned identities and revocable server-side sessions",
+  ],
+  [
+    "Distributed rate limiting",
+    "IMPLEMENTED",
+    "PostgreSQL-backed atomic buckets protect authentication, mutations, uploads and public evidence access",
+  ],
+  [
+    "Private production storage boundary",
+    "IMPLEMENTED",
+    "S3-compatible private quarantine storage requires a clean external scanner result before ingestion",
+  ],
   [
     "Application foundation",
     "IMPLEMENTED",
@@ -56,7 +72,7 @@ const capabilities = [
   [
     "Public-network settlement",
     "BLOCKED",
-    "Zaino/Ironwood subtree-root compatibility and funded operational qualification remain unresolved",
+    "Upstream Zaino now includes Ironwood subtree-root support, but Obliq public sync and a funded public shielded flow remain unproved",
   ],
   [
     "Settlement intent",
@@ -123,15 +139,34 @@ export default async function ProofPage() {
     "local-development";
   let databaseRuntime = "NOT CONFIGURED";
   let auditRuntime = "NOT CONFIGURED";
+  let runtimeSummary = {
+    auth: "UNAVAILABLE",
+    storage: "UNAVAILABLE",
+    rateLimit: "UNAVAILABLE",
+    network: "UNAVAILABLE",
+    publicNetwork: "PUBLIC_NETWORK_BLOCKED",
+  };
+  try {
+    const runtime = getRuntimeSecurityConfig();
+    runtimeSummary = {
+      auth: runtime.authMode.toUpperCase(),
+      storage: runtime.storageMode.toUpperCase(),
+      rateLimit: runtime.rateLimitMode.toUpperCase(),
+      network: runtime.network.toUpperCase(),
+      publicNetwork: runtime.publicNetworkStatus,
+    };
+  } catch {
+    // Runtime configuration failures are reported as unavailable without secrets.
+  }
   if (process.env.DATABASE_URL) {
     try {
       await checkDatabaseConnection(getDatabase());
       databaseRuntime = "CONNECTED";
-      if (process.env.OBLIQ_DEV_ORGANIZATION_ID) {
-        const audit = await verifyAuditChain(
-          getDatabase(),
-          process.env.OBLIQ_DEV_ORGANIZATION_ID,
-        );
+      const proofOrganization =
+        process.env.OBLIQ_PROOF_ORGANIZATION_ID ??
+        process.env.OBLIQ_DEV_ORGANIZATION_ID;
+      if (proofOrganization) {
+        const audit = await verifyAuditChain(getDatabase(), proofOrganization);
         auditRuntime = audit.valid
           ? `VALID · ${audit.eventCount} events`
           : "INVALID";
@@ -150,10 +185,10 @@ export default async function ProofPage() {
             Claims should be inspectable—or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/60">
-            Phase 5 derives controlled financial evidence from canonical settled
-            records. It preserves the real Phase-4 regtest settlement and
-            UFVK-only reconciliation evidence. Public-network readiness remains
-            blocked, and application evidence is not a ZK claim.
+            Phase 6 reports hardened runtime boundaries alongside the real
+            Phase-4 regtest settlement and UFVK-only reconciliation evidence.
+            Public-network operation remains blocked until Obliq itself proves
+            current public synchronization and a funded shielded flow.
           </p>
         </div>
       </section>
@@ -184,6 +219,12 @@ export default async function ProofPage() {
             </div>
           </div>
           <div className="space-y-5">
+            <ProofCard
+              label="Runtime security modes"
+              value={`${runtimeSummary.auth} · ${runtimeSummary.storage}`}
+              detail={`Rate limits: ${runtimeSummary.rateLimit}. Zcash network: ${runtimeSummary.network}. ${runtimeSummary.publicNetwork}.`}
+              good={runtimeSummary.auth !== "UNAVAILABLE"}
+            />
             <ProofCard
               label="End-to-end settlement"
               value="VERIFIED · REGTEST"

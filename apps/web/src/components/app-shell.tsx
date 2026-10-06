@@ -12,6 +12,7 @@ import {
 import Link from "next/link";
 import { Brand } from "./brand";
 import { StatusPill } from "./status-pill";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
 export const appSections = [
   ["Overview", "/app", BarChart3, "IMPLEMENTED"],
@@ -26,6 +27,7 @@ export const appSections = [
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const runtime = getRuntimeSecurityConfig();
   return (
     <div className="min-h-screen bg-[#eef0eb] lg:grid lg:grid-cols-[244px_1fr]">
       <aside className="bg-ink hidden min-h-screen border-r border-white/10 p-5 text-white lg:flex lg:flex-col">
@@ -33,7 +35,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mt-9 rounded-xl border border-white/10 bg-white/5 p-3">
           <p className="text-xs font-medium">Obliq Studio</p>
           <p className="mt-1 text-[11px] text-white/45">
-            Development workspace
+            {runtime.deploymentMode === "production"
+              ? "Production workspace"
+              : "Development workspace"}
           </p>
         </div>
         <nav className="mt-6 space-y-1" aria-label="Application">
@@ -55,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto border-t border-white/10 pt-5 text-[11px] leading-5 text-white/45">
-          Phase 5 · Controlled evidence · Not a ZK business proof
+          Phase 6 · Hardened boundaries · {runtime.network.toUpperCase()}
         </div>
       </aside>
       <div>
@@ -66,11 +70,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="hidden items-center gap-2 lg:flex">
             <span className="size-2 rounded-full bg-emerald-600" />
             <span className="text-muted text-xs">
-              Persisted development environment
+              {runtime.authMode === "oidc"
+                ? "OIDC session"
+                : "Development identity"}
             </span>
           </div>
           <div className="flex items-center gap-3">
             <StatusPill status="IMPLEMENTED" />
+            {runtime.authMode === "oidc" && (
+              <form action="/auth/logout" method="post">
+                <button className="text-muted text-xs underline underline-offset-4">
+                  Sign out
+                </button>
+              </form>
+            )}
             <div className="bg-forest grid size-8 place-items-center rounded-full text-xs font-semibold text-white">
               OS
             </div>

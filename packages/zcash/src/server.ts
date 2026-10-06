@@ -59,6 +59,8 @@ export class ProcessZcashObserver implements ZcashObserver {
         OBSERVER_UFVK: this.config.viewingAuthority,
       });
       const parsed = parseObserverOutput(stdout);
+      if (parsed.network !== this.config.network)
+        throw new Error("Observer network does not match configured network");
       const status: ObserverStatus = {
         availability: parsed.synced ? "AVAILABLE" : "SYNCING",
         network: this.config.network,
@@ -99,6 +101,7 @@ export class ProcessZcashObserver implements ZcashObserver {
 }
 
 interface RawObserverOutput {
+  network: ZcashNetwork;
   spendingAuthority: false;
   chainTipHeight: number;
   fullyScannedHeight: number;
@@ -122,6 +125,7 @@ function parseObserverOutput(value: string): RawObserverOutput {
   const candidate = parsed as Partial<RawObserverOutput>;
   if (
     candidate.spendingAuthority !== false ||
+    candidate.network !== "regtest" ||
     !Number.isSafeInteger(candidate.chainTipHeight) ||
     !Number.isSafeInteger(candidate.fullyScannedHeight) ||
     typeof candidate.synced !== "boolean" ||

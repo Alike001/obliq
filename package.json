@@ -26,6 +26,7 @@
     "zcash:observe": "tsx scripts/run-zcash-observer.ts",
     "test:integration": "vitest run packages/database/src/repositories/*integration.test.ts",
     "security:secrets": "node scripts/check-secrets.mjs",
+    "runtime:check": "tsx scripts/check-runtime-config.ts",
     "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {

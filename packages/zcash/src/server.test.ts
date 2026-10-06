@@ -20,6 +20,7 @@ describe("process observer adapter", () => {
         expect(env.OBSERVER_UFVK).toBe("uviewregtest1sensitive");
         return Promise.resolve({
           stdout: JSON.stringify({
+            network: "regtest",
             spendingAuthority: false,
             chainTipHeight: 117,
             fullyScannedHeight: 117,
@@ -47,6 +48,33 @@ describe("process observer adapter", () => {
       "uregtest1private",
     );
     expect(result.status).not.toHaveProperty("viewingAuthority");
+  });
+
+  it("fails closed when sidecar network identity differs", async () => {
+    const observer = new ProcessZcashObserver(
+      {
+        binary: "/safe/observer",
+        databasePath: "/safe/wallet.sqlite",
+        endpoint: "https://node.invalid",
+        network: "regtest",
+        viewingAuthority: "uviewregtest1sensitive",
+      },
+      () =>
+        Promise.resolve({
+          stdout: JSON.stringify({
+            network: "mainnet",
+            spendingAuthority: false,
+            chainTipHeight: 1,
+            fullyScannedHeight: 1,
+            synced: true,
+            observations: [],
+          }),
+        }),
+    );
+    expect((await observer.observe()).status).toMatchObject({
+      availability: "UNAVAILABLE",
+      reasonCode: "MALFORMED_OBSERVER_OUTPUT",
+    });
   });
 
   it("maps infrastructure failure to unavailable without financial inference", async () => {

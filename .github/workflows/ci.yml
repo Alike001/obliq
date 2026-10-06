@@ -8,7 +8,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     services:
       postgres:
         image: postgres:17-alpine
@@ -38,5 +38,8 @@ jobs:
       - run: npm run validate
       - run: cargo fmt --check --manifest-path tools/zcash-observer/Cargo.toml
       - run: cargo check --locked --manifest-path tools/zcash-observer/Cargo.toml
+      - run: cargo test --locked --manifest-path tools/zcash-observer/Cargo.toml
+      - run: cargo install cargo-audit --locked
+      - run: cargo audit --file tools/zcash-observer/Cargo.lock
       - run: npm run security:secrets
       - run: npm audit --omit=dev --audit-level=high

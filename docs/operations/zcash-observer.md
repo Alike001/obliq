@@ -1,6 +1,6 @@
 # Zcash observer operations
 
-Status: **IMPLEMENTED for isolated regtest; public-network deployment PLANNED**
+Status: **IMPLEMENTED for isolated regtest; public-network operation BLOCKED**
 
 ## Components
 
@@ -49,11 +49,17 @@ and fully-scanned heights. If either the node or observer is unavailable, or the
 scan lags, record infrastructure status and leave the last financial conclusion
 unchanged.
 
-The isolated tracer used Zaino `0.6.0-no-tls`. That build rejects Ironwood
-subtree-root requests from librustzcash 0.24.0, so the tracer scanned requested
-ranges from their preceding authenticated tree state. Do not deploy the h2c
-Zaino endpoint publicly. Production requires authenticated TLS and validated
-Ironwood subtree-root/reorg behavior at operational scale.
+The isolated tracer used Zaino `0.6.0-no-tls`. Current Zaino 0.10.1 includes the
+Ironwood subtree-root correction introduced in Zaino Serve 0.7.0. Phase 6 did
+not silently inherit that result: Obliq still uses regtest `LocalNetwork` and
+has not qualified public birthdays, sync, restart or reorg behavior. ADR 0010
+therefore retains `PUBLIC_NETWORK_BLOCKED`. Do not deploy an h2c Zaino endpoint
+publicly; a remote data service requires authenticated TLS/private transport.
+
+The sidecar returns `network: regtest`; the process adapter rejects a mismatch.
+Its SQLite file is set owner-only on Unix after a scan. Production must also use
+an encrypted volume and encrypted restricted backups. Corruption or restart
+failure reports observer UNAVAILABLE and preserves the last financial result.
 
 ## Correlation and confirmation
 

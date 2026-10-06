@@ -16,7 +16,7 @@ Read-only reconciliation boundary (implemented on regtest, sensitive)
 Controlled evidence (implemented) + ledger (planned)
 ```
 
-Phase 1 added executable `packages/ai` and `packages/storage` boundaries. Phase 2 added `packages/policy`; Phases 3–4 proved separate read and external-write Zcash boundaries. Phase 5 adds `packages/evidence` for deterministic disclosure and hashing. The database application layer persists immutable policy meaning, authorized actions and issued evidence. Ledger remains planned.
+Phase 1 added executable `packages/ai` and `packages/storage` boundaries. Phase 2 added `packages/policy`; Phases 3–4 proved separate read and external-write Zcash boundaries. Phase 5 added `packages/evidence` for deterministic disclosure and hashing. Phase 6 adds `packages/security` for fail-closed runtime configuration, redaction, fingerprints and origin checks, while storage/database/web adapters implement deployable identity, quarantine and abuse boundaries. Ledger remains planned.
 
 ## Runtime surfaces
 
@@ -27,6 +27,8 @@ Phase 1 added executable `packages/ai` and `packages/storage` boundaries. Phase 
 - `/docs` renders current implementation documentation with desktop and mobile navigation.
 - `/security` describes enforced and planned controls separately.
 - `/proof` reports real build/system capability states; it contains no mocked chain evidence.
+- `/health/live` reports process liveness; `/health/ready` validates sanitized
+  runtime mode plus PostgreSQL connectivity.
 
 ## Dependency direction
 

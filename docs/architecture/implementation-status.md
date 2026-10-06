@@ -8,7 +8,7 @@
 
 Do not use **verified** without evidence that can be inspected. A successful build verifies compilation; it does not verify Zcash settlement. A seeded dashboard is not proof of persisted financial operations.
 
-## Phase 5 status and limitations
+## Phase 6 status and limitations
 
 Vendors, immutable destination history and manual verification provenance, obligations, duplicate resolution, immutable policy versions, structured control findings, persisted role-authorized approvals, approval invalidation, explainable readiness and audit-chain verification are implemented against PostgreSQL. The dashboard and approval inbox use organization data rather than financial fixtures.
 
@@ -25,13 +25,22 @@ Zallet RPC credential and accepts no PCZT, raw transaction, mnemonic,
 passphrase or spending key. Live market pricing and public-network execution
 are not implemented.
 
+Production-capable OIDC identity/session architecture, PostgreSQL distributed
+rate limiting, private S3-compatible quarantine storage, strict external scanner
+boundary, runtime network validation, evidence-link HTTP protections and
+redacted structured logging are **IMPLEMENTED**. Actual provider credentials,
+object storage, scanner, secret manager and hardened observer/signer hosts are
+deployment configuration—not seeded success. Development identity/local storage
+remain explicitly development-only.
+
 Extraction remains **SEEDED** through a labelled fixture provider. Manual
 destination verification is operational evidence, not cryptographic ownership
-proof. Production authentication, RLS, object storage, malware scanning,
-production observer secret custody/TLS/HA and independent audit anchoring remain
-**PLANNED**. Public-network operation is **BLOCKED** by the documented
-Zaino/Ironwood subtree-root limitation and missing funded operational
-qualification. Embedded wallet custody and ledger settlement entries remain
+proof. RLS, native PDF, live pricing, automated object retention, production
+observer HA and independent audit anchoring remain **PLANNED**. The old
+Zaino/Ironwood subtree-root defect is fixed upstream, but public-network
+operation remains **BLOCKED** because Obliq is regtest-only and has not proven
+authenticated public synchronization, reorg handling or a funded shielded
+transaction. Embedded wallet custody and ledger settlement entries remain
 **UNAVAILABLE** or **PLANNED**.
 
 Canonical application evidence, explicit server-enforced field disclosure,

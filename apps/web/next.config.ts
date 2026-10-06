@@ -8,7 +8,18 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=()",
   },
+  {
+    key: "Content-Security-Policy",
+    value:
+      "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self'",
+  },
 ];
+
+if (process.env.NODE_ENV === "production")
+  securityHeaders.push({
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains",
+  });
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -18,14 +29,35 @@ const nextConfig: NextConfig = {
     "@obliq/database",
     "@obliq/domain",
     "@obliq/policy",
+    "@obliq/security",
     "@obliq/storage",
     "@obliq/zcash",
   ],
   experimental: {
-    serverActions: { bodySizeLimit: "11mb" },
+    serverActions: {
+      bodySizeLimit: "11mb",
+      ...(process.env.OBLIQ_SERVER_ACTION_ALLOWED_ORIGINS
+        ? {
+            allowedOrigins:
+              process.env.OBLIQ_SERVER_ACTION_ALLOWED_ORIGINS.split(",").map(
+                (value) => value.trim(),
+              ),
+          }
+        : {}),
+    },
   },
   headers() {
-    return Promise.resolve([{ source: "/(.*)", headers: securityHeaders }]);
+    return Promise.resolve([
+      { source: "/(.*)", headers: securityHeaders },
+      {
+        source: "/verify/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+    ]);
   },
 };
 

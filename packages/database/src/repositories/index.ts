@@ -216,7 +216,8 @@ export function listVendors(db: Executor, organizationId: string) {
     .select()
     .from(vendors)
     .where(eq(vendors.organizationId, organizationId))
-    .orderBy(asc(vendors.displayName));
+    .orderBy(asc(vendors.displayName))
+    .limit(100);
 }
 
 export async function getVendor(
@@ -429,6 +430,11 @@ export interface SourceInput {
   storageRef?: string;
   contentHash?: string;
   metadata: Record<string, unknown>;
+  storageMode?: "LOCAL_DEVELOPMENT" | "S3_PRIVATE";
+  scanStatus?: "NOT_REQUIRED" | "DEVELOPMENT_UNSCANNED" | "CLEAN";
+  quarantinedAt?: Date;
+  scannedAt?: Date;
+  retentionUntil?: Date;
   extraction?: {
     provider: string;
     mode: "LIVE" | "SEEDED_FIXTURE";
@@ -442,6 +448,12 @@ export async function createSource(
   actor: TenantActor,
   input: SourceInput,
 ) {
+  if (
+    input.kind === "INVOICE_UPLOAD" &&
+    input.scanStatus !== "DEVELOPMENT_UNSCANNED" &&
+    input.scanStatus !== "CLEAN"
+  )
+    throw new Error("Uploaded invoice must pass the configured scan boundary");
   return db.transaction(async (tx) => {
     await requireWriteRole(tx, actor, financeWriteRoles);
     const [source] = await tx
@@ -452,6 +464,11 @@ export async function createSource(
         storageRef: input.storageRef,
         contentHash: input.contentHash,
         metadataJson: input.metadata,
+        storageMode: input.storageMode ?? "LOCAL_DEVELOPMENT",
+        scanStatus: input.scanStatus ?? "NOT_REQUIRED",
+        quarantinedAt: input.quarantinedAt,
+        scannedAt: input.scannedAt,
+        retentionUntil: input.retentionUntil,
       })
       .returning();
     if (!source) throw new Error("Source insert did not return a record");
@@ -946,7 +963,8 @@ export function listObligations(
       ),
     )
     .where(and(...predicates))
-    .orderBy(asc(obligations.dueAt), desc(obligations.createdAt));
+    .orderBy(asc(obligations.dueAt), desc(obligations.createdAt))
+    .limit(100);
 }
 
 export async function getObligation(
@@ -1048,5 +1066,6 @@ export async function getDashboardMetrics(
 
 export * from "./control";
 export * from "./evidence";
+export * from "./hardening";
 export * from "./reconciliation";
 export * from "./settlement";

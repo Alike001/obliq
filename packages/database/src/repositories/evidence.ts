@@ -504,7 +504,8 @@ export async function listEvidencePackages(db: Database, actor: TenantActor) {
       ),
     )
     .where(eq(evidencePackages.organizationId, actor.organizationId))
-    .orderBy(desc(evidencePackages.createdAt));
+    .orderBy(desc(evidencePackages.createdAt))
+    .limit(100);
 }
 
 export async function listEvidenceEligibleObligations(
@@ -529,7 +530,8 @@ export async function listEvidenceEligibleObligations(
         eq(obligations.state, "SETTLED"),
       ),
     )
-    .orderBy(desc(obligations.updatedAt));
+    .orderBy(desc(obligations.updatedAt))
+    .limit(100);
 }
 
 export async function getEvidencePreview(

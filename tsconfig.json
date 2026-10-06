@@ -6,6 +6,7 @@
     { "path": "./packages/database" },
     { "path": "./packages/storage" },
     { "path": "./packages/policy" },
+    { "path": "./packages/security" },
     { "path": "./packages/zcash" },
     { "path": "./packages/evidence" },
     { "path": "./scripts" },

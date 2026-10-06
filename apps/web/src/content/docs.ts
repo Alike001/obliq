@@ -29,7 +29,7 @@ export const docs: readonly DocPage[] = [
     slug: "overview",
     title: "Overview",
     status: "IMPLEMENTED",
-    description: "What Obliq is, who it serves, and what exists in Phase 5.",
+    description: "What Obliq is, who it serves, and what exists in Phase 6.",
     sections: [
       {
         id: "product",
@@ -43,7 +43,7 @@ export const docs: readonly DocPage[] = [
         id: "today",
         title: "What exists today",
         paragraphs: [
-          "Phase 5 adds immutable controlled financial evidence derived from settled canonical records. The exact external Zallet signing and observer-driven reconciliation boundaries remain unchanged.",
+          "Phase 6 hardens the complete lifecycle with production-capable OIDC sessions, shared rate limits, private quarantined storage/scanning, runtime network validation and deployable component boundaries. Provider infrastructure is not fabricated or bundled.",
         ],
         bullets: [
           "Manual and invoice-backed obligation capture",
@@ -53,13 +53,14 @@ export const docs: readonly DocPage[] = [
           "UFVK-only shielded observation proven on isolated Zcash regtest",
           "External Zallet shielded signing and broadcast proven on isolated regtest",
           "Explicit-disclosure evidence, canonical JSON hashing and external verification",
+          "OIDC identity/session, PostgreSQL abuse-control and private upload boundaries",
         ],
       },
       {
         id: "not-yet",
         title: "What does not exist yet",
         paragraphs: [
-          "Live market pricing, embedded wallet integration, public-network operation, native PDF generation and zero-knowledge business proofs are not live. The only quote source is explicitly controlled regtest input.",
+          "Live market pricing, embedded wallet integration, public-network operation, native PDF generation and zero-knowledge business proofs are not live. Production provider credentials and infrastructure must be supplied by an operator. The only quote source is explicitly controlled regtest input.",
         ],
         callout: {
           tone: "warning",
@@ -243,7 +244,7 @@ export const docs: readonly DocPage[] = [
         id: "tenancy",
         title: "Server-side tenancy",
         paragraphs: [
-          "Every tenant-owned financial table carries organization_id. Domain guards reject cross-organization access. The development session abstraction fails closed outside development; production identity integration remains planned.",
+          "Every tenant-owned financial table carries organization_id and repositories reject cross-organization access. Production OIDC maps only pre-provisioned issuer/subject identities to one active membership; client roles are ignored. RLS is not active and is not claimed.",
         ],
       },
     ],
@@ -318,7 +319,7 @@ export const docs: readonly DocPage[] = [
         id: "implemented",
         title: "Implemented",
         paragraphs: [
-          "PostgreSQL-backed vendors and obligations, deterministic controls and approvals, immutable settlement quotes/intents, external Zallet signing receipts, UFVK-only observation, three-signal correlation, idempotent execution/confirmation persistence, and organization-scoped audit events.",
+          "PostgreSQL-backed vendors and obligations, deterministic controls and approvals, immutable settlement quotes/intents, external Zallet signing receipts, UFVK-only observation, three-signal correlation, controlled evidence, OIDC sessions, shared rate limits, private upload/scanner boundaries, idempotent persistence, and organization-scoped audit events.",
         ],
       },
       {
@@ -332,7 +333,7 @@ export const docs: readonly DocPage[] = [
         id: "planned",
         title: "Planned and unavailable",
         paragraphs: [
-          "Production authentication, live market quotes, embedded wallet signing, public-network execution, ledger settlement entries and native PDF evidence are not implemented. Controlled JSON evidence and external verification are implemented. Public-network operation is BLOCKED by the documented service limitation and lacks funded qualification.",
+          "Live market quotes, embedded wallet signing, public-network execution, ledger settlement entries and native PDF evidence are not implemented. Production identity/storage/scanner integration code exists but requires real provider infrastructure. Public-network operation remains BLOCKED: the old Zaino subtree-root issue is fixed upstream, but Obliq public synchronization, reorg recovery and a funded shielded flow remain unproved.",
         ],
         callout: {
           tone: "warning",
@@ -409,7 +410,7 @@ export const docs: readonly DocPage[] = [
         id: "upload",
         title: "Document handling",
         paragraphs: [
-          "The server accepts PDF, PNG and JPEG up to the configured limit. It checks file signatures and declared MIME agreement, hashes content with SHA-256, generates a storage identifier and keeps the original filename as metadata only. There is no public raw-file route.",
+          "The server accepts PDF, PNG and JPEG up to the configured limit. It checks file signatures and declared MIME agreement, hashes content with SHA-256, generates a storage identifier and keeps the original filename as metadata only. Production uses private quarantine storage and requires an authenticated scanner CLEAN result; unknown fails closed. There is no public raw-file route.",
         ],
       },
       {
@@ -680,7 +681,7 @@ export const docs: readonly DocPage[] = [
         title: "External verification",
         paragraphs: [
           "The public route uses an independent 256-bit random URL-safe identifier rather than the internal UUID. It displays only embedded claims, current ACTIVE/SUPERSEDED/REVOKED status and hash result. Invalid identifiers reveal no organization data.",
-          "JSON is the canonical downloadable artifact. The printable HTML receipt renders the same verified model. Native PDF generation is PLANNED and not claimed.",
+          "JSON is the canonical downloadable artifact. The printable HTML receipt renders the same verified model. Native PDF remains PLANNED: Phase 6 did not add a renderer whose font/browser/runtime dependencies could drift into an independent source of truth.",
         ],
       },
       {

@@ -35,6 +35,9 @@ use zcash_protocol::{
     local_consensus::LocalNetwork,
 };
 
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+
 #[derive(Clone, Default)]
 struct MemoryBlockCache(Arc<Mutex<BTreeMap<u32, CompactBlock>>>);
 
@@ -163,6 +166,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut client = CompactTxStreamerClient::connect(endpoint()).await?;
     let mut wallet = WalletDb::for_path(&wallet_path, params, SystemClock, OsRng)?;
     init_wallet_db(&mut wallet, None)?;
+    #[cfg(unix)]
+    std::fs::set_permissions(&wallet_path, std::fs::Permissions::from_mode(0o600))?;
 
     if command == "init" {
         if wallet.get_account_ids()?.is_empty() {
@@ -200,6 +205,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!(
             "{}",
             json!({
+                "network": "regtest",
                 "authority": "UFVK_VIEW_ONLY",
                 "spendingAuthority": false,
                 "receiver": address.encode(&params),
@@ -337,6 +343,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!(
         "{}",
         json!({
+            "network": "regtest",
             "authority": "UFVK_VIEW_ONLY",
             "spendingAuthority": false,
             "chainTipHeight": u32::from(chain_tip),
