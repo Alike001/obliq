@@ -5,6 +5,8 @@ dist/
 target/
 .env
 .env.local
+.env.*
+!.env.example
 *.log
 .DS_Store
 .playwright-mcp/
@@ -14,3 +16,35 @@ artifacts/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+*.db
+*.db-shm
+*.db-wal
+backups/
+dumps/
+*.dump
+*.backup
+*.sql.gz
+
+# Private credentials and cryptographic material
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.age
+credentials*.json
+service-account*.json
+client_secret*.json
+*.pczt
+*.rawtx
+
+# Wallet, observer and node state
+wallet.dat
+wallet.sqlite*
+.zcash/
+.zebrad-cache/
+.zaino/
+zcash-data/
+node-data/
+observer-cache/
