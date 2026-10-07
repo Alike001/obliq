@@ -40,6 +40,14 @@ Create a **Free Node web service** from the reviewed branch or merged commit.
 | Node version      | `24.21.0`                                                  |
 | Plan              | Free (`0.1 CPU`, `512 MB RAM`)                             |
 
+The root `build:preview` script first performs a forced TypeScript project
+build of every workspace package, following declared package dependencies,
+and then runs the Next.js production build. This is required because the web
+project references declaration outputs from the composite package projects.
+The forced package build makes a clean Render checkout independent of local
+`dist` directories or incremental TypeScript state. Do not replace the root
+script with a direct workspace `next build` invocation.
+
 Set these environment variables exactly:
 
 ```text
