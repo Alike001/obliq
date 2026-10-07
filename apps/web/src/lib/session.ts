@@ -16,6 +16,7 @@ import { getRuntimeSecurityConfig } from "./runtime-config";
  */
 export async function getTenantContext(): Promise<TenantContext> {
   const runtime = getRuntimeSecurityConfig();
+  if (runtime.authMode === "disabled") throw new AuthenticationRequiredError();
   if (runtime.authMode === "oidc") {
     const token = (await cookies()).get(sessionCookieName())?.value;
     if (!token) throw new AuthenticationRequiredError();

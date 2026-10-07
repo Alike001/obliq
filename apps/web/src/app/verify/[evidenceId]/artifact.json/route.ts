@@ -6,6 +6,7 @@ import {
 } from "@obliq/database";
 import { getDatabase } from "@/lib/db";
 import { rateLimitRequest, requestSubject } from "@/lib/request-security";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,14 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ evidenceId: string }> },
 ) {
+  if (getRuntimeSecurityConfig().deploymentMode === "preview")
+    return new Response(
+      "Evidence verification is unavailable in public preview",
+      {
+        status: 404,
+        headers: { "Cache-Control": "no-store" },
+      },
+    );
   const { evidenceId } = await params;
   const subject = await requestSubject();
   try {

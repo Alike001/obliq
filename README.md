@@ -35,7 +35,7 @@ Ledger remains planned. Policy and evidence are framework-independent packages w
 
 ## Local setup
 
-Requirements: Node.js 20.9+ (Node 24 recommended), npm 11+, Docker Compose or PostgreSQL 16+.
+Requirements: Node.js 24, npm 11+, Docker Compose or PostgreSQL 16+.
 
 ```bash
 cp .env.example .env
@@ -94,6 +94,11 @@ cargo audit --file tools/zcash-observer/Cargo.lock
 PostgreSQL RLS is not active; ADR 0009 records the transaction-context prerequisite and compensating server enforcement. Provider credentials, secret-manager injection, scanner/object-store operations, encrypted observer volumes and independent audit anchoring are deployment responsibilities and are not claimed as configured.
 
 See [security architecture](docs/architecture/security.md), [threat model](docs/architecture/threat-model.md), and the in-product `/security` and `/proof` surfaces.
+
+The optional [Render Free public preview](docs/operations/render-free-preview.md)
+runs without PostgreSQL or Zcash infrastructure. Its explicit `preview` mode
+exposes only presentation, documentation, security, proof, and health routes;
+it is not a product or production deployment.
 
 ## Phase status
 

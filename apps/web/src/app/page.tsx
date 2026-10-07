@@ -38,6 +38,7 @@ const lifecycle = [
 ] as const;
 
 export default function LandingPage() {
+  const preview = process.env.OBLIQ_DEPLOYMENT_MODE === "preview";
   return (
     <main>
       <SiteHeader />
@@ -58,17 +59,21 @@ export default function LandingPage() {
               settlements—without giving up control of their treasury.
             </p>
             <div className="mt-9 flex flex-wrap gap-3">
-              <Link href="/app" className="button button-dark">
-                Explore the product <ArrowRight size={16} />
+              <Link
+                href={preview ? "/proof" : "/app"}
+                className="button button-dark"
+              >
+                {preview ? "Inspect the proof" : "Explore the product"}{" "}
+                <ArrowRight size={16} />
               </Link>
               <Link href="/docs" className="button button-light">
                 Read the architecture
               </Link>
             </div>
             <p className="text-muted mt-5 max-w-xl text-xs leading-5">
-              Capture, deterministic controls and human approvals are
-              implemented. Zcash settlement and reconciliation remain explicitly
-              unavailable—not simulated.
+              {preview
+                ? "This hosted preview is read-only. Financial operations, evidence verification and Zcash services are disabled; public-network settlement remains blocked."
+                : "Capture, deterministic controls and human approvals are implemented. Zcash settlement and reconciliation remain explicitly unavailable—not simulated."}
             </p>
           </div>
           <ProductPreview />
