@@ -333,7 +333,7 @@ textarea.input {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
-  padding: 0.1875rem var(--s2);
+  padding: var(--s1) var(--s2);
   border-radius: var(--radius-control);
   background: var(--neutral-bg);
   color: var(--ink);
@@ -369,7 +369,7 @@ textarea.input {
   display: inline-flex;
   align-items: center;
   gap: var(--s2);
-  padding: 0.125rem var(--s2);
+  padding: var(--s1) var(--s2);
   border: 1px solid var(--ink);
   border-radius: 2px;
   background: var(--surface);
@@ -390,7 +390,7 @@ textarea.input {
 .scope {
   display: inline-flex;
   align-items: center;
-  padding: 0.125rem var(--s2) 0.125rem var(--s4);
+  padding: var(--s1) var(--s2) var(--s1) var(--s4);
   border: 1px solid var(--line-strong);
   border-radius: 2px;
   background:
@@ -410,7 +410,6 @@ textarea.input {
   gap: var(--s2) var(--s3);
   padding: var(--s4);
   border: 1px solid var(--line-strong);
-  border-left-width: 4px;
   border-radius: var(--radius-control);
   background: var(--surface);
 }
@@ -671,17 +670,10 @@ textarea.input {
     gap: var(--s3);
     padding: var(--s2) var(--s4);
     border-top: 0;
-    border-left: 3px solid var(--line);
   }
   .step small {
     margin-left: auto;
     text-align: right;
-  }
-  .step-done {
-    border-left-color: var(--clear);
-  }
-  .step-now {
-    border-left-color: var(--ink);
   }
 }
 
@@ -869,7 +861,7 @@ textarea.input {
   }
   .mnav a[aria-current="page"] {
     font-weight: 600;
-    border-left: 3px solid var(--violet);
+    background: var(--violet-tint);
   }
   .page {
     padding: var(--s5) var(--s4) var(--s7);
