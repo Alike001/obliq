@@ -1,9 +1,17 @@
 import { formatMinorUnits } from "@obliq/domain";
-import { getDashboardMetrics, listObligations } from "@obliq/database";
+import {
+  getDashboardMetrics,
+  listObligations,
+  listPolicies,
+  listVendorDestinations,
+  listVendors,
+} from "@obliq/database";
 import { ArrowUpRight, FilePlus2 } from "lucide-react";
 import Link from "next/link";
+import { FirstRunGuide } from "@/components/first-run-guide";
 import { StatusPill } from "@/components/status-pill";
 import { getDatabase } from "@/lib/db";
+import { firstRunSteps } from "@/lib/first-run";
 import { getTenantContext } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
@@ -14,6 +22,8 @@ export default async function AppOverviewPage() {
     getDashboardMetrics(db, tenant.organizationId),
     listObligations(db, tenant.organizationId),
   ]);
+  const firstRun =
+    recent.length === 0 ? await getFirstRunSteps(db, tenant) : null;
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -32,6 +42,7 @@ export default async function AppOverviewPage() {
             Record obligation
           </Link>
         </div>
+        {firstRun && <FirstRunGuide steps={firstRun} />}
         <section
           className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
           aria-label="Real control metrics"
@@ -119,6 +130,28 @@ export default async function AppOverviewPage() {
       </div>
     </main>
   );
+}
+// Read-only and scoped to the session's organization. It runs only while the
+// organization has no obligations, and writes nothing.
+async function getFirstRunSteps(
+  db: ReturnType<typeof getDatabase>,
+  tenant: { organizationId: string; role: string },
+) {
+  const [vendors, policies] = await Promise.all([
+    listVendors(db, tenant.organizationId),
+    listPolicies(db, tenant.organizationId),
+  ]);
+  const destinations = await Promise.all(
+    vendors.map((vendor) =>
+      listVendorDestinations(db, tenant.organizationId, vendor.id),
+    ),
+  );
+  return firstRunSteps({
+    role: tenant.role,
+    vendorIds: vendors.map((vendor) => vendor.id),
+    destinations: destinations.flat(),
+    policyCount: policies.length,
+  });
 }
 function Metric({
   label,

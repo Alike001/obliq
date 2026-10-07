@@ -29,7 +29,7 @@ export const appSections = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const runtime = getRuntimeSecurityConfig();
   return (
-    <div className="min-h-screen bg-[#eef0eb] lg:grid lg:grid-cols-[244px_1fr]">
+    <div className="bg-canvas min-h-screen lg:grid lg:grid-cols-[244px_1fr]">
       <aside className="bg-ink hidden min-h-screen border-r border-white/10 p-5 text-white lg:flex lg:flex-col">
         <Brand inverse />
         <div className="mt-9 rounded-xl border border-white/10 bg-white/5 p-3">

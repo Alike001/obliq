@@ -1,39 +1,37 @@
 import Link from "next/link";
+import { isReadOnlyPreview, siteLinks } from "@/lib/site-links";
 import { Brand } from "./brand";
 
-const links = [
-  ["Product", "/app"],
-  ["Documentation", "/docs"],
-  ["Security", "/security"],
-  ["Proof", "/proof"],
-] as const;
-
+/** The header wraps on narrow screens; no link is hidden behind a script. */
 export function SiteHeader() {
-  const preview = process.env.OBLIQ_DEPLOYMENT_MODE === "preview";
-  const visibleLinks = preview
-    ? links.filter(([label]) => label !== "Product")
-    : links;
+  const preview = isReadOnlyPreview();
+  const { nav, primary } = siteLinks(preview);
   return (
-    <header className="border-ink/10 bg-paper/90 border-b backdrop-blur">
-      <div className="page-wrap flex h-18 items-center justify-between">
-        <Brand />
+    <header className="border-line bg-surface border-b">
+      <div className="page-wrap flex flex-wrap items-center justify-between gap-x-6 gap-y-1 py-3">
+        <div className="flex flex-wrap items-center gap-x-3">
+          <Brand />
+          {preview && (
+            <span className="cap cap-hatched">Read-only preview</span>
+          )}
+        </div>
+        {/* Below 640px the links take their own row under the button. */}
         <nav
           aria-label="Primary"
-          className="text-muted hidden items-center gap-7 text-sm md:flex"
+          className="order-3 flex w-full flex-wrap items-center gap-x-6 sm:order-none sm:ml-auto sm:w-auto"
         >
-          {visibleLinks.map(([label, href]) => (
+          {nav.map(({ label, href }) => (
             <Link
               key={href}
               href={href}
-              className="hover:text-ink transition-colors"
+              className="text-ink inline-flex min-h-11 items-center no-underline hover:underline"
             >
               {label}
             </Link>
           ))}
         </nav>
-        <Link href={preview ? "/proof" : "/app"} className="button button-dark">
-          {preview ? "View proof" : "Open foundation"}{" "}
-          <span aria-hidden>↗</span>
+        <Link href={primary.href} className="button button-dark">
+          {primary.label}
         </Link>
       </div>
     </header>

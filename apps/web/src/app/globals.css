@@ -1,108 +1,594 @@
 @import "tailwindcss";
 
+/*
+ * Direction B, "Lanes". Token names and values follow
+ * docs/design/design-system.md. Components reference the role, never the hex.
+ */
 @theme inline {
-  --color-paper: #f5f4ef;
-  --color-panel: #fbfaf6;
-  --color-ink: #14211d;
-  --color-muted: #63706a;
-  --color-line: #d9ddd7;
-  --color-mint: #bfe8d0;
-  --color-forest: #173f33;
-  --font-sans: "Inter", "Avenir Next", "Segoe UI", sans-serif;
-  --font-mono: "SFMono-Regular", "Cascadia Code", monospace;
+  --color-ink: #14233b;
+  --color-ink-2: #47556b;
+  --color-ink-3: #5f6b80;
+  --color-line: #ccd4de;
+  --color-line-strong: #7e8a9c;
+  --color-canvas: #edf1f4;
+  --color-surface: #ffffff;
+  --color-sunken: #f5f7f9;
+  --color-violet: #5a32a3;
+  --color-violet-tint: #efe9f8;
+  --color-violet-on-ink: #b9a6e8;
+  --color-clear: #17603d;
+  --color-clear-bg: #e3f2e9;
+  --color-hold: #7a4b00;
+  --color-hold-bg: #fbefcf;
+  --color-stop: #9b1c1c;
+  --color-stop-bg: #fbe6e4;
+  --color-neutral-bg: #e6eaef;
+
+  /* Names used by pages that have not been moved to Lanes yet (issues #3 and
+     #4). They point at the Lanes roles and go when those pages migrate. */
+  --color-paper: var(--color-canvas);
+  --color-panel: var(--color-surface);
+  --color-muted: var(--color-ink-2);
+  --color-forest: var(--color-violet);
+  --color-mint: var(--color-violet-on-ink);
+
+  --font-sans: var(--font-plex-sans), "Segoe UI", system-ui, sans-serif;
+  --font-serif: var(--font-plex-serif), Georgia, serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "Cascadia Code", monospace;
+}
+
+:root {
+  /* Oblique hatch: marks anything that is not live, public truth. */
+  --hatch: repeating-linear-gradient(
+    -55deg,
+    transparent 0 5px,
+    rgb(20 35 59 / 0.13) 5px 6px
+  );
+  --measure: 68ch;
 }
 
 * {
   box-sizing: border-box;
 }
-html {
-  scroll-behavior: smooth;
-}
 body {
   margin: 0;
-  background: var(--color-paper);
+  background: var(--color-canvas);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
 }
 a {
-  text-underline-offset: 4px;
+  text-underline-offset: 3px;
 }
 ::selection {
-  background: var(--color-mint);
+  background: var(--color-violet-tint);
   color: var(--color-ink);
 }
 :focus-visible {
-  outline: 3px solid #2c7a5b;
-  outline-offset: 3px;
+  outline: 3px solid var(--color-violet);
+  outline-offset: 2px;
+}
+.on-ink :focus-visible {
+  outline-color: var(--color-violet-on-ink);
 }
 
-.page-wrap {
-  width: min(1180px, calc(100% - 2rem));
-  margin-inline: auto;
-}
-.button {
-  display: inline-flex;
-  min-height: 2.75rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border-radius: 999px;
-  padding-inline: 1.1rem;
-  font-size: 0.875rem;
-  font-weight: 650;
-  transition: 0.2s ease;
-}
-.button-dark {
-  background: var(--color-ink);
-  color: white;
-}
-.button-dark:hover {
-  background: var(--color-forest);
-  transform: translateY(-1px);
-}
-.button-light {
-  border: 1px solid rgb(20 33 29 / 0.16);
-  background: rgb(255 255 255 / 0.5);
-  color: var(--color-ink);
-}
-.button-light:hover {
-  background: white;
-}
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: #557067;
-}
-.display {
-  font-size: clamp(3rem, 7vw, 6.7rem);
-  font-weight: 540;
-  letter-spacing: -0.067em;
-  line-height: 0.93;
-}
-.section-title {
-  font-size: clamp(2rem, 4vw, 3.6rem);
-  font-weight: 550;
-  letter-spacing: -0.05em;
-  line-height: 1;
-}
-.card {
-  border: 1px solid rgb(20 33 29 / 0.11);
-  border-radius: 1.25rem;
-  background: rgb(251 250 246 / 0.76);
-}
-.hairline {
-  border-color: rgb(20 33 29 / 0.11);
-}
-
-@media (max-width: 640px) {
+@layer components {
   .page-wrap {
-    width: min(100% - 1.25rem, 1180px);
+    width: min(76rem, calc(100% - 3rem));
+    margin-inline: auto;
   }
+
+  /* ---------- Type roles ---------- */
+  .t-display,
+  .display {
+    font-family: var(--font-serif);
+    font-size: clamp(2.375rem, 5.2vw, 3.25rem);
+    font-weight: 500;
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+  .t-title,
+  .section-title {
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .t-section {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .t-lede {
+    max-width: var(--measure);
+    color: var(--color-ink-2);
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+  .t-small {
+    color: var(--color-ink-2);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+  .eyebrow {
+    color: var(--color-ink-2);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .text-link {
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--color-violet);
+    font-weight: 600;
+    text-decoration: underline;
+  }
+
+  /* ---------- Buttons ---------- */
   .button {
-    min-height: 2.5rem;
-    padding-inline: 0.9rem;
+    display: inline-flex;
+    min-height: 2.75rem;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding-inline: 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .button-dark {
+    background: var(--color-ink);
+    color: #fff;
+  }
+  .button-dark:hover {
+    background: #22375a;
+  }
+  .button-light {
+    border-color: var(--color-line-strong);
+    background: var(--color-surface);
+    color: var(--color-ink);
+  }
+  .button-light:hover {
+    background: var(--color-sunken);
+  }
+
+  /* ---------- Surfaces ---------- */
+  .card,
+  .sheet {
+    border: 1px solid var(--color-line);
+    border-radius: 6px;
+    background: var(--color-surface);
+  }
+  .sheet-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem 1rem;
+    border-bottom: 1px solid var(--color-line);
+    padding: 1rem 1.5rem;
+  }
+  .hairline {
+    border-color: var(--color-line);
+  }
+  .band {
+    padding-block: 4.5rem;
+  }
+  .band-surface {
+    border-block: 1px solid var(--color-line);
+    background: var(--color-surface);
+  }
+  .cols-2 {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    align-items: start;
+    gap: 2rem 3rem;
+  }
+  .plain-list > * {
+    border-top: 1px solid var(--color-line);
+    padding-block: 0.875rem;
+  }
+  .plain-list > :first-child {
+    border-top: 0;
+    padding-top: 0;
+  }
+  .skip-link {
+    position: absolute;
+    top: -5rem;
+    left: 0.75rem;
+    z-index: 50;
+  }
+  .skip-link:focus {
+    top: 0.75rem;
+  }
+
+  /* ---------- Glyphs: state is never colour alone ---------- */
+  .glyph {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    flex: none;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+  }
+  .glyph-done {
+    background: currentColor;
+  }
+  .glyph-wait {
+    background: linear-gradient(90deg, currentColor 50%, transparent 50%);
+  }
+  .glyph-stop {
+    border-radius: 1px;
+    background: currentColor;
+  }
+  .glyph-unknown {
+    border-style: dashed;
+  }
+  .glyph-attn {
+    width: 0;
+    height: 0;
+    border: 0.42rem solid transparent;
+    border-top: 0;
+    border-bottom: 0.75rem solid currentColor;
+    border-radius: 0;
+  }
+
+  /* ---------- State tag: where a record or a step is ---------- */
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-radius: 4px;
+    background: var(--color-neutral-bg);
+    padding: 0.25rem 0.5rem;
+    color: var(--color-ink);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .tag .glyph {
+    color: var(--color-ink-3);
+  }
+  .tag-clear {
+    background: var(--color-clear-bg);
+  }
+  .tag-clear .glyph {
+    color: var(--color-clear);
+  }
+  .tag-hold {
+    background: var(--color-hold-bg);
+  }
+  .tag-hold .glyph {
+    color: var(--color-hold);
+  }
+  .tag-stop {
+    background: var(--color-stop-bg);
+  }
+  .tag-stop .glyph {
+    color: var(--color-stop);
+  }
+
+  /* ---------- Capability stamp: what the product can do ---------- */
+  .cap {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--color-ink);
+    border-radius: 2px;
+    background: var(--color-surface);
+    padding: 0.25rem 0.5rem;
+    color: var(--color-ink);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .cap-hatched {
+    border-style: dashed;
+    background: var(--hatch), var(--color-surface);
+  }
+  .cap-blocked {
+    border-color: var(--color-stop);
+    color: var(--color-stop);
+  }
+
+  /* ---------- Scope tag: which network a fact is about ---------- */
+  .scope {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 2px;
+    background:
+      linear-gradient(var(--color-surface), var(--color-surface)) no-repeat
+        0.625rem 0 / 100% 100%,
+      var(--hatch),
+      var(--color-hold-bg);
+    padding: 0.25rem 0.5rem 0.25rem 1rem;
+    color: var(--color-ink);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+
+  /* ---------- Notice ---------- */
+  .notice {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.5rem 0.75rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: 4px;
+    background: var(--color-surface);
+    padding: 1rem;
+  }
+  .notice > .glyph {
+    margin-top: 0.3rem;
+  }
+  .notice strong {
+    display: block;
+  }
+  .notice-hold {
+    border-color: var(--color-hold);
+    background: var(--color-hold-bg);
+  }
+  .notice-hold > .glyph {
+    color: var(--color-hold);
+  }
+  .notice-hatched {
+    background: var(--hatch), var(--color-sunken);
+  }
+
+  /* ---------- Ledger table: stacks below 720px, never scrolls sideways ---- */
+  .ledger {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .ledger caption {
+    border-bottom: 1px solid var(--color-line);
+    padding: 1rem;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    text-align: left;
+  }
+  .ledger th {
+    border-bottom: 1px solid var(--color-line);
+    background: var(--color-sunken);
+    padding: 0.75rem 1rem;
+    color: var(--color-ink-2);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: left;
+  }
+  .ledger td {
+    border-bottom: 1px solid var(--color-line);
+    padding: 0.75rem 1rem;
+    vertical-align: top;
+  }
+  .ledger tr:last-child td {
+    border-bottom: 0;
+  }
+  .ledger .stamps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+  }
+  @media (max-width: 719px) {
+    .ledger thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    .ledger,
+    .ledger tbody,
+    .ledger tr,
+    .ledger td {
+      display: block;
+    }
+    .ledger tr {
+      border-bottom: 1px solid var(--color-line);
+      padding: 0.75rem 1rem;
+    }
+    .ledger tr:last-child {
+      border-bottom: 0;
+    }
+    .ledger td {
+      border: 0;
+      padding: 0.25rem 0;
+    }
+    .ledger td.lead {
+      font-weight: 600;
+    }
+  }
+
+  /* ---------- Authority track ----------
+     One ordered list of steps. From 900px each step is placed in the lane of
+     the authority that performs it; below that it is a grouped list in the
+     same order. */
+  .track {
+    display: grid;
+    gap: 2px;
+  }
+  .track-steps {
+    display: grid;
+    gap: 2px;
+  }
+  .lane-bg,
+  .lane-name {
+    display: none;
+  }
+  .step {
+    border-radius: 4px;
+    background: var(--color-sunken);
+    padding: 0.875rem 1rem;
+  }
+  .step-lane {
+    margin-bottom: 0.625rem;
+    border-bottom: 1px solid var(--color-line);
+    padding-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .step-lane span {
+    color: var(--color-ink-2);
+    font-weight: 400;
+  }
+  .step-body {
+    display: grid;
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+  .step-number {
+    color: var(--color-ink-2);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+    font-variant-numeric: tabular-nums;
+  }
+  .step-name {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+  .step-text {
+    margin-top: 0.25rem;
+    color: var(--color-ink-2);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+  .step-scope {
+    margin-top: 0.5rem;
+  }
+  /* Hatched: this step is proven on a test network only. */
+  .step-hatched {
+    background: var(--hatch), var(--color-sunken);
+  }
+  @media (min-width: 900px) {
+    .track {
+      grid-template-columns: 11rem repeat(5, minmax(0, 1fr));
+      grid-template-rows: repeat(3, auto);
+    }
+    .lane-bg {
+      display: block;
+      grid-column: 1 / -1;
+      border-radius: 4px;
+      background: var(--color-sunken);
+    }
+    .lane-name {
+      display: block;
+      grid-column: 1;
+      border-right: 1px solid var(--color-line);
+      padding: 0.75rem 1rem;
+    }
+    .lane-name strong {
+      display: block;
+      font-size: 0.8125rem;
+    }
+    .lane-name span {
+      color: var(--color-ink-2);
+      font-size: 0.75rem;
+    }
+    .track-steps {
+      grid-column: 2 / -1;
+      grid-row: 1 / -1;
+      grid-template-columns: subgrid;
+      grid-template-rows: subgrid;
+    }
+    .step {
+      position: relative;
+      grid-column: var(--col);
+      grid-row: var(--lane);
+      border-top: 3px solid var(--color-ink);
+      border-radius: 0;
+      background: var(--color-surface);
+      padding: 0.75rem;
+    }
+    .step-hatched {
+      background: var(--hatch), var(--color-surface);
+    }
+    /* The lane is already named in the row heading. */
+    .step-lane {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    /* The oblique hand-off: authority crosses to another lane at a slant. */
+    .step-handoff::before {
+      position: absolute;
+      top: -3px;
+      left: -0.875rem;
+      width: 0.875rem;
+      height: calc(100% + 3px);
+      background: var(--color-line-strong);
+      clip-path: polygon(0 0, 2px 0, 100% 100%, calc(100% - 2px) 100%);
+      content: "";
+    }
+    .step-handoff-up::before {
+      clip-path: polygon(calc(100% - 2px) 0, 100% 0, 2px 100%, 0 100%);
+    }
+  }
+
+  /* ---------- Numbered steps ---------- */
+  .steps {
+    counter-reset: step;
+  }
+  .steps > li {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.25rem 0.75rem;
+    border-top: 1px solid var(--color-line);
+    padding: 1rem 1.5rem;
+    counter-increment: step;
+  }
+  .steps > li:first-child {
+    border-top: 0;
+  }
+  .steps > li::before {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 2px solid var(--color-line-strong);
+    border-radius: 50%;
+    content: counter(step);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .steps > li[data-state="done"]::before {
+    border-color: var(--color-clear);
+    background: var(--color-clear);
+    color: #fff;
+  }
+  .steps > li[data-state="next"]::before {
+    border-color: var(--color-ink);
+    background: var(--color-ink);
+    color: #fff;
+  }
+
+  @media (max-width: 899px) {
+    .page-wrap {
+      width: min(76rem, calc(100% - 2rem));
+    }
+    .band {
+      padding-block: 3rem;
+    }
+    .cols-2 {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .steps > li {
+      padding-inline: 1rem;
+    }
   }
 }
