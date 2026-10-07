@@ -68,22 +68,22 @@ export function parseRuntimeSecurityConfig(
   const publicNetworkStatus =
     env.OBLIQ_PUBLIC_NETWORK_STATUS ?? "PUBLIC_NETWORK_BLOCKED";
   if (
-    ![
-      "PUBLIC_NETWORK_BLOCKED",
-      "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST",
-      "PUBLIC_NETWORK_VERIFIED",
-    ].includes(publicNetworkStatus)
+    publicNetworkStatus !== "PUBLIC_NETWORK_BLOCKED" &&
+    publicNetworkStatus !== "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST" &&
+    publicNetworkStatus !== "PUBLIC_NETWORK_VERIFIED"
   )
     throw new Error("OBLIQ_PUBLIC_NETWORK_STATUS is invalid");
-  if (publicNetworkStatus !== "PUBLIC_NETWORK_BLOCKED")
-    throw new Error(
-      "This release cannot claim public-network readiness without a code change",
-    );
   if (
     selectedNetwork !== "regtest" &&
     publicNetworkStatus === "PUBLIC_NETWORK_BLOCKED"
   )
     throw new Error("Public Zcash network is blocked by runtime policy");
+  if (publicNetworkStatus === "PUBLIC_NETWORK_VERIFIED")
+    throw new Error("This release has not verified public-network settlement");
+  if (selectedNetwork === "mainnet")
+    throw new Error(
+      "Mainnet remains blocked pending public-network verification",
+    );
 
   if (deploymentMode === "production") {
     if (authMode !== "oidc")

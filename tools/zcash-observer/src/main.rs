@@ -22,7 +22,7 @@ use zcash_client_backend::{
     proto::{
         compact_formats::CompactBlock,
         service::{
-            BlockId, BlockRange, ChainSpec, TxFilter,
+            BlockId, BlockRange, ChainSpec, Empty, TxFilter,
             compact_tx_streamer_client::CompactTxStreamerClient,
         },
     },
@@ -31,7 +31,7 @@ use zcash_client_sqlite::{WalletDb, util::SystemClock, wallet::init::init_wallet
 use zcash_keys::keys::{UnifiedAddressRequest, UnifiedFullViewingKey};
 use zcash_primitives::transaction::Transaction;
 use zcash_protocol::{
-    consensus::{BlockHeight, BranchId},
+    consensus::{BlockHeight, BranchId, Network, NetworkType, NetworkUpgrade, Parameters},
     local_consensus::LocalNetwork,
 };
 
@@ -118,8 +118,41 @@ impl BlockCache for MemoryBlockCache {
     }
 }
 
-fn params() -> LocalNetwork {
-    LocalNetwork {
+#[derive(Clone)]
+enum ObserverParameters {
+    Regtest(LocalNetwork),
+    Public(Network),
+}
+
+impl Parameters for ObserverParameters {
+    fn network_type(&self) -> NetworkType {
+        match self {
+            Self::Regtest(params) => params.network_type(),
+            Self::Public(params) => params.network_type(),
+        }
+    }
+
+    fn activation_height(&self, nu: NetworkUpgrade) -> Option<BlockHeight> {
+        match self {
+            Self::Regtest(params) => params.activation_height(nu),
+            Self::Public(params) => params.activation_height(nu),
+        }
+    }
+}
+
+struct ConfiguredNetwork {
+    label: &'static str,
+    service_chain_name: &'static str,
+    params: ObserverParameters,
+}
+
+fn configured_network() -> Result<ConfiguredNetwork, Box<dyn Error>> {
+    let value = env::var("OBSERVER_NETWORK").unwrap_or_else(|_| "regtest".to_string());
+    configured_network_for(&value)
+}
+
+fn configured_network_for(value: &str) -> Result<ConfiguredNetwork, Box<dyn Error>> {
+    let regtest = || LocalNetwork {
         overwinter: Some(BlockHeight::from_u32(1)),
         sapling: Some(BlockHeight::from_u32(1)),
         blossom: Some(BlockHeight::from_u32(1)),
@@ -130,6 +163,24 @@ fn params() -> LocalNetwork {
         nu6_1: Some(BlockHeight::from_u32(2)),
         nu6_2: Some(BlockHeight::from_u32(2)),
         nu6_3: Some(BlockHeight::from_u32(2)),
+    };
+    match value {
+        "regtest" => Ok(ConfiguredNetwork {
+            label: "regtest",
+            service_chain_name: "regtest",
+            params: ObserverParameters::Regtest(regtest()),
+        }),
+        "testnet" => Ok(ConfiguredNetwork {
+            label: "testnet",
+            service_chain_name: "test",
+            params: ObserverParameters::Public(Network::TestNetwork),
+        }),
+        "mainnet" => Ok(ConfiguredNetwork {
+            label: "mainnet",
+            service_chain_name: "main",
+            params: ObserverParameters::Public(Network::MainNetwork),
+        }),
+        _ => Err("OBSERVER_NETWORK must be regtest, testnet, or mainnet".into()),
     }
 }
 
@@ -143,7 +194,7 @@ fn endpoint() -> String {
     env::var("OBSERVER_ENDPOINT").unwrap_or_else(|_| "http://127.0.0.1:28137".to_string())
 }
 
-fn viewing_key(params: &LocalNetwork) -> Result<UnifiedFullViewingKey, Box<dyn Error>> {
+fn viewing_key(params: &ObserverParameters) -> Result<UnifiedFullViewingKey, Box<dyn Error>> {
     let encoded = env::var("OBSERVER_UFVK").map_err(|_| "OBSERVER_UFVK is required")?;
     UnifiedFullViewingKey::decode(params, &encoded).map_err(Into::into)
 }
@@ -160,11 +211,23 @@ fn canonical_txid(database_hex: &str) -> String {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let command = env::args().nth(1).ok_or("expected init or sync")?;
-    let params = params();
+    let configured = configured_network()?;
+    let params = configured.params;
     let ufvk = viewing_key(&params)?;
     let wallet_path = path();
     let mut client = CompactTxStreamerClient::connect(endpoint()).await?;
-    let mut wallet = WalletDb::for_path(&wallet_path, params, SystemClock, OsRng)?;
+    let service_info = client
+        .get_lightd_info(Request::new(Empty {}))
+        .await?
+        .into_inner();
+    if service_info.chain_name != configured.service_chain_name {
+        return Err(format!(
+            "observer network mismatch: expected {}, data service reported {}",
+            configured.service_chain_name, service_info.chain_name
+        )
+        .into());
+    }
+    let mut wallet = WalletDb::for_path(&wallet_path, params.clone(), SystemClock, OsRng)?;
     init_wallet_db(&mut wallet, None)?;
     #[cfg(unix)]
     std::fs::set_permissions(&wallet_path, std::fs::Permissions::from_mode(0o600))?;
@@ -175,16 +238,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .get_latest_block(Request::new(ChainSpec {}))
                 .await?
                 .into_inner();
+            let birthday_height = match env::var("OBSERVER_BIRTHDAY_HEIGHT") {
+                Ok(value) => value.parse::<u32>()?,
+                Err(env::VarError::NotPresent) => u32::try_from(tip.height)?,
+                Err(error) => return Err(error.into()),
+            };
+            if u64::from(birthday_height) > tip.height {
+                return Err("OBSERVER_BIRTHDAY_HEIGHT is above the current chain tip".into());
+            }
             let tree = client
                 .get_tree_state(Request::new(BlockId {
-                    height: tip.height,
-                    hash: tip.hash,
+                    height: u64::from(birthday_height),
+                    hash: if u64::from(birthday_height) == tip.height {
+                        tip.hash
+                    } else {
+                        vec![]
+                    },
                 }))
                 .await?
                 .into_inner();
             let birthday = zcash_client_backend::data_api::AccountBirthday::from_treestate(
                 tree,
-                Some(BlockHeight::from_u32(tip.height as u32)),
+                Some(BlockHeight::from_u32(birthday_height)),
             )?;
             wallet.import_account_ufvk(
                 "obliq-view-only",
@@ -205,7 +280,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!(
             "{}",
             json!({
-                "network": "regtest",
+                "network": configured.label,
                 "authority": "UFVK_VIEW_ONLY",
                 "spendingAuthority": false,
                 "receiver": address.encode(&params),
@@ -219,62 +294,71 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
 
     let cache = MemoryBlockCache::default();
-    let tip = client
-        .get_latest_block(Request::new(ChainSpec {}))
-        .await?
-        .into_inner();
-    let tip_height = BlockHeight::from_u32(u32::try_from(tip.height)?);
-    wallet.update_chain_tip(tip_height)?;
-    loop {
-        let ranges = wallet.suggest_scan_ranges()?;
-        if ranges.is_empty() {
-            break;
-        }
-        let mut scanned = false;
-        for range in ranges {
-            if range.is_empty() {
-                continue;
+    if matches!(params, ObserverParameters::Public(_)) {
+        // The maintained sync driver imports Sapling, Orchard, and Ironwood
+        // subtree roots and verifies recent scanned ranges on every run. Its
+        // continuity-error path rewinds and rescans after a reorganization.
+        zcash_client_backend::sync::run(&mut client, &params, &cache, &mut wallet, 1_000).await?;
+    } else {
+        // The pinned Z3 regtest image predates the Ironwood subtree-root enum,
+        // so the already-proven regtest tracer retains its range scanner.
+        let tip = client
+            .get_latest_block(Request::new(ChainSpec {}))
+            .await?
+            .into_inner();
+        let tip_height = BlockHeight::from_u32(u32::try_from(tip.height)?);
+        wallet.update_chain_tip(tip_height)?;
+        loop {
+            let ranges = wallet.suggest_scan_ranges()?;
+            if ranges.is_empty() {
+                break;
             }
-            scanned = true;
-            let start = range.block_range().start;
-            let end = range.block_range().end - 1;
-            let blocks = client
-                .get_block_range(Request::new(BlockRange {
-                    start: Some(BlockId {
-                        height: u32::from(start) as u64,
+            let mut scanned = false;
+            for range in ranges {
+                if range.is_empty() {
+                    continue;
+                }
+                scanned = true;
+                let start = range.block_range().start;
+                let end = range.block_range().end - 1;
+                let blocks = client
+                    .get_block_range(Request::new(BlockRange {
+                        start: Some(BlockId {
+                            height: u32::from(start) as u64,
+                            hash: vec![],
+                        }),
+                        end: Some(BlockId {
+                            height: u32::from(end) as u64,
+                            hash: vec![],
+                        }),
+                        pool_types: vec![],
+                    }))
+                    .await?
+                    .into_inner()
+                    .try_collect::<Vec<_>>()
+                    .await?;
+                cache.insert(blocks).await?;
+                let chain_state = client
+                    .get_tree_state(Request::new(BlockId {
+                        height: u32::from(start - 1) as u64,
                         hash: vec![],
-                    }),
-                    end: Some(BlockId {
-                        height: u32::from(end) as u64,
-                        hash: vec![],
-                    }),
-                    pool_types: vec![],
-                }))
-                .await?
-                .into_inner()
-                .try_collect::<Vec<_>>()
-                .await?;
-            cache.insert(blocks).await?;
-            let chain_state = client
-                .get_tree_state(Request::new(BlockId {
-                    height: u32::from(start - 1) as u64,
-                    hash: vec![],
-                }))
-                .await?
-                .into_inner()
-                .to_chain_state()?;
-            scan_cached_blocks(
-                &params,
-                &cache,
-                &mut wallet,
-                start,
-                &chain_state,
-                range.len(),
-            )?;
-            cache.delete(range).await?;
-        }
-        if !scanned {
-            break;
+                    }))
+                    .await?
+                    .into_inner()
+                    .to_chain_state()?;
+                scan_cached_blocks(
+                    &params,
+                    &cache,
+                    &mut wallet,
+                    start,
+                    &chain_state,
+                    range.len(),
+                )?;
+                cache.delete(range).await?;
+            }
+            if !scanned {
+                break;
+            }
         }
     }
 
@@ -343,7 +427,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!(
         "{}",
         json!({
-            "network": "regtest",
+            "network": configured.label,
             "authority": "UFVK_VIEW_ONLY",
             "spendingAuthority": false,
             "chainTipHeight": u32::from(chain_tip),
@@ -353,4 +437,28 @@ async fn main() -> Result<(), Box<dyn Error>> {
         })
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn maps_explicit_networks_to_consensus_and_service_identities() {
+        for (value, network_type, service_chain_name) in [
+            ("regtest", NetworkType::Regtest, "regtest"),
+            ("testnet", NetworkType::Test, "test"),
+            ("mainnet", NetworkType::Main, "main"),
+        ] {
+            let configured = configured_network_for(value).expect("supported network");
+            assert_eq!(configured.label, value);
+            assert_eq!(configured.params.network_type(), network_type);
+            assert_eq!(configured.service_chain_name, service_chain_name);
+        }
+    }
+
+    #[test]
+    fn rejects_unknown_networks() {
+        assert!(configured_network_for("staging").is_err());
+    }
 }

@@ -21,8 +21,11 @@ Phase 3 proved a real shielded receiving account, UFVK-only import, output and m
 PostgreSQL stores receiver and opaque-reference fingerprints, exact zatoshis,
 normalized output evidence, sync status and audit history. It does not store the
 UFVK or memo plaintext. Infrastructure failure is `UNAVAILABLE`, not unpaid.
-Production mainnet/testnet operations, TLS, cache encryption and Ironwood
-subtree-root compatibility at scale remain planned.
+Public testnet TLS synchronization and current Ironwood subtree-root wire
+compatibility are implemented and were exercised through a fully scanned
+unfunded account. Public shielded observation is still awaiting an externally
+funded test; mainnet execution, owned public infrastructure, cache encryption
+and scale qualification remain planned or blocked.
 
 ## Quote, intent and execution state
 
@@ -37,4 +40,8 @@ timeout uncertainty, and only the Phase-3 observer may advance a broadcast to
 
 ## Current source assumptions
 
-Checked 2026-10-06 against current Zallet, librustzcash, lightwalletd, Zebra and Z3 sources. Zallet `v0.1.0-beta.3` exports UFVK/UIVK values but does not implement the required Orchard/Unified watch-only import. The observer therefore uses `zcash_client_backend 0.24.0` and `zcash_client_sqlite 0.22.0`. See ADR 0006 for exact commits and rejected architectures.
+Rechecked 2026-10-07 against current Zallet, librustzcash, Zaino, lightwalletd,
+Zebra and Z3 sources. Zallet `v0.1.0-beta.3` exports UFVK/UIVK values, while
+`z_importviewingkey` remains Sapling-only. The observer therefore continues to
+use `zcash_client_backend 0.24.0` and `zcash_client_sqlite 0.22.0`. See ADRs
+0006 and 0011 for exact commits, evidence and rejected architectures.

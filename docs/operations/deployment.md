@@ -49,5 +49,7 @@ infer a payment state while PostgreSQL, signer or observer outcome is unknown.
   exceptions and evidence integrity failures from redacted structured logs.
 - Invoice deletion follows contractual/accounting retention; removal must be
   audited before object deletion is automated.
-- Public network is blocked. Production must keep `OBLIQ_ZCASH_NETWORK=regtest`
-  unless a later evidence-backed ADR changes the status.
+- Public testnet synchronization is ready for an explicitly authorized funded
+  test under ADR 0011. Mainnet remains fail-closed. Production must keep
+  `OBLIQ_ZCASH_NETWORK=regtest` until a real public shielded observation and the
+  owned Zebra/Zaino topology have been verified.
