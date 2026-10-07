@@ -564,6 +564,9 @@ textarea.input {
   .ledger td.lead::before {
     content: none;
   }
+  .ledger td:empty {
+    display: none;
+  }
 }
 
 /* ---------- Authority track ---------- */

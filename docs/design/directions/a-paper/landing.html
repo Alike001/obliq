@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direction A, Paper: Landing page — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <p class="specimen">
+      Direction A, Paper. Design proposal. Network labels show what the main
+      branch reports today; nothing here is a new product claim.
+    </p>
+    <header class="site-head">
+      <div class="wrap">
+        <a class="brand" href="#">obliq</a>
+        <nav class="nav" aria-label="Primary">
+          <a href="#">Documentation</a><a href="#">Security</a
+          ><a href="#">Proof</a
+          ><a class="btn btn-dark" href="#">Open workspace</a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <section class="wrap hero">
+        <div class="stack">
+          <h1 class="display">
+            Pay your business bills without publishing your business.
+          </h1>
+          <p class="lede">
+            Obliq is accounts payable for crypto-native finance teams. Capture
+            an invoice, approve it under policy, settle it in shielded Zcash
+            from a signer you operate, and reconcile the payment back to the
+            bill.
+          </p>
+          <div class="row">
+            <a class="btn btn-dark" href="#">Open the workspace</a
+            ><a class="btn btn-light" href="#">See what is proven</a>
+          </div>
+          <p class="row small muted">
+            <span class="pill pill-test">Regtest verified</span> Shielded
+            settlement is verified on regtest only. Public-network operation is
+            blocked.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <h2 class="h-card">One bill, three authorities</h2>
+          </div>
+          <ol class="rows">
+            <li>
+              <div>
+                <strong>Business approval</strong
+                ><span class="muted small">Your finance team, in Obliq</span>
+              </div>
+            </li>
+            <li>
+              <div>
+                <strong>Signature</strong
+                ><span class="muted small">Your signer, outside Obliq</span>
+              </div>
+              <span class="pill pill-test">Regtest verified</span>
+            </li>
+            <li>
+              <div>
+                <strong>Observation</strong
+                ><span class="muted small">Read-only observer</span>
+              </div>
+              <span class="pill pill-test">Regtest verified</span>
+            </li>
+          </ol>
+          <p class="pad small" style="border-top: 1px solid var(--line)">
+            <strong>Obliq never holds a spending key.</strong> It can record an
+            approval. It cannot sign a payment.
+          </p>
+        </div>
+      </section>
+      <section class="band band-dark on-dark">
+        <div class="wrap stack">
+          <h2 class="h2">From invoice to reconciled payment.</h2>
+          <ol class="life">
+            <li>
+              <span class="n">1</span>
+              <h3>Capture the invoice</h3>
+              <p>
+                Bring the bill into one controlled record. A person confirms
+                every value.
+              </p>
+              <p class="who">Your finance team, in Obliq</p>
+            </li>
+            <li>
+              <span class="n">2</span>
+              <h3>Approve under policy</h3>
+              <p>
+                Policy decides which approvals the bill needs. People give them.
+              </p>
+              <p class="who">Your finance team, in Obliq</p>
+            </li>
+            <li>
+              <span class="n">3</span>
+              <h3>Settle privately</h3>
+              <p>
+                Obliq hands one exact shielded payment request to a signer you
+                operate.
+              </p>
+              <p class="who">Your signer, outside Obliq</p>
+              <p><span class="pill pill-test">Regtest verified</span></p>
+            </li>
+            <li>
+              <span class="n">4</span>
+              <h3>Reconcile</h3>
+              <p>A read-only observer matches the payment back to the bill.</p>
+              <p class="who">Read-only observer</p>
+              <p><span class="pill pill-test">Regtest verified</span></p>
+            </li>
+            <li>
+              <span class="n">5</span>
+              <h3>Prove</h3>
+              <p>Issue evidence that discloses only the fields you choose.</p>
+              <p class="who">Your finance team, in Obliq</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+      <section class="band">
+        <div class="wrap cols">
+          <div class="stack-sm">
+            <h2 class="h2">What is proven, and where.</h2>
+            <p class="lede">
+              Regtest is an isolated test network. Each network is listed on its
+              own line.
+            </p>
+          </div>
+          <div class="card">
+            <ul class="rows">
+              <li>
+                <div>
+                  <strong>Regtest shielded settlement</strong
+                  ><span class="muted small"
+                    >Signing, broadcast and reconciliation, end to end on an
+                    isolated test network.</span
+                  >
+                </div>
+                <span class="pill pill-test">Regtest verified</span>
+              </li>
+              <li>
+                <div>
+                  <strong>Public testnet read-only synchronization</strong
+                  ><span class="muted small"
+                    >Not proven on a public network in this release.</span
+                  >
+                </div>
+                <span class="pill pill-stop">Blocked</span>
+              </li>
+              <li>
+                <div>
+                  <strong>Public funded settlement</strong
+                  ><span class="muted small"
+                    >No funded shielded payment has been settled on a public
+                    network.</span
+                  >
+                </div>
+                <span class="pill pill-wait">Not verified</span>
+              </li>
+              <li>
+                <div>
+                  <strong>Mainnet</strong
+                  ><span class="muted small"
+                    >Mainnet operation is blocked.</span
+                  >
+                </div>
+                <span class="pill pill-stop">Blocked</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="foot on-dark">
+      <div class="wrap">
+        Obliq. Private financial operations. Shielded settlement is verified on
+        regtest only.
+      </div>
+    </footer>
+  </body>
+</html>

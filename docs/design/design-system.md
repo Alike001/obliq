@@ -1,10 +1,12 @@
-# Obliq design system: proposal
+# Obliq design system: Direction B, "Lanes"
 
-**Status: proposed.** This document becomes the approved system when the pull
-request that adds it is merged. Until then nothing in `apps/web` uses it.
+**Status: proposed.** This is the full specification of Direction B, the
+recommended one of the three directions in [`directions.md`](./directions.md).
+It becomes the approved system only if the owner chooses that direction. Until
+then nothing in `apps/web` uses it.
 
 It answers the findings in [`audit.md`](./audit.md). Rendered examples are in
-[`proposals/`](./proposals) with screenshots in [`screens/`](./screens).
+[`directions/b-lanes/`](./directions/b-lanes) and [`proposals/`](./proposals).
 
 ## 1. Direction
 
@@ -401,18 +403,18 @@ The target is WCAG 2.2 AA.
 | T1, T2, T5, T6 | One status statement; landing copy matches `implementation-status.md`     | No                                                      |
 | T3             | Remove the invented dashboard preview; the hero shows the authority lanes | No                                                      |
 | T4, H3         | Capability stamp, scope tag and state tag (section 6)                     | No                                                      |
-| U1, U16        | Sign-in page, branded not-found and root error pages                      | Sign-in page: yes, the redirect target (decision D5)    |
+| U1, U16        | Sign-in page, branded not-found and root error pages                      | Sign-in page: yes (proposed change P3)                  |
 | U3, A11        | Success notices driven by the redirect flags that already exist           | No                                                      |
-| U2             | Field-level validation with input preserved                               | Yes: actions must return errors (decision D3)           |
+| U2             | Field-level validation with input preserved                               | Yes: actions must return errors (proposed change P1)    |
 | U4             | Pending state on submit buttons                                           | No (client component around the button)                 |
 | U5             | Confirmation step before consequential actions                            | No (the same form is submitted after confirmation)      |
 | U6, U15        | Explain disabled actions; show person, role and organization              | No                                                      |
 | U7, U9, U11    | Show ZEC beside zatoshis; show time remaining; copy buttons; full link    | No                                                      |
-| U8             | Land on the new signing review after preparing an intent                  | Yes: the redirect target (decision D4)                  |
+| U8             | Land on the new signing review after preparing an intent                  | Yes: the redirect target (proposed change P2)           |
 | U10            | Disable fields the role may not disclose, with the reason                 | No (uses the role already in session; server unchanged) |
 | U12, H6, A5    | Recipient layout and verdict bar for `/verify`                            | No                                                      |
 | U13            | State labels, names and dates (sections 6 and 9)                          | No                                                      |
-| U14            | State filter links using the existing `state` parameter                   | No; sorting and paging are out of scope (decision D6)   |
+| U14            | State filter links using the existing `state` parameter                   | No; sorting and paging are proposed change P4           |
 | U17            | Docs index, previous and next links, outline at all widths                | No                                                      |
 | H1             | Group the capability register by status, blocked first                    | No                                                      |
 | H2, H4         | Next-action panel, authority track, ceremony list                         | No                                                      |
@@ -424,19 +426,16 @@ The target is WCAG 2.2 AA.
 
 ## 12. Decisions for the owner
 
-These are the points where approval is needed before implementation. Each has a
-recommended answer.
+| #   | Decision                                                                                                               | Recommendation                                                                        |
+| --- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| D1  | Show record states as sentence-case labels ("Ready to settle") instead of the stored value (`READY_TO_SETTLE`).        | Yes. Show the stored value in the history and in exports, where exactness matters.    |
+| D2  | Express "verified on regtest" as a status plus a Regtest scope tag, with no change to the `ImplementationStatus` type. | Yes. It keeps the distinction `CONTRIBUTING.md` asks for and needs no domain change.  |
+| D3  | Adopt IBM Plex, self-hosted through `next/font`.                                                                       | Yes. It adds a build-time font download; the alternative is to commit the font files. |
+| D4  | Ship one light theme first.                                                                                            | Yes.                                                                                  |
 
-| #   | Decision                                                                                                                                              | Recommendation                                                                                             |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| D1  | Show record states as sentence-case labels ("Ready to settle") instead of the stored value (`READY_TO_SETTLE`).                                       | Yes. Show the stored value in the history and in exports, where exactness matters.                         |
-| D2  | Express "verified on regtest" as the Implemented stamp plus a Regtest scope tag, with no change to the `ImplementationStatus` type.                   | Yes. It keeps the distinction `CONTRIBUTING.md` asks for and needs no domain change.                       |
-| D3  | Let server actions return validation errors to the form instead of throwing. This changes action signatures and nothing about what they accept or do. | Yes, as its own reviewed pull request. Until then, use native constraint messages and the success notices. |
-| D4  | Redirect to the new settlement's signing review after an intent is prepared, instead of the list.                                                     | Yes. One-line change to a redirect target, reviewed with D3.                                               |
-| D5  | Add a sign-in page between `/app` and the identity provider, and render authentication failures as pages.                                             | Yes. The route handlers keep their status codes and logic; only the response body changes.                 |
-| D6  | Sorting and paging for lists need repository support.                                                                                                 | Out of scope for design work. Open a separate issue.                                                       |
-| D7  | Adopt IBM Plex, self-hosted through `next/font`.                                                                                                      | Yes. It adds a build-time font download; the alternative is to commit the font files.                      |
-| D8  | Ship one light theme first.                                                                                                                           | Yes.                                                                                                       |
+Changes that would alter how a server action or route handler behaves are not
+design decisions. They are described separately, and not implemented, in
+[`proposed-behavior-changes.md`](./proposed-behavior-changes.md).
 
 ## 13. Implementation notes
 
@@ -456,8 +455,8 @@ For the engineers who implement issues #2, #3 and #4 after approval.
 - Nothing in this system requires a change to database schemas, sessions,
   capabilities, policy evaluation, approvals, quotes, intents, signing,
   broadcast, the observer, reconciliation, or evidence hashing and disclosure.
-  Decisions D3, D4 and D5 change how results are returned or where a redirect
-  lands, and are called out so they are reviewed rather than slipped in.
+  The few changes that would alter behaviour are listed in
+  `proposed-behavior-changes.md` and are not part of this system.
 
 ## 14. Limits of this proposal
 
@@ -465,8 +464,9 @@ For the engineers who implement issues #2, #3 and #4 after approval.
   with a screen reader, or on physical devices.
 - The audit was done by reading source at one commit, not by observing users.
   Severity ratings are a designer's judgement.
-- Five representative surfaces are drawn. Vendors, approvals inbox, policies,
-  evidence creation, documentation, security and proof follow the same
-  components but have not been drawn.
+- Seven surfaces are drawn: landing, dashboard, obligations list, obligation
+  detail, signing review, evidence verification, and the state sheet. Vendors,
+  approvals inbox, policies, evidence creation, documentation, security and
+  proof follow the same components but have not been drawn.
 - All example values in the proposals are labelled placeholders. They are not
   product data, customers, approvals or transactions.
