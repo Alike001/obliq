@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "OBLIQ_DEPLOYMENT_MODE=test OBLIQ_SESSION_MODE=oidc OBLIQ_STORAGE_MODE=local-development OBLIQ_ZCASH_NETWORK=regtest OBSERVER_NETWORK=regtest next build",
-    "start": "next start"
+    "build:preview": "next build",
+    "start": "next start",
+    "start:preview": "next start --hostname 0.0.0.0"
   },
   "dependencies": {
     "@obliq/ai": "*",

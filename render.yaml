@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: obliq-public-preview
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm ci && npm run preview:check && npm run build:preview
+    startCommand: npm run start:preview
+    healthCheckPath: /health/ready
+    autoDeployTrigger: "off"
+    envVars:
+      - key: NODE_VERSION
+        value: 24.21.0
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: OBLIQ_DEPLOYMENT_MODE
+        value: preview
+      - key: OBLIQ_SESSION_MODE
+        value: disabled
+      - key: OBLIQ_STORAGE_MODE
+        value: disabled
+      - key: OBLIQ_ZCASH_NETWORK
+        value: disabled
+      - key: OBSERVER_NETWORK
+        value: disabled
+      - key: OBLIQ_PUBLIC_NETWORK_STATUS
+        value: PUBLIC_NETWORK_BLOCKED
+      - key: OBLIQ_APP_BASE_URL
+        sync: false

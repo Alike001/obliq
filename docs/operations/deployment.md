@@ -3,6 +3,9 @@
 Status: architecture **IMPLEMENTED**; provider credentials and infrastructure
 are deployment-specific.
 
+The database-free Render configuration is a restricted public preview, not the
+production topology below. See [Render Free public preview](./render-free-preview.md).
+
 ## Topology
 
 | Component              | Placement                                            | Authority / data                                                       |

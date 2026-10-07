@@ -60,6 +60,8 @@ async function mutationActor(
   limit = 120,
   windowSeconds = 60,
 ) {
+  if (getRuntimeSecurityConfig().deploymentMode === "preview")
+    throw new Error("Financial operations are unavailable in public preview");
   const actor = await resolveTenantContext();
   await rateLimitRequest(
     `app:${scope}`,

@@ -35,6 +35,7 @@ const principles = [
 ] as const;
 
 export default function SecurityPage() {
+  const preview = process.env.OBLIQ_DEPLOYMENT_MODE === "preview";
   return (
     <main>
       <SiteHeader />
@@ -57,6 +58,18 @@ export default function SecurityPage() {
           </div>
         </div>
       </section>
+      {preview && (
+        <section className="page-wrap pt-10">
+          <div className="rounded-xl border border-amber-300 bg-amber-50 p-5">
+            <p className="text-sm font-semibold">Public preview boundary</p>
+            <p className="text-muted mt-2 text-sm leading-6">
+              This host has no database, authentication provider, document
+              storage, observer or signer. Product, authentication, external
+              evidence-verification and every mutation route are unavailable.
+            </p>
+          </div>
+        </section>
+      )}
       <section className="page-wrap py-20">
         <div className="grid gap-12 lg:grid-cols-[.75fr_1.25fr]">
           <div>
