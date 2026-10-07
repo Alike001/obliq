@@ -1,0 +1,13 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/domain" },
+    { "path": "./packages/ai" },
+    { "path": "./packages/evidence" },
+    { "path": "./packages/policy" },
+    { "path": "./packages/security" },
+    { "path": "./packages/storage" },
+    { "path": "./packages/zcash" },
+    { "path": "./packages/database" }
+  ]
+}

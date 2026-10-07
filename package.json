@@ -13,8 +13,9 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@obliq/web",
-    "build": "npm run build --workspace=@obliq/web",
-    "build:preview": "npm run build:preview --workspace=@obliq/web",
+    "build": "npm run build:packages && npm run build --workspace=@obliq/web",
+    "build:packages": "tsc --build tsconfig.packages.json --force --pretty false",
+    "build:preview": "npm run build:packages && npm run build:preview --workspace=@obliq/web",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --build --pretty false",
     "test": "vitest run",
