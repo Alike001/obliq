@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal: landing page — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="obliq.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <p class="specimen">
+      Design proposal. Capability labels are copied from the current proof page;
+      nothing here is a new product claim.
+    </p>
+
+    <header class="site-head">
+      <div class="site-head-in">
+        <a class="brand" href="#">obliq</a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#">Documentation</a>
+          <a href="#">Security</a>
+          <a href="#">What is proven</a>
+          <a class="btn btn-primary" href="#">Open the workspace</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="wrap hero">
+        <h1 class="t-display">
+          Obliq can record an approval. It cannot sign a payment.
+        </h1>
+        <p class="t-lede">
+          Accounts payable for teams that settle in shielded Zcash. Capture a
+          bill, apply policy and approvals, hand an exact payment request to a
+          signer you operate, then reconcile what the network shows.
+        </p>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="#">Open the workspace</a>
+          <a class="btn btn-secondary" href="#">See what is proven</a>
+        </div>
+        <div class="notice notice-hatched" role="note">
+          <span class="glyph glyph-attn" aria-hidden="true"></span>
+          <div>
+            <strong>Proven on an isolated regtest network only.</strong>
+            <p>
+              Public-network settlement is blocked until Obliq proves public
+              synchronization and a funded shielded payment.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="band band-surface" aria-labelledby="lanes-h">
+        <div class="wrap stack">
+          <div class="stack-sm">
+            <h2 class="t-title" id="lanes-h">
+              Three authorities, kept in separate hands
+            </h2>
+            <p class="t-lede">
+              A payment crosses from one lane to the next only by a deliberate
+              hand-off. No lane can act for another.
+            </p>
+          </div>
+          <div class="track">
+            <div class="lane lane-1">
+              <div class="lane-name">
+                <strong>Business approval</strong>
+                <span>Your finance team, recorded in Obliq</span>
+              </div>
+              <ol>
+                <li class="step">Capture the bill</li>
+                <li class="step">Evaluate policy</li>
+                <li class="step">Approve</li>
+                <li class="step">Mark ready to settle</li>
+              </ol>
+            </div>
+            <div class="lane lane-2">
+              <div class="lane-name">
+                <strong>Signature</strong>
+                <span>A signer you operate, outside Obliq</span>
+              </div>
+              <ol>
+                <li class="step">Inspect the exact request</li>
+                <li class="step">Sign</li>
+                <li class="step">Broadcast</li>
+              </ol>
+            </div>
+            <div class="lane lane-3">
+              <div class="lane-name">
+                <strong>Observation</strong>
+                <span>Read-only observer with a viewing key</span>
+              </div>
+              <ol>
+                <li class="step">Detect the output</li>
+                <li class="step">Count confirmations</li>
+                <li class="step">Mark settled</li>
+              </ol>
+            </div>
+          </div>
+          <ul class="facts">
+            <li>
+              <strong>No spending key on the server.</strong>
+              <p class="t-small">
+                Obliq accepts no seed, PCZT, raw transaction or signer
+                credential.
+              </p>
+            </li>
+            <li>
+              <strong>Approval is not a signature.</strong>
+              <p class="t-small">
+                An approval records business intent. Only your signer can
+                authorize the transaction.
+              </p>
+            </li>
+            <li>
+              <strong>The viewing key is still sensitive.</strong>
+              <p class="t-small">
+                The observer cannot spend, but a leaked viewing key reveals
+                account activity.
+              </p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="band" aria-labelledby="status-h">
+        <div class="wrap cols-2">
+          <div class="stack-sm">
+            <h2 class="t-title" id="status-h">What works today</h2>
+            <p class="t-lede">
+              Every capability carries its status. A hatched label means it is
+              not live.
+            </p>
+            <p><a href="#">Open the full capability register</a></p>
+          </div>
+          <div class="sheet">
+            <table class="ledger">
+              <thead>
+                <tr>
+                  <th scope="col">Capability</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Where it is proven</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="lead" data-label="Capability">
+                    Policy engine and approval workflow
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap">Implemented</span>
+                  </td>
+                  <td data-label="Proven">Application and database tests</td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Capability">
+                    External shielded signing and broadcast
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap">Implemented</span>
+                  </td>
+                  <td data-label="Proven">
+                    <span class="scope">Regtest</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Capability">
+                    Shielded observation and reconciliation
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap">Implemented</span>
+                  </td>
+                  <td data-label="Proven">
+                    <span class="scope">Regtest</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Capability">
+                    Controlled evidence and verification
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap">Implemented</span>
+                  </td>
+                  <td data-label="Proven">Application and database tests</td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Capability">
+                    Invoice field extraction
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap cap-hatched">Seeded</span>
+                  </td>
+                  <td data-label="Proven">
+                    Development fixture; human entry required
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Capability">
+                    Public-network settlement
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap cap-blocked">Blocked</span>
+                  </td>
+                  <td data-label="Proven">Not proven</td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Capability">
+                    Native evidence PDF
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap cap-hatched">Planned</span>
+                  </td>
+                  <td data-label="Proven">Not built</td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Capability">
+                    Zero-knowledge business proof
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap cap-hatched">Unavailable</span>
+                  </td>
+                  <td data-label="Proven">Not claimed</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-foot on-ink">
+      <div class="wrap">
+        <p>
+          Obliq. Private financial operations. Settlement is proven on regtest
+          only.
+        </p>
+        <nav class="row" aria-label="Footer">
+          <a href="#">Documentation</a>
+          <a href="#">Security</a>
+          <a href="#">What is proven</a>
+        </nav>
+      </div>
+    </footer>
+  </body>
+</html>

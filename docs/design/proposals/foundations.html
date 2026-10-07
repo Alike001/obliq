@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal: foundations and components — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="obliq.css" />
+  </head>
+  <body>
+    <p class="specimen">
+      Design specimen. Sample values are placeholders, not product data.
+    </p>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="t-title">Foundations and components</h1>
+          <p class="t-small">
+            Colour, type, the hatch rule, and the core components.
+          </p>
+        </div>
+      </div>
+
+      <div class="stack">
+        <section aria-labelledby="f-colour">
+          <h2 class="spec-title" id="f-colour">Colour</h2>
+          <div class="swatches">
+            <div class="swatch">
+              <i style="background: #14233b"></i>
+              <span
+                ><strong>Ink</strong><br />#14233B, text, primary action</span
+              >
+            </div>
+            <div class="swatch">
+              <i style="background: #47556b"></i>
+              <span><strong>Ink 2</strong><br />#47556B, secondary text</span>
+            </div>
+            <div class="swatch">
+              <i style="background: #7e8a9c"></i>
+              <span
+                ><strong>Line strong</strong><br />#7E8A9C, control
+                borders</span
+              >
+            </div>
+            <div class="swatch">
+              <i style="background: #ccd4de"></i>
+              <span><strong>Line</strong><br />#CCD4DE, dividers</span>
+            </div>
+            <div class="swatch">
+              <i style="background: #edf1f4"></i>
+              <span><strong>Canvas</strong><br />#EDF1F4, page</span>
+            </div>
+            <div class="swatch">
+              <i style="background: #ffffff"></i>
+              <span><strong>Surface</strong><br />#FFFFFF, records</span>
+            </div>
+            <div class="swatch">
+              <i style="background: #5a32a3"></i>
+              <span
+                ><strong>Violet</strong><br />#5A32A3, links, focus,
+                current</span
+              >
+            </div>
+            <div class="swatch">
+              <i style="background: #17603d"></i>
+              <span><strong>Clear</strong><br />#17603D on #E3F2E9</span>
+            </div>
+            <div class="swatch">
+              <i style="background: #7a4b00"></i>
+              <span><strong>Hold</strong><br />#7A4B00 on #FBEFCF</span>
+            </div>
+            <div class="swatch">
+              <i style="background: #9b1c1c"></i>
+              <span><strong>Stop</strong><br />#9B1C1C on #FBE6E4</span>
+            </div>
+            <div class="swatch">
+              <i style="background: var(--hatch), #f5f7f9"></i>
+              <span><strong>Hatch</strong><br />Not live, not public</span>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="f-type">
+          <h2 class="spec-title" id="f-type">Type</h2>
+          <div class="sheet sheet-pad stack-sm">
+            <p class="t-display">Serif states what is on the record.</p>
+            <p class="t-doc">Payment evidence receipt</p>
+            <p class="t-title">Sans runs the interface: page title</p>
+            <p class="t-section">Section heading</p>
+            <p>
+              Body text at 15px. Amounts use tabular figures so columns align:
+              <span class="num">USD 12,000.00</span> and
+              <span class="num">USD 640.00</span>.
+            </p>
+            <p class="t-small">Small text at 13px for supporting detail.</p>
+            <p class="ident">
+              Mono is for machine identifiers only: specimen0000…0000
+            </p>
+          </div>
+        </section>
+
+        <div class="sheet-grid">
+          <section aria-labelledby="f-btn">
+            <h2 class="spec-title" id="f-btn">Buttons</h2>
+            <div class="sheet sheet-pad stack-sm">
+              <div class="row">
+                <button class="btn btn-primary">Record obligation</button>
+                <button class="btn btn-secondary">Upload an invoice</button>
+              </div>
+              <div class="row">
+                <button class="btn btn-danger">Revoke package</button>
+                <button class="btn btn-quiet">Cancel</button>
+                <button class="btn btn-primary" aria-disabled="true">
+                  Unavailable
+                </button>
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="f-field">
+            <h2 class="spec-title" id="f-field">Field</h2>
+            <div class="sheet sheet-pad stack-sm">
+              <div class="field">
+                <label for="f1">Due date</label>
+                <input class="input" id="f1" value="2026-10-21" />
+                <p class="hint">The date the vendor expects payment.</p>
+              </div>
+              <div class="field">
+                <label for="f2">Currency</label>
+                <input
+                  class="input"
+                  id="f2"
+                  value="US"
+                  aria-invalid="true"
+                  aria-describedby="f2-e"
+                />
+                <p class="error" id="f2-e">
+                  Enter a three-letter currency code, for example USD.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section aria-labelledby="f-tag">
+            <h2 class="spec-title" id="f-tag">State tags, for records</h2>
+            <div class="sheet sheet-pad row">
+              <span class="tag"
+                ><span class="glyph glyph-open" aria-hidden="true"></span>Under
+                review</span
+              >
+              <span class="tag tag-hold"
+                ><span class="glyph glyph-wait" aria-hidden="true"></span
+                >Approval required</span
+              >
+              <span class="tag tag-clear"
+                ><span class="glyph glyph-done" aria-hidden="true"></span
+                >Settled</span
+              >
+              <span class="tag tag-stop"
+                ><span class="glyph glyph-stop" aria-hidden="true"></span
+                >Blocked</span
+              >
+              <span class="tag tag-unknown"
+                ><span class="glyph glyph-unknown" aria-hidden="true"></span
+                >Broadcast unknown</span
+              >
+            </div>
+          </section>
+
+          <section aria-labelledby="f-cap">
+            <h2 class="spec-title" id="f-cap">
+              Capability stamps, for the product
+            </h2>
+            <div class="sheet sheet-pad row">
+              <span class="cap">Implemented</span>
+              <span class="cap cap-hatched">Seeded</span>
+              <span class="cap cap-hatched">Planned</span>
+              <span class="cap cap-blocked">Blocked</span>
+              <span class="cap cap-hatched">Unavailable</span>
+            </div>
+          </section>
+
+          <section aria-labelledby="f-scope">
+            <h2 class="spec-title" id="f-scope">Scope tag, for the network</h2>
+            <div class="sheet sheet-pad stack-sm">
+              <p>Settled <span class="scope">Regtest</span></p>
+              <p class="t-small">
+                Attached to every network fact. A regtest result never appears
+                without it.
+              </p>
+            </div>
+          </section>
+
+          <section aria-labelledby="f-notice">
+            <h2 class="spec-title" id="f-notice">Notices</h2>
+            <div class="stack-sm">
+              <div class="notice">
+                <span class="glyph glyph-open" aria-hidden="true"></span>
+                <div>
+                  <strong>Neutral</strong>
+                  <p>Context worth reading.</p>
+                </div>
+              </div>
+              <div class="notice notice-hold">
+                <span class="glyph glyph-attn" aria-hidden="true"></span>
+                <div>
+                  <strong>Hold</strong>
+                  <p>Read before you act.</p>
+                </div>
+              </div>
+              <div class="notice notice-stop">
+                <span class="glyph glyph-stop" aria-hidden="true"></span>
+                <div>
+                  <strong>Stop</strong>
+                  <p>Something failed.</p>
+                </div>
+              </div>
+              <div class="notice notice-clear">
+                <span class="glyph glyph-done" aria-hidden="true"></span>
+                <div>
+                  <strong>Clear</strong>
+                  <p>An action was recorded.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+  </body>
+</html>

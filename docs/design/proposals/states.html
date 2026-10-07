@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal: interaction states — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="obliq.css" />
+  </head>
+  <body>
+    <p class="specimen">
+      Design specimen. Each panel shows one state in isolation with placeholder
+      values.
+    </p>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="t-title">Interaction states</h1>
+          <p class="t-small">
+            Loading, empty, validation, unavailable, unknown, permission, error
+            and success.
+          </p>
+        </div>
+      </div>
+
+      <div class="sheet-grid">
+        <section aria-labelledby="s-loading">
+          <h2 class="spec-title" id="s-loading">Loading</h2>
+          <div class="sheet sheet-pad stack-sm" aria-busy="true">
+            <span class="sr" role="status">Loading obligations</span>
+            <span class="skeleton" style="width: 40%; height: 1.5rem"></span>
+            <span class="skeleton" style="width: 90%"></span>
+            <span class="skeleton" style="width: 75%"></span>
+            <span class="skeleton" style="width: 82%"></span>
+            <p class="t-small">
+              The skeleton keeps the layout of the page it replaces. No value,
+              count or state is shown until it is read from the database.
+            </p>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-empty">
+          <h2 class="spec-title" id="s-empty">Empty, first use</h2>
+          <div class="sheet">
+            <div class="empty">
+              <p><strong>No obligations recorded yet</strong></p>
+              <p class="t-small">
+                An obligation is a bill you intend to pay. Record one by hand or
+                start from an invoice file.
+              </p>
+              <div class="btn-row">
+                <a class="btn btn-primary" href="#">Record an obligation</a>
+                <a class="btn btn-secondary" href="#">Upload an invoice</a>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-none">
+          <h2 class="spec-title" id="s-none">Empty, no match</h2>
+          <div class="sheet">
+            <div class="empty">
+              <p><strong>No obligations match "specimen query"</strong></p>
+              <p class="t-small">
+                Search covers vendor, reference and purpose.
+              </p>
+              <a class="btn btn-secondary" href="#">Clear search</a>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-prereq">
+          <h2 class="spec-title" id="s-prereq">Empty, prerequisite missing</h2>
+          <div class="sheet">
+            <div class="empty">
+              <p><strong>Add a vendor first</strong></p>
+              <p class="t-small">
+                Every obligation is owed to a vendor. You have none recorded.
+              </p>
+              <a class="btn btn-primary" href="#">Add a vendor</a>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-valid">
+          <h2 class="spec-title" id="s-valid">Validation</h2>
+          <form class="sheet sheet-pad stack-sm">
+            <div class="notice notice-stop" role="alert">
+              <span class="glyph glyph-stop" aria-hidden="true"></span>
+              <div>
+                <strong>The obligation was not saved</strong>
+                <p><a href="#amt">Amount: use at most two decimal places</a></p>
+              </div>
+            </div>
+            <div class="field">
+              <label for="amt">Amount</label>
+              <input
+                class="input"
+                id="amt"
+                value="1250.005"
+                inputmode="decimal"
+                aria-invalid="true"
+                aria-describedby="amt-e"
+              />
+              <p class="error" id="amt-e">
+                Use at most two decimal places, for example 1250.00.
+              </p>
+            </div>
+            <div class="field">
+              <label for="ref">Invoice or reference number</label>
+              <input class="input" id="ref" value="SPECIMEN-0007" />
+            </div>
+            <button class="btn btn-primary">Record obligation</button>
+          </form>
+        </section>
+
+        <section aria-labelledby="s-unavail">
+          <h2 class="spec-title" id="s-unavail">Unavailable</h2>
+          <div class="stack-sm">
+            <div class="notice notice-hold" role="status">
+              <span class="glyph glyph-attn" aria-hidden="true"></span>
+              <div>
+                <strong>The observer is unavailable</strong>
+                <p>
+                  Obliq cannot currently see the network. This says nothing
+                  about whether a payment was made. Existing records are
+                  unchanged.
+                </p>
+              </div>
+            </div>
+            <div class="notice notice-hatched" role="note">
+              <span class="glyph glyph-open" aria-hidden="true"></span>
+              <div>
+                <strong
+                  >Ledger <span class="cap cap-hatched">Planned</span></strong
+                >
+                <p>
+                  This area is not built. Nothing here can move funds or record
+                  that funds moved.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-unknown">
+          <h2 class="spec-title" id="s-unknown">Unknown outcome</h2>
+          <div class="sheet sheet-pad stack-sm">
+            <span class="tag tag-unknown"
+              ><span class="glyph glyph-unknown" aria-hidden="true"></span
+              >Broadcast unknown</span
+            >
+            <p>
+              The broadcast timed out. It may or may not have reached the
+              network.
+            </p>
+            <p class="t-small">
+              Do not sign again. The observer will report detection if the
+              transaction was accepted. You can record the outcome again when
+              you know it.
+            </p>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-perm">
+          <h2 class="spec-title" id="s-perm">Permission</h2>
+          <div class="sheet sheet-pad stack-sm">
+            <p><strong>Treasury approval, 0 of 2 recorded</strong></p>
+            <p class="t-small">
+              You are signed in as Finance. This requirement can be satisfied by
+              Treasury or the Owner. You also created this obligation, and this
+              tier does not let the requester approve.
+            </p>
+            <button class="btn btn-primary" aria-disabled="true">
+              Approve
+            </button>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-error">
+          <h2 class="spec-title" id="s-error">Error</h2>
+          <div class="stack-sm">
+            <div class="notice notice-stop" role="alert">
+              <span class="glyph glyph-stop" aria-hidden="true"></span>
+              <div>
+                <strong>The approval was not recorded</strong>
+                <p>
+                  The request failed before anything was saved. The obligation
+                  is unchanged. Your note is still in the form.
+                </p>
+                <p><a href="#">Try again</a></p>
+              </div>
+            </div>
+            <div class="notice notice-stop" role="alert">
+              <span class="glyph glyph-stop" aria-hidden="true"></span>
+              <div>
+                <strong>This page could not be loaded</strong>
+                <p>
+                  The database did not respond. No placeholder record was
+                  substituted.
+                </p>
+                <p><a href="#">Reload the page</a></p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-success">
+          <h2 class="spec-title" id="s-success">Success</h2>
+          <div class="stack-sm">
+            <div class="notice notice-clear" role="status">
+              <span class="glyph glyph-done" aria-hidden="true"></span>
+              <div>
+                <strong>Approval recorded</strong>
+                <p>
+                  Finance, 1 of 1. The obligation is approved. It has not been
+                  signed or paid.
+                </p>
+              </div>
+            </div>
+            <div class="notice notice-clear" role="status">
+              <span class="glyph glyph-done" aria-hidden="true"></span>
+              <div>
+                <strong>Evidence issued</strong>
+                <p>
+                  The content and its hash are now fixed. Share the verification
+                  link only with its recipient.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-ev">
+          <h2 class="spec-title" id="s-ev">Evidence verdicts</h2>
+          <div class="sheet">
+            <div class="verdict verdict-stop" role="alert">
+              <span class="glyph glyph-stop" aria-hidden="true"></span>
+              Integrity check failed. Do not rely on this record
+              <p>The content does not match the hash it was issued with.</p>
+            </div>
+            <div class="verdict verdict-hold" role="status">
+              <span class="glyph glyph-attn" aria-hidden="true"></span>
+              This package was revoked and is not current
+              <p>
+                The content is shown as issued, for the record. Ask the issuer
+                for a current package.
+              </p>
+            </div>
+            <div class="verdict" role="status">
+              <span class="glyph glyph-unknown" aria-hidden="true"></span>
+              No evidence found for this link
+              <p>
+                The link is wrong or was never issued. No organization data was
+                disclosed.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="s-confirm">
+          <h2 class="spec-title" id="s-confirm">Deliberate confirmation</h2>
+          <form class="sheet sheet-pad stack-sm">
+            <p><strong>Revoke this evidence package?</strong></p>
+            <p class="t-small">
+              The verification link will show the package as revoked. The
+              content stays visible and is not deleted. This cannot be undone.
+            </p>
+            <div class="field">
+              <label for="why">Reason, kept in the internal record</label>
+              <textarea class="input" id="why"></textarea>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-danger">Revoke package</button>
+              <button class="btn btn-quiet" type="button">
+                Keep it active
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

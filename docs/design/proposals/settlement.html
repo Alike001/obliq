@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal: signing review — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="obliq.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <p class="specimen">
+      Design specimen. Amounts, hashes, identifiers and times are placeholders,
+      not product data and not a real transaction.
+    </p>
+
+    <div class="shell">
+      <aside class="rail on-ink">
+        <a class="brand" href="#">obliq</a>
+        <p class="who">
+          <strong>Specimen organization</strong>
+          <span>Signed in as Treasury</span>
+        </p>
+        <nav class="nav" aria-label="Workspace">
+          <a href="#">Overview</a>
+          <a href="obligations.html">Obligations</a>
+          <a href="#">Vendors</a>
+          <a href="#">Approvals</a>
+          <a href="#" aria-current="page">Settlements</a>
+          <a href="#">Evidence</a>
+          <a href="#">Policies</a>
+          <a href="#">Ledger <span class="planned">Planned</span></a>
+          <a href="#">Settings <span class="planned">Planned</span></a>
+        </nav>
+        <p class="rail-foot">Development workspace</p>
+      </aside>
+
+      <div>
+        <header class="topbar">
+          <a class="brand" href="#">obliq</a>
+          <div class="topbar-end">
+            <span class="scope">Regtest</span>
+            <span class="t-small session">OIDC session</span>
+            <a class="btn btn-quiet session" href="#">Sign out</a>
+            <details class="mnav">
+              <summary>Menu</summary>
+              <nav aria-label="Workspace">
+                <a href="#">Overview</a>
+                <a href="obligations.html">Obligations</a>
+                <a href="#">Vendors</a>
+                <a href="#">Approvals</a>
+                <a href="#" aria-current="page">Settlements</a>
+                <a href="#">Evidence</a>
+                <a href="#">Policies</a>
+                <a href="#">Sign out</a>
+              </nav>
+            </details>
+          </div>
+        </header>
+
+        <main class="page" id="main">
+          <p class="crumb"><a href="#">Settlements</a></p>
+          <div class="page-head">
+            <div class="stack-sm">
+              <h1 class="t-title">Signing review for SPECIMEN-0004</h1>
+              <p class="row">
+                <span class="tag tag-hold"
+                  ><span class="glyph glyph-wait" aria-hidden="true"></span
+                  >Awaiting signature</span
+                >
+                <span class="t-small"
+                  >Intent <span class="ident">specimen0000…</span>, version
+                  1</span
+                >
+              </p>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="notice notice-hatched" role="note">
+              <span class="glyph glyph-attn" aria-hidden="true"></span>
+              <div>
+                <strong>This is a regtest settlement.</strong>
+                <p>
+                  It moves no value on a public network. The quote is a
+                  controlled test input, not market pricing.
+                </p>
+              </div>
+            </div>
+
+            <div class="split">
+              <section class="sheet" aria-labelledby="ceremony-h">
+                <div class="sheet-head">
+                  <h2 class="t-section" id="ceremony-h">Signing ceremony</h2>
+                  <span class="t-small">Step 3 of 5</span>
+                </div>
+                <ol class="ceremony sheet-pad">
+                  <li data-state="done">
+                    <div>
+                      <strong>Review what is being authorized</strong>
+                      <p class="where">In Obliq. Done.</p>
+                    </div>
+                  </li>
+                  <li data-state="done">
+                    <div class="stack-sm">
+                      <div>
+                        <strong>Sign in Zallet</strong>
+                        <p class="where">
+                          Outside Obliq, on the signer you operate. Signing
+                          review began 09:31.
+                        </p>
+                      </div>
+                      <div class="field">
+                        <span class="t-label" id="zip-l"
+                          >ZIP-321 payment request</span
+                        >
+                        <code class="codeblock" aria-labelledby="zip-l"
+                          >zcash:specimen-receiver?amount=0.25&amp;memo=specimen</code
+                        >
+                        <button
+                          class="btn btn-secondary"
+                          type="button"
+                          style="justify-self: start"
+                        >
+                          Copy request
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                  <li data-state="now" aria-current="step">
+                    <form class="stack-sm">
+                      <div>
+                        <strong>Record the signing receipt</strong>
+                        <p class="where">
+                          In Obliq. Enter receipt details only. Never paste a
+                          PCZT, raw transaction, key, seed or passphrase.
+                        </p>
+                      </div>
+                      <div class="form-grid">
+                        <div class="field">
+                          <label for="txid">Transaction ID</label>
+                          <input
+                            class="input mono"
+                            id="txid"
+                            name="txid"
+                            value="specimen-not-hex"
+                            aria-invalid="true"
+                            aria-describedby="txid-e"
+                          />
+                          <p class="error" id="txid-e">
+                            Enter the 64-character hexadecimal transaction ID
+                            shown by Zallet.
+                          </p>
+                        </div>
+                        <div class="field">
+                          <label for="hash">Signed transaction hash</label>
+                          <input class="input mono" id="hash" name="hash" />
+                          <p class="hint">64 hexadecimal characters.</p>
+                        </div>
+                        <div class="field">
+                          <label for="ver">Zallet version</label>
+                          <input class="input" id="ver" name="ver" />
+                        </div>
+                      </div>
+                      <div class="btn-row">
+                        <button class="btn btn-primary">
+                          Record signing receipt
+                        </button>
+                        <button class="btn btn-secondary" type="button">
+                          Signing did not succeed
+                        </button>
+                      </div>
+                    </form>
+                  </li>
+                  <li data-state="todo">
+                    <div>
+                      <strong>Record the broadcast outcome</strong>
+                      <p class="where">
+                        In Obliq. A timeout is recorded as unknown, not as
+                        failure and not as settlement.
+                      </p>
+                    </div>
+                  </li>
+                  <li data-state="todo">
+                    <div>
+                      <strong>Observer confirms settlement</strong>
+                      <p class="where">
+                        Read-only observer. Only the observer can mark this
+                        settled.
+                      </p>
+                    </div>
+                  </li>
+                </ol>
+              </section>
+
+              <aside class="sheet sheet-pad stack-sm" aria-labelledby="auth-h">
+                <h2 class="t-section" id="auth-h">What is being authorized</h2>
+                <dl class="kv" style="grid-template-columns: 1fr">
+                  <div>
+                    <dt>Vendor</dt>
+                    <dd>Specimen vendor C</dd>
+                  </div>
+                  <div>
+                    <dt>Business amount</dt>
+                    <dd class="num">USD 12,000.00</dd>
+                  </div>
+                  <div>
+                    <dt>Shielded amount</dt>
+                    <dd class="num">0.25 ZEC</dd>
+                  </div>
+                  <div>
+                    <dt>Network</dt>
+                    <dd><span class="scope">Regtest</span></dd>
+                  </div>
+                  <div>
+                    <dt>Quote</dt>
+                    <dd>
+                      Controlled regtest input. Expires
+                      <time datetime="2026-10-07T09:45">09:45</time>, in 11
+                      minutes.
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Privacy policy</dt>
+                    <dd>Full privacy, shielded only</dd>
+                  </div>
+                  <div>
+                    <dt>Destination fingerprint</dt>
+                    <dd class="ident">specimen00000000…00000000</dd>
+                  </div>
+                  <div>
+                    <dt>Approval binding</dt>
+                    <dd>
+                      Obligation version 2, decision
+                      <span class="ident">specimen…</span>
+                    </dd>
+                  </div>
+                </dl>
+                <p class="t-small">
+                  Compare these values with the Zallet PCZT inspection before
+                  you authorize. Business approval does not sign this
+                  transaction.
+                </p>
+              </aside>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

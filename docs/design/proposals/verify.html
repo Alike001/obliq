@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal: evidence verification — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="obliq.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <p class="specimen">
+      Design specimen. Issuer, amounts, dates, identifiers and hashes are
+      placeholders, not issued evidence.
+    </p>
+
+    <header class="site-head">
+      <div class="site-head-in">
+        <a class="brand" href="#">obliq</a>
+        <nav class="site-nav" aria-label="About this page">
+          <a href="#">How verification works</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="page page-narrow" id="main">
+      <div class="stack">
+        <div class="stack-sm">
+          <h1 class="t-title">Payment evidence</h1>
+          <p class="t-lede">
+            Someone shared this record with you. It shows only the fields the
+            issuer chose to disclose.
+          </p>
+        </div>
+
+        <article class="sheet" aria-labelledby="doc-h">
+          <div class="verdict verdict-clear" role="status">
+            <span class="glyph glyph-done" aria-hidden="true"></span>
+            Content matches its hash, and the package is active
+            <p>
+              Checked on this page load. The content has not changed since it
+              was issued.
+            </p>
+          </div>
+          <div class="sheet-pad stack">
+            <header class="stack-sm">
+              <h2 class="t-doc" id="doc-h">Payment evidence receipt</h2>
+              <p class="t-small">
+                Issued by Specimen organization. Version 1. Created
+                <time datetime="2026-10-07T10:02">7 Oct 2026, 10:02 UTC</time>.
+              </p>
+            </header>
+
+            <dl class="claims">
+              <div>
+                <dt>Obligation reference</dt>
+                <dd>
+                  SPECIMEN-0004
+                  <small
+                    >Source: Obliq business record. Disclosure class: public
+                    safe.</small
+                  >
+                </dd>
+              </div>
+              <div>
+                <dt>Payment status</dt>
+                <dd>
+                  Settled
+                  <small
+                    >Source: Zcash reconciliation observation. Disclosure class:
+                    public safe.</small
+                  >
+                </dd>
+              </div>
+              <div>
+                <dt>Counterparty</dt>
+                <dd>
+                  Specimen vendor C
+                  <small
+                    >Source: Obliq business record. Disclosure class:
+                    counterparty.</small
+                  >
+                </dd>
+              </div>
+              <div>
+                <dt>Business amount</dt>
+                <dd>
+                  <span class="num">USD 12,000.00</span>
+                  <small
+                    >Source: Obliq business record. Disclosure class:
+                    counterparty.</small
+                  >
+                </dd>
+              </div>
+              <div>
+                <dt>Zcash network</dt>
+                <dd>
+                  <span class="scope">Regtest</span>
+                  <small
+                    >Source: Zcash reconciliation observation. Disclosure class:
+                    finance.</small
+                  >
+                </dd>
+              </div>
+            </dl>
+
+            <dl class="kv" style="grid-template-columns: 1fr">
+              <div>
+                <dt>Evidence identifier</dt>
+                <dd class="ident">specimen-evidence-identifier-0000</dd>
+              </div>
+              <div>
+                <dt>SHA-256 hash of this content</dt>
+                <dd class="ident">
+                  specimen0000000000000000000000000000000000000000000000000000
+                </dd>
+              </div>
+            </dl>
+
+            <div class="notice" role="note">
+              <span class="glyph glyph-open" aria-hidden="true"></span>
+              <div>
+                <strong>What this record does not prove</strong>
+                <p>
+                  Obliq generated it from the issuer's own records. It is not a
+                  zero-knowledge proof, an independent accounting attestation,
+                  or blockchain proof of facts a person entered.
+                </p>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <div class="stack-sm no-print">
+          <div class="btn-row">
+            <a class="btn btn-primary" href="#">Download canonical JSON</a>
+            <button class="btn btn-secondary" type="button">
+              Print this receipt
+            </button>
+          </div>
+          <p class="t-small">
+            The JSON file is the canonical record. Obliq does not generate a
+            PDF; printing uses your browser.
+          </p>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-foot on-ink">
+      <div class="wrap">
+        <p>
+          Anyone with this link can read this record. Share it only with its
+          intended recipient.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
