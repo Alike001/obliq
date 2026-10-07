@@ -65,12 +65,40 @@ export interface PublicTestnetQualificationReport {
     repeatIngestionChanged: boolean;
     observationRowCount: number;
     broadcastReceiptPresent: boolean;
+    networkFeeZat: string;
     settlementState: string;
     obligationState: string;
     auditChainValid: boolean;
     idempotent: boolean;
   };
   blockers: readonly string[];
+}
+
+export function priorQualificationMatchesPayment(
+  prior: PublicTestnetQualificationReport,
+  target: ObservationTarget,
+  current?: { transactionReference: string; outputIndex: number },
+) {
+  const expected = prior.expectedPayment;
+  const observation = prior.observation;
+  if (
+    prior.schema !== "obliq.public-testnet-qualification.v1" ||
+    prior.mode !== "FUNDED_PAYMENT" ||
+    prior.network !== "testnet" ||
+    !expected ||
+    expected.amountZat !== target.expectedAmountZat.toString() ||
+    expected.receiverFingerprint !== target.receiverFingerprint ||
+    expected.memoReferenceHash !== target.memoReferenceHash ||
+    expected.requiredConfirmations !== target.requiredConfirmations ||
+    (prior.progression.length > 0 && !observation)
+  )
+    return false;
+  return (
+    !current ||
+    (!!observation &&
+      observation.transactionReference === current.transactionReference &&
+      observation.outputIndex === current.outputIndex)
+  );
 }
 
 interface BuildReportInput {

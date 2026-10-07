@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { createDatabase, schema } from "@obliq/database";
 import {
   addVendorDestination,
@@ -16,6 +16,10 @@ import {
   verifyDestinationManually,
 } from "@obliq/database/repositories";
 import { eq } from "drizzle-orm";
+import {
+  assertPrivateRegularFile,
+  writePrivateFileExclusive,
+} from "@obliq/zcash/qualification-files";
 
 const databaseUrl = process.env.DATABASE_URL;
 const recipientFile = process.env.OBLIQ_TESTNET_RECIPIENT_FILE;
@@ -25,6 +29,7 @@ if (!databaseUrl || !recipientFile || !outputFile)
     "DATABASE_URL, OBLIQ_TESTNET_RECIPIENT_FILE and OBLIQ_TESTNET_HANDOFF_FILE are required",
   );
 
+await assertPrivateRegularFile(recipientFile, "Testnet recipient file");
 const response: unknown = JSON.parse(await readFile(recipientFile, "utf8"));
 const receiver = readReceiver(response);
 if (!receiver.startsWith("utest1"))
@@ -147,7 +152,7 @@ try {
     handoff.privacyPolicy !== "FullPrivacy"
   )
     throw new Error("Unsafe or unexpected signer handoff");
-  await writeFile(
+  await writePrivateFileExclusive(
     outputFile,
     JSON.stringify(
       {
@@ -165,7 +170,6 @@ try {
       null,
       2,
     ),
-    { mode: 0o600 },
   );
   console.log(
     JSON.stringify({
@@ -187,18 +191,12 @@ try {
 function readReceiver(value: unknown): string {
   if (!value || typeof value !== "object")
     throw new Error("Recipient file is malformed");
-  const item = value as {
-    address?: unknown;
-    result?: unknown;
-  };
-  if (typeof item.address === "string") return item.address;
-  if (typeof item.result === "string") return item.result;
+  const item = value as Record<string, unknown>;
   if (
-    item.result &&
-    typeof item.result === "object" &&
-    "address" in item.result &&
-    typeof item.result.address === "string"
+    Object.keys(item).length !== 1 ||
+    typeof item.address !== "string" ||
+    item.address.length > 1024
   )
-    return item.result.address;
-  throw new Error("Recipient file contains no address");
+    throw new Error("Recipient file must contain only one bounded address");
+  return item.address;
 }

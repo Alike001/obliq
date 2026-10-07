@@ -1,4 +1,4 @@
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { createDatabase, schema } from "@obliq/database";
 import {
   ingestShieldedObservation,
@@ -7,10 +7,16 @@ import {
 } from "@obliq/database/repositories";
 import {
   buildPublicTestnetQualificationReport,
+  priorQualificationMatchesPayment,
+  type PublicTestnetQualificationReport,
   type PublicTestnetQualificationMode,
   type QualificationSnapshot,
 } from "@obliq/zcash/qualification";
 import { ProcessZcashObserver } from "@obliq/zcash/server";
+import {
+  assertPrivateRegularFile,
+  writePrivateFileExclusive,
+} from "@obliq/zcash/qualification-files";
 import { and, eq, sql } from "drizzle-orm";
 
 const required = (name: string) => {
@@ -27,13 +33,12 @@ if (!(["UNFUNDED_SYNCHRONIZATION", "FUNDED_PAYMENT"] as const).includes(mode))
 const databaseUrl = required("DATABASE_URL");
 const handoffFile = required("OBLIQ_TESTNET_HANDOFF_FILE");
 const evidenceFile = required("OBLIQ_TESTNET_EVIDENCE_FILE");
-const handoffStat = await stat(handoffFile);
-if ((handoffStat.mode & 0o077) !== 0)
-  throw new Error(
-    "Testnet handoff file must not be accessible by group or other",
-  );
+const priorEvidenceFile = process.env.OBLIQ_TESTNET_PRIOR_EVIDENCE_FILE;
+await assertPrivateRegularFile(handoffFile, "Testnet handoff file");
 const handoff = readHandoff(await readFile(handoffFile, "utf8"));
-const priorProgression = await readPriorProgression(evidenceFile);
+const priorEvidence = priorEvidenceFile
+  ? await readPriorEvidence(priorEvidenceFile)
+  : undefined;
 
 const observer = new ProcessZcashObserver({
   binary: required("OBSERVER_BINARY"),
@@ -72,10 +77,23 @@ try {
     throw new Error("A testnet observation target is required");
   if (target.expectedAmountZat !== 100_000n)
     throw new Error("Observation target amount is not the qualified amount");
+  const qualificationTarget = {
+    network: "testnet" as const,
+    receiverFingerprint: target.receiverFingerprint,
+    memoReferenceHash: target.memoReferenceHash,
+    expectedAmountZat: target.expectedAmountZat,
+    requiredConfirmations: target.requiredConfirmations,
+  };
+  if (
+    priorEvidence &&
+    !priorQualificationMatchesPayment(priorEvidence, qualificationTarget)
+  )
+    throw new Error("Prior evidence belongs to a different payment");
   const [execution] = await connection.db
     .select({
       state: schema.settlements.state,
       txRefPrivate: schema.settlements.txRefPrivate,
+      networkFeeZat: schema.settlements.networkFeeZat,
       intentId: schema.settlements.intentId,
       intentHash: schema.settlements.intentHash,
       obligationId: schema.settlements.obligationId,
@@ -97,15 +115,19 @@ try {
   const report = buildPublicTestnetQualificationReport({
     mode,
     scan,
-    target: {
-      network: "testnet",
-      receiverFingerprint: target.receiverFingerprint,
-      memoReferenceHash: target.memoReferenceHash,
-      expectedAmountZat: target.expectedAmountZat,
-      requiredConfirmations: target.requiredConfirmations,
-    },
-    priorProgression,
+    target: qualificationTarget,
+    ...(priorEvidence ? { priorProgression: priorEvidence.progression } : {}),
   });
+
+  if (
+    priorEvidence &&
+    report.observation &&
+    !priorQualificationMatchesPayment(priorEvidence, qualificationTarget, {
+      transactionReference: report.observation.transactionReference,
+      outputIndex: report.observation.outputIndex,
+    })
+  )
+    throw new Error("Prior evidence belongs to a different transaction output");
 
   if (mode === "FUNDED_PAYMENT" && report.observation) {
     const observed = scan.observations.find(
@@ -124,12 +146,14 @@ try {
     if (
       !broadcastReceiptPresent ||
       !execution.txRefPrivate ||
+      !execution.networkFeeZat ||
       execution.txRefPrivate !== observed.txid
     )
       report.classification = "PUBLIC_NETWORK_FUNDED_TEST_BLOCKED";
     if (
       !broadcastReceiptPresent ||
       !execution.txRefPrivate ||
+      !execution.networkFeeZat ||
       execution.txRefPrivate !== observed.txid
     )
       report.blockers = [
@@ -194,6 +218,7 @@ try {
         repeatIngestionChanged,
         observationRowCount,
         broadcastReceiptPresent,
+        networkFeeZat: execution.networkFeeZat.toString(),
         settlementState: finalSettlement?.state ?? "UNAVAILABLE",
         obligationState: finalObligation?.state ?? "UNAVAILABLE",
         auditChainValid,
@@ -219,9 +244,10 @@ try {
     }
   }
 
-  await writeFile(evidenceFile, JSON.stringify(report, null, 2), {
-    mode: 0o600,
-  });
+  await writePrivateFileExclusive(
+    evidenceFile,
+    JSON.stringify(report, null, 2),
+  );
   console.log(
     JSON.stringify({
       classification: report.classification,
@@ -264,33 +290,24 @@ function readHandoff(value: string) {
   } & Record<string, unknown>;
 }
 
-async function readPriorProgression(
+async function readPriorEvidence(
   filename: string,
-): Promise<readonly QualificationSnapshot[]> {
-  try {
-    const parsed: unknown = JSON.parse(await readFile(filename, "utf8"));
-    if (
-      !parsed ||
-      typeof parsed !== "object" ||
-      !("schema" in parsed) ||
-      parsed.schema !== "obliq.public-testnet-qualification.v1" ||
-      !("network" in parsed) ||
-      parsed.network !== "testnet" ||
-      !("progression" in parsed) ||
-      !Array.isArray(parsed.progression) ||
-      !parsed.progression.every(isQualificationSnapshot)
-    )
-      throw new Error("Prior evidence report is malformed");
-    return parsed.progression;
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      "code" in error &&
-      (error as NodeJS.ErrnoException).code === "ENOENT"
-    )
-      return [];
-    throw error;
-  }
+): Promise<PublicTestnetQualificationReport> {
+  await assertPrivateRegularFile(filename, "Prior testnet evidence file");
+  const parsed: unknown = JSON.parse(await readFile(filename, "utf8"));
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !("schema" in parsed) ||
+    parsed.schema !== "obliq.public-testnet-qualification.v1" ||
+    !("network" in parsed) ||
+    parsed.network !== "testnet" ||
+    !("progression" in parsed) ||
+    !Array.isArray(parsed.progression) ||
+    !parsed.progression.every(isQualificationSnapshot)
+  )
+    throw new Error("Prior evidence report is malformed");
+  return parsed as unknown as PublicTestnetQualificationReport;
 }
 
 function isQualificationSnapshot(

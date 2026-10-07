@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPublicTestnetQualificationReport,
+  priorQualificationMatchesPayment,
   qualificationMemoHash,
 } from "./qualification";
 import { receiverFingerprint, type ObserverScanResult } from "./index";
@@ -76,6 +77,32 @@ describe("public testnet qualification evidence", () => {
     });
     expect(verified.classification).toBe("PUBLIC_NETWORK_VERIFIED");
     expect(verified.progression).toHaveLength(2);
+    expect(
+      priorQualificationMatchesPayment(confirming, target, {
+        transactionReference: "ab".repeat(32),
+        outputIndex: 0,
+      }),
+    ).toBe(true);
+  });
+
+  it("rejects confirmation progression from a different payment", () => {
+    const prior = buildPublicTestnetQualificationReport({
+      mode: "FUNDED_PAYMENT",
+      scan: scan({ observations: [observation(1)] }),
+      target,
+    });
+    expect(
+      priorQualificationMatchesPayment(prior, target, {
+        transactionReference: "cd".repeat(32),
+        outputIndex: 0,
+      }),
+    ).toBe(false);
+    expect(
+      priorQualificationMatchesPayment(prior, {
+        ...target,
+        expectedAmountZat: 100_001n,
+      }),
+    ).toBe(false);
   });
 
   it("blocks mismatches and confirmation regression", () => {

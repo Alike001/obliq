@@ -277,9 +277,20 @@ suite("Phase 4 non-custodial settlement repositories", () => {
         settlementId,
         signerRequestId: "sign-1",
         outcome: "AUTHORIZED",
+        networkFeeZat: 10_000n,
         txid: "bad",
         signedTxHash: txid,
         signerVersion: "test",
+      }),
+    ).rejects.toThrow("sanitized external signing receipt");
+    await expect(
+      recordExternalSigning(connection.db, actor, {
+        settlementId,
+        signerRequestId: "sign-1",
+        outcome: "AUTHORIZED",
+        txid,
+        signedTxHash: "cd".repeat(32),
+        signerVersion: "v0.1.0-beta.3",
       }),
     ).rejects.toThrow("sanitized external signing receipt");
     const signed = await recordExternalSigning(connection.db, actor, {
@@ -290,8 +301,17 @@ suite("Phase 4 non-custodial settlement repositories", () => {
       signedTxHash: "cd".repeat(32),
       signerType: "ZALLET_PCZT",
       signerVersion: "v0.1.0-beta.3",
+      networkFeeZat: 10_000n,
     });
     expect(signed?.state).toBe("SIGNED");
+    expect(signed?.networkFeeZat).toBe(10_000n);
+    expect(
+      (await connection.db.select().from(schema.auditEvents)).find(
+        (event) =>
+          event.subjectId === settlementId &&
+          event.eventType === "SIGNING_AUTHORIZED",
+      )?.payloadJson,
+    ).toMatchObject({ networkFeeZat: "10000" });
     await expect(
       recordExternalSigning(connection.db, actor, {
         settlementId,
@@ -309,9 +329,22 @@ suite("Phase 4 non-custodial settlement repositories", () => {
           signedTxHash: "cd".repeat(32),
           signerType: "ZALLET_PCZT",
           signerVersion: "v0.1.0-beta.3",
+          networkFeeZat: 10_000n,
         })
       )?.state,
     ).toBe("SIGNED");
+    await expect(
+      recordExternalSigning(connection.db, actor, {
+        settlementId,
+        signerRequestId: "sign-1",
+        outcome: "AUTHORIZED",
+        txid,
+        signedTxHash: "cd".repeat(32),
+        signerType: "ZALLET_PCZT",
+        signerVersion: "v0.1.0-beta.3",
+        networkFeeZat: 20_000n,
+      }),
+    ).rejects.toThrow("Conflicting signing receipt");
     const broadcast = await recordExternalBroadcast(connection.db, actor, {
       settlementId,
       broadcastRequestId: "broadcast-1",

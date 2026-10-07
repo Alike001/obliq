@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
-    "./qualification": "./src/qualification.ts"
+    "./qualification": "./src/qualification.ts",
+    "./qualification-files": "./src/qualification-files.ts"
   },
   "dependencies": {
     "server-only": "0.0.1"

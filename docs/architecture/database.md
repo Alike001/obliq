@@ -2,6 +2,11 @@
 
 PostgreSQL is the persistence authority. Drizzle owns typed schema definitions and SQL migrations.
 
+Settlement signing receipts persist the externally inspected Zcash network fee
+as nullable `bigint` zatoshis. New authorized receipts require a positive exact
+integer fee; the column remains nullable so migration 0011 does not invent fee
+evidence for historical attempts.
+
 ## Decisions
 
 - UUIDs are opaque record identifiers.

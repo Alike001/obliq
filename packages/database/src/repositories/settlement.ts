@@ -544,6 +544,7 @@ export async function recordExternalSigning(
     outcome: "AUTHORIZED" | "REJECTED" | "UNAVAILABLE" | "FAILED";
     signerType?: "ZALLET_PCZT";
     signerVersion?: string;
+    networkFeeZat?: bigint;
     txid?: string;
     signedTxHash?: string;
     errorCode?: string;
@@ -571,13 +572,17 @@ export async function recordExternalSigning(
         !txidPattern.test(input.txid) ||
         !input.signedTxHash ||
         !txidPattern.test(input.signedTxHash) ||
-        !input.signerVersion
+        !input.signerVersion ||
+        input.networkFeeZat === undefined ||
+        input.networkFeeZat <= 0n ||
+        input.networkFeeZat > 2_100_000_000_000_000n
       )
         throw new Error("A sanitized external signing receipt is required");
       if (execution.settlement.txRefPrivate) {
         if (
           execution.settlement.txRefPrivate !== input.txid ||
-          execution.settlement.signedTxHash !== input.signedTxHash
+          execution.settlement.signedTxHash !== input.signedTxHash ||
+          execution.settlement.networkFeeZat !== input.networkFeeZat
         )
           throw new Error("Conflicting signing receipt");
         return execution.settlement;
@@ -597,6 +602,7 @@ export async function recordExternalSigning(
           state: "SIGNED",
           signerType: "ZALLET_PCZT",
           signerVersion: input.signerVersion,
+          networkFeeZat: input.networkFeeZat,
           signedTxHash: input.signedTxHash,
           txRefPrivate: input.txid,
           signedAt: new Date(),
@@ -616,13 +622,17 @@ export async function recordExternalSigning(
         payload: {
           signerType: "ZALLET_PCZT",
           signerVersion: input.signerVersion,
+          networkFeeZat: input.networkFeeZat.toString(),
         },
       });
       await appendAuditEvent(tx, actor, {
         eventType: "TRANSACTION_SIGNED",
         subjectType: "SETTLEMENT",
         subjectId: input.settlementId,
-        payload: { txid: input.txid },
+        payload: {
+          txid: input.txid,
+          networkFeeZat: input.networkFeeZat.toString(),
+        },
       });
       return stored;
     }

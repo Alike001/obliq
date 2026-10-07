@@ -113,6 +113,24 @@ command plus a sanitized qualification harness. These changes make the funded
 test reproducible, but do not add network evidence. The classification remains
 unchanged. See `docs/operations/public-testnet-verification.md`.
 
+The owner-review preflight also established two execution details:
+
+- Zallet v0.1.0-beta.3 `pczt_inspect` exposes creator-recorded receiver/value
+  metadata, shielded bundle composition, privacy policy, and implied fee, but
+  not memo plaintext. The opaque memo is bound by local handoff-to-create chain
+  of custody before signing and independently verified only after UFVK
+  decryption. This limitation must remain visible; inspection is not evidence
+  that the memo itself is correct.
+- The exact inspected network fee is now mandatory in the sanitized signing
+  receipt, persisted as integer zatoshis, and included in chained audit
+  metadata. Historical settlement rows remain nullable; no historical fee is
+  fabricated.
+
+Qualification handoffs and evidence reports use owner-only, non-symlink files
+and exclusive creation. Each confirmation run creates a new immutable report
+and names its prior report explicitly, preserving rather than overwriting the
+progression evidence.
+
 ## Authoritative sources
 
 - [Zaino source and changelog](https://github.com/zingolabs/zaino)
