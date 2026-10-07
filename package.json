@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "npm@11.13.0",
   "engines": {
-    "node": ">=20.9"
+    "node": ">=24 <25"
   },
   "workspaces": [
     "apps/*",
@@ -13,7 +13,9 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace=@obliq/web",
-    "build": "npm run build --workspace=@obliq/web",
+    "build": "npm run build:packages && npm run build --workspace=@obliq/web",
+    "build:packages": "tsc --build tsconfig.packages.json --force --pretty false",
+    "build:preview": "npm run build:packages && npm run build:preview --workspace=@obliq/web",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --build --pretty false",
     "test": "vitest run",
@@ -29,6 +31,8 @@
     "test:integration": "vitest run packages/database/src/repositories/*integration.test.ts",
     "security:secrets": "node scripts/check-secrets.mjs",
     "runtime:check": "tsx scripts/check-runtime-config.ts",
+    "preview:check": "tsx scripts/check-runtime-config.ts",
+    "start:preview": "npm run preview:check && npm run start:preview --workspace=@obliq/web",
     "validate": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {

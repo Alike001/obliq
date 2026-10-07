@@ -59,6 +59,60 @@ describe("runtime security configuration", () => {
     expect(JSON.stringify(config)).not.toContain("client-secret");
   });
 
+  it("accepts a database-free public preview with every private runtime disabled", () => {
+    expect(
+      parseRuntimeSecurityConfig({
+        NODE_ENV: "production",
+        OBLIQ_DEPLOYMENT_MODE: "preview",
+        OBLIQ_SESSION_MODE: "disabled",
+        OBLIQ_STORAGE_MODE: "disabled",
+        OBLIQ_ZCASH_NETWORK: "disabled",
+        OBSERVER_NETWORK: "disabled",
+        OBLIQ_PUBLIC_NETWORK_STATUS: "PUBLIC_NETWORK_BLOCKED",
+        OBLIQ_APP_BASE_URL: "https://obliq-preview.onrender.com",
+      }),
+    ).toEqual({
+      deploymentMode: "preview",
+      authMode: "disabled",
+      storageMode: "disabled",
+      rateLimitMode: "disabled",
+      network: "disabled",
+      observerNetwork: "disabled",
+      publicNetworkStatus: "PUBLIC_NETWORK_BLOCKED",
+    });
+  });
+
+  it("fails public preview closed if a private dependency or secret is configured", () => {
+    const preview = {
+      NODE_ENV: "production",
+      OBLIQ_DEPLOYMENT_MODE: "preview",
+      OBLIQ_SESSION_MODE: "disabled",
+      OBLIQ_STORAGE_MODE: "disabled",
+      OBLIQ_ZCASH_NETWORK: "disabled",
+      OBSERVER_NETWORK: "disabled",
+      OBLIQ_PUBLIC_NETWORK_STATUS: "PUBLIC_NETWORK_BLOCKED",
+      OBLIQ_APP_BASE_URL: "https://obliq-preview.onrender.com",
+    };
+    expect(() =>
+      parseRuntimeSecurityConfig({ ...preview, DATABASE_URL: "postgres://db" }),
+    ).toThrow("must not configure DATABASE_URL");
+    expect(() =>
+      parseRuntimeSecurityConfig({ ...preview, OBSERVER_UFVK: "secret" }),
+    ).toThrow("must not configure OBSERVER_UFVK");
+    expect(() =>
+      parseRuntimeSecurityConfig({
+        ...preview,
+        OBLIQ_SESSION_MODE: "development",
+      }),
+    ).toThrow("requires authentication to be disabled");
+    expect(() =>
+      parseRuntimeSecurityConfig({
+        ...preview,
+        OBLIQ_ZCASH_NETWORK: "regtest",
+      }),
+    ).toThrow("do not match");
+  });
+
   it("fails on network mismatch or an unqualified public network", () => {
     expect(() =>
       parseRuntimeSecurityConfig({

@@ -10,6 +10,8 @@ import { SiteHeader } from "@/components/site-header";
 import { EvidenceArtifact } from "@/components/evidence-artifact";
 import { getDatabase } from "@/lib/db";
 import { rateLimitRequest, requestSubject } from "@/lib/request-security";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
+import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
@@ -21,6 +23,7 @@ export default async function VerifyEvidencePage({
 }: {
   params: Promise<{ evidenceId: string }>;
 }) {
+  if (getRuntimeSecurityConfig().deploymentMode === "preview") notFound();
   const { evidenceId } = await params;
   const subject = await requestSubject();
   let rateLimited = false;

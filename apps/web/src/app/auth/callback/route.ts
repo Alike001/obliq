@@ -15,10 +15,15 @@ import {
   securityPepper,
 } from "@/lib/request-security";
 import { sessionCookieName } from "@/lib/session";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  if (getRuntimeSecurityConfig().authMode !== "oidc")
+    return new Response("OIDC authentication is not configured", {
+      status: 404,
+    });
   try {
     await rateLimitRequest("auth:callback", await requestSubject(), 30, 300);
   } catch (error) {
