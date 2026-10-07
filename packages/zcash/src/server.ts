@@ -56,6 +56,8 @@ export class ProcessZcashObserver implements ZcashObserver {
       const status: ObserverStatus = {
         availability: parsed.synced ? "AVAILABLE" : "SYNCING",
         network: this.config.network,
+        authority: parsed.authority,
+        spendingAuthority: parsed.spendingAuthority,
         chainTipHeight: parsed.chainTipHeight,
         fullyScannedHeight: parsed.fullyScannedHeight,
       };
@@ -84,6 +86,8 @@ export class ProcessZcashObserver implements ZcashObserver {
         status: {
           availability: "UNAVAILABLE",
           network: this.config.network,
+          authority: "UFVK_VIEW_ONLY",
+          spendingAuthority: false,
           reasonCode: classifyFailure(message),
         },
         observations: [],

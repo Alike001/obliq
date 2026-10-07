@@ -14,6 +14,9 @@ export type ObserverAvailability =
 export interface ObserverStatus {
   availability: ObserverAvailability;
   network: ZcashNetwork;
+  /** Safe capability metadata; never contains viewing material. */
+  authority?: "UFVK_VIEW_ONLY";
+  spendingAuthority?: false;
   chainTipHeight?: number;
   fullyScannedHeight?: number;
   reasonCode?: string;

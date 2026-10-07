@@ -108,6 +108,11 @@ Until that happens:
 - public data-service uptime is not a financial conclusion; and
 - there is no transparent fallback.
 
+Phase 7A adds a testnet-bound controlled quote and immutable-intent preparation
+command plus a sanitized qualification harness. These changes make the funded
+test reproducible, but do not add network evidence. The classification remains
+unchanged. See `docs/operations/public-testnet-verification.md`.
+
 ## Authoritative sources
 
 - [Zaino source and changelog](https://github.com/zingolabs/zaino)

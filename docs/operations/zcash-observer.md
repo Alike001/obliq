@@ -92,3 +92,7 @@ backed up outside Obliq. Export only the account UFVK to the observer, initializ
 the observer from a birthday preceding the payment, and send to the
 observer-derived `utest1...` receiver from a separate externally controlled
 wallet. Obliq must never receive either wallet's mnemonic or spending key.
+
+The complete preparation, external-wallet ceremony, fee boundary, and
+sanitized verification procedure are in
+[Public testnet settlement verification](./public-testnet-verification.md).

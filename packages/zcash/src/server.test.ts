@@ -97,6 +97,8 @@ describe("process observer adapter", () => {
       status: {
         availability: "UNAVAILABLE",
         network: "regtest",
+        authority: "UFVK_VIEW_ONLY",
+        spendingAuthority: false,
         reasonCode: "NODE_UNAVAILABLE",
       },
       observations: [],

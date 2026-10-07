@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./qualification": "./src/qualification.ts"
   },
   "dependencies": {
     "server-only": "0.0.1"

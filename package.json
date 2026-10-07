@@ -24,6 +24,8 @@
     "db:migrate": "drizzle-kit migrate --config packages/database/drizzle.config.ts",
     "db:seed": "tsx packages/database/src/seed.ts",
     "zcash:observe": "tsx scripts/run-zcash-observer.ts",
+    "zcash:testnet:prepare": "tsx scripts/prepare-public-testnet-tracer.ts",
+    "zcash:testnet:verify": "tsx scripts/verify-public-testnet-tracer.ts",
     "test:integration": "vitest run packages/database/src/repositories/*integration.test.ts",
     "security:secrets": "node scripts/check-secrets.mjs",
     "runtime:check": "tsx scripts/check-runtime-config.ts",

@@ -1,8 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDatabase, schema } from "../index";
 import {
+  createControlledQualificationQuote,
   createControlledRegtestQuote,
   getSettlement,
   ingestShieldedObservation,
@@ -527,5 +528,117 @@ suite("Phase 4 non-custodial settlement repositories", () => {
     expect((await verifyAuditChain(connection.db, organizationId)).valid).toBe(
       true,
     );
+  });
+
+  it("prepares a testnet-only qualification intent without changing the regtest path", async () => {
+    const testnetReceiver = `utest1${"p".repeat(90)}`;
+    const [destination] = await connection.db
+      .insert(schema.vendorDestinations)
+      .values({
+        organizationId,
+        vendorId,
+        network: "ZCASH",
+        receiver: testnetReceiver,
+        fingerprint: receiverFingerprint(testnetReceiver),
+        verificationStatus: "VERIFIED_MANUALLY",
+        verifiedAt: new Date(),
+        verifiedBy: ownerId,
+        verificationMethod: "Public testnet qualification",
+      })
+      .returning();
+    const [source] = await connection.db
+      .insert(schema.obligationSources)
+      .values({ organizationId, kind: "MANUAL", metadataJson: {} })
+      .returning();
+    const [obligation] = await connection.db
+      .insert(schema.obligations)
+      .values({
+        organizationId,
+        vendorId,
+        type: "VENDOR_INVOICE",
+        reference: "PUBLIC-TESTNET-001",
+        currency: "USD",
+        amountMinor: 100n,
+        description: "Public testnet qualification",
+        state: "READY_TO_SETTLE",
+        sourceId: source!.id,
+        destinationId: destination!.id,
+        createdBy: ownerId,
+        version: 1,
+      })
+      .returning();
+    const [decision] = await connection.db
+      .insert(schema.policyDecisions)
+      .values({
+        organizationId,
+        obligationId: obligation!.id,
+        policyVersionId,
+        obligationVersion: 1,
+        destinationId: destination!.id,
+        result: "APPROVAL_REQUIRED",
+        inputHash: "public-testnet-input",
+      })
+      .returning();
+    await connection.db.insert(schema.settlementReadiness).values({
+      organizationId,
+      obligationId: obligation!.id,
+      obligationVersion: 1,
+      policyDecisionId: decision!.id,
+      destinationId: destination!.id,
+      result: "READY",
+      reasonsJson: [],
+      evaluatedBy: ownerId,
+    });
+    await expect(
+      createControlledQualificationQuote(connection.db, actor, {
+        obligationId: obligation!.id,
+        zatoshiAmount: 100_000n,
+        idempotencyKey: "mainnet-must-fail",
+        network: "mainnet" as never,
+      }),
+    ).rejects.toThrow("not eligible");
+    const quote = await createControlledQualificationQuote(
+      connection.db,
+      actor,
+      {
+        obligationId: obligation!.id,
+        zatoshiAmount: 100_000n,
+        idempotencyKey: "public-testnet-quote",
+        network: "testnet",
+        expiresAt: new Date(Date.now() + 60 * 60_000),
+      },
+    );
+    expect(quote).toMatchObject({
+      source: "TESTNET_FIXED",
+      sourceKind: "CONTROLLED_TESTNET",
+    });
+    const intent = await prepareSettlementIntent(connection.db, actor, {
+      quoteId: quote.id,
+      idempotencyKey: "public-testnet-intent",
+    });
+    expect(intent).toMatchObject({
+      network: "testnet",
+      zatoshiAmount: 100_000n,
+      state: "AWAITING_SIGNATURE",
+    });
+    expect(intent!.paymentRequestUri).toMatch(
+      /^zcash:utest1.*amount=0\.001&memo=/u,
+    );
+    const [settlement] = await connection.db
+      .select()
+      .from(schema.settlements)
+      .where(eq(schema.settlements.intentId, intent!.id))
+      .limit(1);
+    const handoff = await requestExternalSignature(
+      connection.db,
+      actor,
+      settlement!.id,
+      "public-testnet-signing-request",
+    );
+    expect(handoff).toMatchObject({
+      network: "testnet",
+      amountZat: "100000",
+      privacyPolicy: "FullPrivacy",
+    });
   });
 });
