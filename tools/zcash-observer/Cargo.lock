@@ -1461,6 +1461,7 @@ dependencies = [
  "rand_core",
  "rusqlite",
  "serde_json",
+ "sha2 0.10.9",
  "tokio",
  "tonic",
  "zcash_client_backend",
@@ -1468,6 +1469,7 @@ dependencies = [
  "zcash_keys",
  "zcash_primitives",
  "zcash_protocol",
+ "zip32",
 ]
 
 [[package]]

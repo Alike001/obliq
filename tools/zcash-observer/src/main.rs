@@ -1,20 +1,22 @@
 use async_trait::async_trait;
 use futures_util::TryStreamExt;
 use rand_core::OsRng;
-use rusqlite::Connection;
+use rusqlite::{Connection, OpenFlags};
 use serde_json::json;
+use sha2::{Digest, Sha256};
 use std::{
     collections::BTreeMap,
     convert::Infallible,
     env,
     error::Error,
+    fs,
     path::PathBuf,
     sync::{Arc, Mutex},
 };
 use tonic::Request;
 use zcash_client_backend::{
     data_api::{
-        AccountPurpose, TransactionDataRequest, WalletRead, WalletWrite,
+        Account, AccountPurpose, TransactionDataRequest, WalletRead, WalletWrite,
         chain::{BlockCache, BlockSource, error as chain_error, scan_cached_blocks},
         scanning::ScanRange,
         wallet::{ConfirmationsPolicy, decrypt_and_store_transaction},
@@ -28,6 +30,7 @@ use zcash_client_backend::{
     },
 };
 use zcash_client_sqlite::{WalletDb, util::SystemClock, wallet::init::init_wallet_db};
+use zcash_keys::address::{Address, UnifiedAddress};
 use zcash_keys::keys::{UnifiedAddressRequest, UnifiedFullViewingKey};
 use zcash_primitives::transaction::Transaction;
 use zcash_protocol::{
@@ -208,10 +211,141 @@ fn canonical_txid(database_hex: &str) -> String {
         .to_lowercase()
 }
 
+#[cfg(unix)]
+fn require_private_regular_file(path: &std::path::Path) -> Result<(), Box<dyn Error>> {
+    let metadata = fs::symlink_metadata(path)?;
+    if !metadata.file_type().is_file() || metadata.file_type().is_symlink() {
+        return Err("qualification input must be a regular file, not a symlink".into());
+    }
+    if metadata.permissions().mode() & 0o777 != 0o600 {
+        return Err("qualification input must have mode 0600".into());
+    }
+    Ok(())
+}
+
+#[cfg(not(unix))]
+fn require_private_regular_file(_path: &std::path::Path) -> Result<(), Box<dyn Error>> {
+    Err("recipient verification requires Unix file permission checks".into())
+}
+
+fn orchard_receiver_matches(
+    ufvk: &UnifiedFullViewingKey,
+    recipient: &Address,
+) -> Result<bool, &'static str> {
+    let Address::Unified(recipient_ua) = recipient else {
+        return Err("recipient must be a Unified Address");
+    };
+    let orchard_receiver = recipient_ua
+        .orchard()
+        .copied()
+        .ok_or("recipient Unified Address has no Orchard receiver")?;
+    let orchard_only = UnifiedAddress::from_receivers(Some(orchard_receiver), None, None)
+        .expect("an Orchard receiver forms a valid Unified Address");
+
+    Ok(!ufvk
+        .to_unified_incoming_viewing_key()
+        .decrypt_diversifiers(&orchard_only)
+        .is_empty())
+}
+
+fn recipient_verification_result(account_count: usize, matching_accounts: usize) -> &'static str {
+    match (account_count, matching_accounts) {
+        (1, 0) => "MISMATCH",
+        (1, 1) => "MATCH",
+        _ => "UNVERIFIED",
+    }
+}
+
+fn verify_recipient(
+    configured: &ConfiguredNetwork,
+    params: ObserverParameters,
+) -> Result<(), Box<dyn Error>> {
+    let wallet_path = path();
+    let recipient_path = PathBuf::from(
+        env::var_os("OBSERVER_RECIPIENT_FILE")
+            .ok_or("OBSERVER_RECIPIENT_FILE is required for verify-recipient")?,
+    );
+    require_private_regular_file(&wallet_path)?;
+    require_private_regular_file(&recipient_path)?;
+
+    let recipient_document = fs::read_to_string(&recipient_path)?;
+    if recipient_document.len() > 4096 {
+        return Err("recipient file exceeds the qualification size limit".into());
+    }
+    let recipient_json: serde_json::Value = serde_json::from_str(&recipient_document)?;
+    let recipient_object = recipient_json
+        .as_object()
+        .ok_or("recipient file must contain a JSON object")?;
+    if recipient_object.len() != 1 || !recipient_object.contains_key("address") {
+        return Err("recipient file must contain only the address field".into());
+    }
+    let recipient_text = recipient_object["address"]
+        .as_str()
+        .ok_or("recipient address must be a string")?;
+    let recipient = Address::decode(&params, recipient_text)
+        .ok_or("recipient is not a valid address for the configured network")?;
+    let Address::Unified(recipient_ua) = &recipient else {
+        return Err("recipient must be a Unified Address".into());
+    };
+    if !recipient_ua.has_orchard() {
+        return Err("recipient Unified Address has no Orchard receiver".into());
+    }
+
+    let conn = Connection::open_with_flags(&wallet_path, OpenFlags::SQLITE_OPEN_READ_ONLY)?;
+    rusqlite::vtab::array::load_module(&conn)?;
+    let wallet = WalletDb::from_connection(conn, params, SystemClock, OsRng);
+    let account_ids = wallet.get_account_ids()?;
+    if account_ids.is_empty() {
+        return Err("observer database has no imported account".into());
+    }
+
+    let mut matching_accounts = 0usize;
+    for account_id in &account_ids {
+        let account = wallet
+            .get_account(*account_id)?
+            .ok_or("observer account disappeared during verification")?;
+        if account.purpose() != AccountPurpose::ViewOnly {
+            return Err("observer database contains spending authority".into());
+        }
+        let ufvk = account
+            .ufvk()
+            .ok_or("observer account does not contain a full viewing key")?;
+        if orchard_receiver_matches(ufvk, &recipient)? {
+            matching_accounts += 1;
+        }
+    }
+
+    let result = recipient_verification_result(account_ids.len(), matching_accounts);
+    let recipient_fingerprint = hex::encode(Sha256::digest(recipient_text.as_bytes()));
+    println!(
+        "{}",
+        json!({
+            "result": result,
+            "network": configured.label,
+            "authority": "UFVK_VIEW_ONLY",
+            "spendingAuthority": false,
+            "observerDatabaseReadOnly": true,
+            "observerDatabasePrivate": true,
+            "recipientFilePrivate": true,
+            "recipientFingerprint": recipient_fingerprint,
+            "orchardReceiverPresent": true,
+            "diversifierRecovered": matching_accounts > 0,
+            "accountCount": account_ids.len(),
+            "matchingAccountCount": matching_accounts,
+        })
+    );
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let command = env::args().nth(1).ok_or("expected init or sync")?;
+    let command = env::args()
+        .nth(1)
+        .ok_or("expected init, sync, or verify-recipient")?;
     let configured = configured_network()?;
+    if command == "verify-recipient" {
+        return verify_recipient(&configured, configured.params.clone());
+    }
     let params = configured.params;
     let ufvk = viewing_key(&params)?;
     let wallet_path = path();
@@ -290,7 +424,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Ok(());
     }
     if command != "sync" {
-        return Err("expected init or sync".into());
+        return Err("expected init, sync, or verify-recipient".into());
     }
 
     let cache = MemoryBlockCache::default();
@@ -442,6 +576,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use zcash_keys::keys::UnifiedSpendingKey;
+    use zip32::{AccountId, DiversifierIndex};
+
+    fn test_ufvk(seed_tag: u8) -> UnifiedFullViewingKey {
+        UnifiedSpendingKey::from_seed(&Network::TestNetwork, &[seed_tag; 32], AccountId::ZERO)
+            .expect("test seed derives a unified key")
+            .to_unified_full_viewing_key()
+    }
+
+    fn orchard_recipient(ufvk: &UnifiedFullViewingKey, start: u32) -> Address {
+        let (ua, _) = ufvk
+            .find_address(
+                DiversifierIndex::from(start),
+                UnifiedAddressRequest::ORCHARD,
+            )
+            .expect("test key derives an Orchard receiver");
+        Address::Unified(ua)
+    }
 
     #[test]
     fn maps_explicit_networks_to_consensus_and_service_identities() {
@@ -460,5 +612,51 @@ mod tests {
     #[test]
     fn rejects_unknown_networks() {
         assert!(configured_network_for("staging").is_err());
+    }
+
+    #[test]
+    fn matches_an_orchard_receiver_at_a_non_default_diversifier() {
+        let ufvk = test_ufvk(1);
+        let recipient = orchard_recipient(&ufvk, 73);
+
+        assert_eq!(orchard_receiver_matches(&ufvk, &recipient), Ok(true));
+    }
+
+    #[test]
+    fn rejects_an_orchard_receiver_from_another_account() {
+        let observer_ufvk = test_ufvk(1);
+        let other_recipient = orchard_recipient(&test_ufvk(2), 73);
+
+        assert_eq!(
+            orchard_receiver_matches(&observer_ufvk, &other_recipient),
+            Ok(false)
+        );
+    }
+
+    #[test]
+    fn requires_the_recipient_to_contain_an_orchard_receiver() {
+        let ufvk = test_ufvk(1);
+        let (all_receivers, _) = ufvk
+            .find_address(
+                DiversifierIndex::from(73u32),
+                UnifiedAddressRequest::AllAvailableKeys,
+            )
+            .expect("test key derives shielded receivers");
+        let sapling_only =
+            UnifiedAddress::from_receivers(None, all_receivers.sapling().copied(), None)
+                .expect("test key derives a Sapling receiver");
+
+        assert_eq!(
+            orchard_receiver_matches(&ufvk, &Address::Unified(sapling_only)),
+            Err("recipient Unified Address has no Orchard receiver")
+        );
+    }
+
+    #[test]
+    fn requires_exactly_one_observer_account_for_a_match() {
+        assert_eq!(recipient_verification_result(1, 1), "MATCH");
+        assert_eq!(recipient_verification_result(1, 0), "MISMATCH");
+        assert_eq!(recipient_verification_result(2, 1), "UNVERIFIED");
+        assert_eq!(recipient_verification_result(2, 2), "UNVERIFIED");
     }
 }
