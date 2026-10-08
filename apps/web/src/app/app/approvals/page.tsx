@@ -1,5 +1,6 @@
 import { formatMinorUnits } from "@obliq/domain";
 import { listApprovalInbox } from "@obliq/database";
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
@@ -19,9 +20,12 @@ export default async function ApprovalsPage() {
           Only requirements your server-validated role may satisfy are shown.
         </p>
         {!items.length ? (
-          <section className="card mt-8 p-10 text-center">
-            <h2 className="font-semibold">No eligible approvals</h2>
-            <p className="text-muted mt-2 text-sm">
+          <section className="card empty mt-8">
+            <span className="empty-icon">
+              <Check size={20} aria-hidden />
+            </span>
+            <h2 className="font-semibold">You are all caught up</h2>
+            <p className="text-muted max-w-sm text-sm">
               There is nothing requiring your capacity right now.
             </p>
           </section>

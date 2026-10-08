@@ -1,34 +1,35 @@
+import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
+import { isReadOnlyPreview, siteLinks } from "@/lib/site-links";
 import { Brand } from "./brand";
 
-const links = [
-  ["Product", "/app"],
-  ["Documentation", "/docs"],
-  ["Security", "/security"],
-  ["Proof", "/proof"],
-] as const;
-
+/** The header wraps on narrow screens; no link is hidden behind a script. */
 export function SiteHeader() {
+  const preview = isReadOnlyPreview();
+  const { nav, primary } = siteLinks(preview);
   return (
-    <header className="border-ink/10 bg-paper/90 border-b backdrop-blur">
-      <div className="page-wrap flex h-18 items-center justify-between">
-        <Brand />
+    <header className="site-nav">
+      <div className="page-wrap flex flex-wrap items-center justify-between gap-x-7 gap-y-0 py-3">
+        <div className="flex flex-wrap items-center gap-x-3">
+          <Brand />
+          {preview && (
+            <span className="cap cap-hatched">Read-only preview</span>
+          )}
+        </div>
+        {/* Below 640px the links take their own row under the button. */}
         <nav
           aria-label="Primary"
-          className="text-muted hidden items-center gap-7 text-sm md:flex"
+          className="order-3 flex w-full flex-wrap items-center gap-x-7 sm:order-none sm:mr-auto sm:ml-6 sm:w-auto"
         >
-          {links.map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className="hover:text-ink transition-colors"
-            >
+          {nav.map(({ label, href }) => (
+            <Link key={href} href={href} className="nav-link">
               {label}
             </Link>
           ))}
         </nav>
-        <Link href="/app" className="button button-dark">
-          Open foundation <span aria-hidden>↗</span>
+        <Link href={primary.href} className="button button-primary">
+          {primary.label}
+          <ArrowUpRight size={15} aria-hidden />
         </Link>
       </div>
     </header>

@@ -17,9 +17,13 @@
   ],
   "exclude": ["node_modules"],
   "references": [
+    { "path": "../../packages/ai" },
+    { "path": "../../packages/database" },
     { "path": "../../packages/domain" },
     { "path": "../../packages/evidence" },
+    { "path": "../../packages/policy" },
     { "path": "../../packages/security" },
+    { "path": "../../packages/storage" },
     { "path": "../../packages/zcash" }
   ]
 }

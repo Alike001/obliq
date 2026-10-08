@@ -135,11 +135,13 @@ export const dynamic = "force-dynamic";
 export default async function ProofPage() {
   const commit =
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ??
+    process.env.RENDER_GIT_COMMIT?.slice(0, 12) ??
     process.env.GIT_COMMIT_SHA?.slice(0, 12) ??
     "local-development";
   let databaseRuntime = "NOT CONFIGURED";
   let auditRuntime = "NOT CONFIGURED";
   let runtimeSummary = {
+    deployment: "UNAVAILABLE",
     auth: "UNAVAILABLE",
     storage: "UNAVAILABLE",
     rateLimit: "UNAVAILABLE",
@@ -149,6 +151,7 @@ export default async function ProofPage() {
   try {
     const runtime = getRuntimeSecurityConfig();
     runtimeSummary = {
+      deployment: runtime.deploymentMode.toUpperCase(),
       auth: runtime.authMode.toUpperCase(),
       storage: runtime.storageMode.toUpperCase(),
       rateLimit: runtime.rateLimitMode.toUpperCase(),
@@ -178,11 +181,11 @@ export default async function ProofPage() {
   return (
     <main>
       <SiteHeader />
-      <section className="hairline bg-ink border-b text-white">
+      <section className="on-ink bg-[#161616] text-white">
         <div className="page-wrap py-20 md:py-24">
-          <p className="eyebrow !text-mint">Technical proof surface</p>
+          <p className="eyebrow">Technical proof surface</p>
           <h1 className="section-title mt-5 max-w-3xl">
-            Claims should be inspectable—or marked unavailable.
+            Claims should be inspectable or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/60">
             Phase 6 reports hardened runtime boundaries alongside the real
@@ -220,10 +223,20 @@ export default async function ProofPage() {
           </div>
           <div className="space-y-5">
             <ProofCard
+              label="Hosted runtime"
+              value={runtimeSummary.deployment}
+              detail={
+                runtimeSummary.deployment === "PREVIEW"
+                  ? "Read-only public preview. Application, authentication, database, storage, evidence-verification and Zcash runtime routes are inaccessible."
+                  : "Runtime deployment classification."
+              }
+              good={runtimeSummary.deployment === "PRODUCTION"}
+            />
+            <ProofCard
               label="Runtime security modes"
               value={`${runtimeSummary.auth} · ${runtimeSummary.storage}`}
               detail={`Rate limits: ${runtimeSummary.rateLimit}. Zcash network: ${runtimeSummary.network}. ${runtimeSummary.publicNetwork}.`}
-              good={runtimeSummary.auth !== "UNAVAILABLE"}
+              good={runtimeSummary.auth === "OIDC"}
             />
             <ProofCard
               label="End-to-end settlement"

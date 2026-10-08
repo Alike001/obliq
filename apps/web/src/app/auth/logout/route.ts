@@ -8,8 +8,13 @@ import {
   securityPepper,
 } from "@/lib/request-security";
 import { sessionCookieName } from "@/lib/session";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
 export async function POST(request: Request) {
+  if (getRuntimeSecurityConfig().authMode !== "oidc")
+    return new Response("OIDC authentication is not configured", {
+      status: 404,
+    });
   try {
     requireSameOrigin(request);
   } catch {

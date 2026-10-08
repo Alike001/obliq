@@ -5,9 +5,12 @@
   "scripts": {
     "dev": "next dev",
     "build": "OBLIQ_DEPLOYMENT_MODE=test OBLIQ_SESSION_MODE=oidc OBLIQ_STORAGE_MODE=local-development OBLIQ_ZCASH_NETWORK=regtest OBSERVER_NETWORK=regtest next build",
-    "start": "next start"
+    "build:preview": "next build",
+    "start": "next start",
+    "start:preview": "next start --hostname 0.0.0.0"
   },
   "dependencies": {
+    "@gsap/react": "2.1.2",
     "@obliq/ai": "*",
     "@obliq/database": "*",
     "@obliq/domain": "*",
@@ -17,7 +20,9 @@
     "@obliq/storage": "*",
     "@obliq/zcash": "*",
     "clsx": "2.1.1",
+    "gsap": "3.15.0",
     "lucide-react": "1.52.0",
+    "motion": "14.0.0",
     "next": "16.3.8",
     "openid-client": "6.8.8",
     "react": "19.3.0",
