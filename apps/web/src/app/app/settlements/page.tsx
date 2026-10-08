@@ -2,6 +2,7 @@ import { formatMinorUnits } from "@obliq/domain";
 import { formatZecAmount } from "@obliq/zcash";
 import { listSettlements } from "@obliq/database";
 import Link from "next/link";
+import { StateTag } from "@/components/state-tag";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 
@@ -35,7 +36,7 @@ export default async function SettlementsPage() {
           </section>
         ) : (
           <section className="card mt-8 overflow-hidden">
-            <div className="hidden grid-cols-[1fr_1fr_1fr_1fr] gap-4 border-b p-4 text-xs font-semibold text-stone-500 md:grid">
+            <div className="bg-sunken text-ink-3 hidden grid-cols-[1fr_1fr_1fr_1fr] gap-4 border-b p-4 text-[0.6875rem] font-bold tracking-[0.08em] uppercase md:grid">
               <span>Vendor / reference</span>
               <span>Business amount</span>
               <span>ZEC intent</span>
@@ -46,7 +47,7 @@ export default async function SettlementsPage() {
                 <Link
                   key={settlement.id}
                   href={`/app/settlements/${settlement.id}`}
-                  className="grid gap-3 p-5 hover:bg-stone-50 md:grid-cols-[1fr_1fr_1fr_1fr]"
+                  className="grid gap-3 p-5 transition-colors hover:bg-stone-50 md:grid-cols-[1fr_1fr_1fr_1fr] md:items-center"
                 >
                   <div>
                     <strong className="text-sm">{vendor.displayName}</strong>
@@ -63,7 +64,9 @@ export default async function SettlementsPage() {
                   <span className="font-mono text-sm">
                     {formatZecAmount(intent.zatoshiAmount)} ZEC
                   </span>
-                  <strong className="text-sm">{settlement.state}</strong>
+                  <span>
+                    <StateTag state={settlement.state} />
+                  </span>
                 </Link>
               ))}
             </div>

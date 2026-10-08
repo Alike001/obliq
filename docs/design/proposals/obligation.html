@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal: obligation record — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="obliq.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <p class="specimen">
+      Design specimen. Vendors, people, amounts, dates and hashes are
+      placeholders, not product data.
+    </p>
+
+    <div class="shell">
+      <aside class="rail on-ink">
+        <a class="brand" href="#">obliq</a>
+        <p class="who">
+          <strong>Specimen organization</strong>
+          <span>Signed in as Finance</span>
+        </p>
+        <nav class="nav" aria-label="Workspace">
+          <a href="#">Overview</a>
+          <a href="obligations.html" aria-current="page">Obligations</a>
+          <a href="#">Vendors</a>
+          <a href="#">Approvals</a>
+          <a href="#">Settlements</a>
+          <a href="#">Evidence</a>
+          <a href="#">Policies</a>
+          <a href="#">Ledger <span class="planned">Planned</span></a>
+          <a href="#">Settings <span class="planned">Planned</span></a>
+        </nav>
+        <p class="rail-foot">Development workspace</p>
+      </aside>
+
+      <div>
+        <header class="topbar">
+          <a class="brand" href="#">obliq</a>
+          <div class="topbar-end">
+            <span class="scope">Regtest</span>
+            <span class="t-small session">OIDC session</span>
+            <a class="btn btn-quiet session" href="#">Sign out</a>
+            <details class="mnav">
+              <summary>Menu</summary>
+              <nav aria-label="Workspace">
+                <a href="#">Overview</a>
+                <a href="obligations.html" aria-current="page">Obligations</a>
+                <a href="#">Vendors</a>
+                <a href="#">Approvals</a>
+                <a href="#">Settlements</a>
+                <a href="#">Evidence</a>
+                <a href="#">Policies</a>
+                <a href="#">Sign out</a>
+              </nav>
+            </details>
+          </div>
+        </header>
+
+        <main class="page" id="main">
+          <p class="crumb"><a href="obligations.html">Obligations</a></p>
+          <div class="page-head">
+            <div class="stack-sm">
+              <h1 class="t-title">SPECIMEN-0006</h1>
+              <p>
+                Specimen vendor A, <span class="num">USD 8,400.00</span>, due
+                <time datetime="2026-10-21">21 Oct 2026</time>
+              </p>
+              <p class="row">
+                <span class="tag tag-hold"
+                  ><span class="glyph glyph-wait" aria-hidden="true"></span
+                  >Approval required</span
+                >
+                <span class="t-small">Record version 2</span>
+              </p>
+            </div>
+            <a class="btn btn-secondary" href="#">Edit record</a>
+          </div>
+
+          <div class="stack">
+            <section class="sheet" aria-labelledby="next-h">
+              <div class="sheet-head">
+                <h2 class="t-section" id="next-h">Your approval is needed</h2>
+                <span class="t-small">Finance, 0 of 1 recorded</span>
+              </div>
+              <form class="sheet-pad stack-sm">
+                <p>
+                  Policy tier requires one Finance approval. Approving records
+                  business authorization only. It does not sign or send a
+                  payment.
+                </p>
+                <div class="field" style="max-width: 34rem">
+                  <label for="note">Note for the audit record (optional)</label>
+                  <input class="input" id="note" name="note" />
+                </div>
+                <div class="btn-row">
+                  <button
+                    class="btn btn-primary"
+                    name="decision"
+                    value="APPROVE"
+                  >
+                    Approve USD 8,400.00
+                  </button>
+                  <button class="btn btn-danger" name="decision" value="REJECT">
+                    Reject
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section aria-labelledby="track-h" class="stack-sm">
+              <h2 class="t-section" id="track-h">Where this obligation is</h2>
+              <div class="track">
+                <div class="lane lane-1">
+                  <div class="lane-name">
+                    <strong>Business approval</strong>
+                    <span>Recorded in Obliq</span>
+                  </div>
+                  <ol>
+                    <li class="step step-done">
+                      <span class="glyph glyph-done" aria-hidden="true"></span>
+                      Captured <small>Done</small>
+                    </li>
+                    <li class="step step-done">
+                      <span class="glyph glyph-done" aria-hidden="true"></span>
+                      Policy evaluated <small>Done</small>
+                    </li>
+                    <li class="step step-now" aria-current="step">
+                      <span class="glyph glyph-wait" aria-hidden="true"></span>
+                      Approval <small>Waiting on Finance</small>
+                    </li>
+                    <li class="step step-todo">
+                      <span class="glyph glyph-open" aria-hidden="true"></span>
+                      Ready to settle <small>Not started</small>
+                    </li>
+                  </ol>
+                </div>
+                <div class="lane lane-2">
+                  <div class="lane-name">
+                    <strong>Signature</strong>
+                    <span>External signer, outside Obliq</span>
+                  </div>
+                  <ol>
+                    <li class="step step-todo">
+                      <span class="glyph glyph-open" aria-hidden="true"></span>
+                      Intent prepared <small>Not started</small>
+                    </li>
+                    <li class="step step-todo">
+                      <span class="glyph glyph-open" aria-hidden="true"></span>
+                      Signed <small>Not started</small>
+                    </li>
+                    <li class="step step-todo">
+                      <span class="glyph glyph-open" aria-hidden="true"></span>
+                      Broadcast <small>Not started</small>
+                    </li>
+                  </ol>
+                </div>
+                <div class="lane lane-3">
+                  <div class="lane-name">
+                    <strong>Observation</strong>
+                    <span>Read-only observer</span>
+                  </div>
+                  <ol>
+                    <li class="step step-todo">
+                      <span class="glyph glyph-open" aria-hidden="true"></span>
+                      Detected <small>Not observed</small>
+                    </li>
+                    <li class="step step-todo">
+                      <span class="glyph glyph-open" aria-hidden="true"></span>
+                      Confirming <small>Not observed</small>
+                    </li>
+                    <li class="step step-todo">
+                      <span class="glyph glyph-open" aria-hidden="true"></span>
+                      Settled <small>Not observed</small>
+                    </li>
+                  </ol>
+                </div>
+              </div>
+            </section>
+
+            <div class="split">
+              <div class="stack">
+                <section class="sheet" aria-labelledby="controls-h">
+                  <div class="sheet-head">
+                    <div>
+                      <h2 class="t-section" id="controls-h">Policy findings</h2>
+                      <p class="t-small">
+                        Policy version
+                        <span class="ident">specimen</span>
+                      </p>
+                    </div>
+                    <button class="btn btn-secondary">
+                      Re-evaluate policy
+                    </button>
+                  </div>
+                  <table class="ledger">
+                    <thead>
+                      <tr>
+                        <th scope="col">Outcome</th>
+                        <th scope="col">Check</th>
+                        <th scope="col">Finding</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td data-label="Outcome">
+                          <span class="tag tag-clear"
+                            ><span
+                              class="glyph glyph-done"
+                              aria-hidden="true"
+                            ></span
+                            >Pass</span
+                          >
+                        </td>
+                        <td class="lead" data-label="Check">
+                          Destination verified
+                        </td>
+                        <td data-label="Finding">
+                          The vendor has a manually verified destination.
+                        </td>
+                      </tr>
+                      <tr>
+                        <td data-label="Outcome">
+                          <span class="tag tag-clear"
+                            ><span
+                              class="glyph glyph-done"
+                              aria-hidden="true"
+                            ></span
+                            >Pass</span
+                          >
+                        </td>
+                        <td class="lead" data-label="Check">Duplicates</td>
+                        <td data-label="Finding">No open duplicate finding.</td>
+                      </tr>
+                      <tr>
+                        <td data-label="Outcome">
+                          <span class="tag tag-hold"
+                            ><span
+                              class="glyph glyph-attn"
+                              aria-hidden="true"
+                            ></span
+                            >Requires approval</span
+                          >
+                        </td>
+                        <td class="lead" data-label="Check">Amount tier</td>
+                        <td data-label="Finding">
+                          Amount falls in the tier that requires one Finance
+                          approval.
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </section>
+
+                <section class="sheet" aria-labelledby="obs-h">
+                  <div class="sheet-head">
+                    <div>
+                      <h2 class="t-section" id="obs-h">Network observation</h2>
+                      <p class="t-small">
+                        Read-only. Nothing here can create, sign or send a
+                        payment.
+                      </p>
+                    </div>
+                    <span class="tag tag-clear"
+                      ><span class="glyph glyph-done" aria-hidden="true"></span
+                      >Observer available
+                      <span class="scope">Regtest</span></span
+                    >
+                  </div>
+                  <div class="empty">
+                    <p><strong>No payment has been observed.</strong></p>
+                    <p class="t-small">
+                      An obligation that is ready to settle has not been paid. A
+                      shielded output appears here once the observer matches
+                      receiver, memo and exact amount.
+                    </p>
+                  </div>
+                </section>
+
+                <section class="sheet" aria-labelledby="hist-h">
+                  <div class="sheet-head">
+                    <h2 class="t-section" id="hist-h">History</h2>
+                    <span class="t-small">Hash-chained audit events</span>
+                  </div>
+                  <ol class="history">
+                    <li>
+                      <div>
+                        <strong>Policy evaluated</strong>
+                        <p class="t-small">
+                          Specimen person B, hash
+                          <span class="ident">specimen0003…</span>
+                        </p>
+                      </div>
+                      <time datetime="2026-10-07T09:14">7 Oct 2026, 09:14</time>
+                    </li>
+                    <li>
+                      <div>
+                        <strong>Obligation updated</strong>
+                        <p class="t-small">
+                          Specimen person A, hash
+                          <span class="ident">specimen0002…</span>
+                        </p>
+                      </div>
+                      <time datetime="2026-10-07T09:02">7 Oct 2026, 09:02</time>
+                    </li>
+                    <li>
+                      <div>
+                        <strong>Obligation created</strong>
+                        <p class="t-small">
+                          Specimen person A, hash
+                          <span class="ident">specimen0001…</span>
+                        </p>
+                      </div>
+                      <time datetime="2026-10-06T16:40">6 Oct 2026, 16:40</time>
+                    </li>
+                  </ol>
+                </section>
+              </div>
+
+              <aside class="sheet sheet-pad stack-sm" aria-labelledby="facts-h">
+                <h2 class="t-section" id="facts-h">Business details</h2>
+                <dl class="kv" style="grid-template-columns: 1fr">
+                  <div>
+                    <dt>Vendor</dt>
+                    <dd><a href="#">Specimen vendor A</a></dd>
+                  </div>
+                  <div>
+                    <dt>Amount</dt>
+                    <dd class="num">USD 8,400.00</dd>
+                  </div>
+                  <div>
+                    <dt>Due</dt>
+                    <dd>21 Oct 2026</dd>
+                  </div>
+                  <div>
+                    <dt>Type</dt>
+                    <dd>Vendor invoice</dd>
+                  </div>
+                  <div>
+                    <dt>Category</dt>
+                    <dd>Infrastructure</dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>Manual entry</dd>
+                  </div>
+                  <div>
+                    <dt>Purpose</dt>
+                    <dd>Placeholder purpose text for this specimen.</dd>
+                  </div>
+                </dl>
+              </aside>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

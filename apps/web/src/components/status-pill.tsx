@@ -1,14 +1,24 @@
 import type { ImplementationStatus } from "@obliq/domain";
 import { cn } from "@/lib/cn";
 
-const tone: Record<ImplementationStatus, string> = {
-  IMPLEMENTED: "bg-emerald-50 text-emerald-800 ring-emerald-700/15",
-  SEEDED: "bg-blue-50 text-blue-800 ring-blue-700/15",
-  PLANNED: "bg-amber-50 text-amber-900 ring-amber-700/15",
-  BLOCKED: "bg-rose-50 text-rose-800 ring-rose-700/15",
-  UNAVAILABLE: "bg-stone-100 text-stone-600 ring-stone-500/15",
+// Solid means live. Hatched means seeded, planned or unavailable.
+const stamp: Record<ImplementationStatus, string> = {
+  IMPLEMENTED: "cap",
+  SEEDED: "cap cap-hatched",
+  PLANNED: "cap cap-hatched",
+  BLOCKED: "cap cap-blocked",
+  UNAVAILABLE: "cap cap-hatched",
 };
 
+const label: Record<ImplementationStatus, string> = {
+  IMPLEMENTED: "Implemented",
+  SEEDED: "Seeded",
+  PLANNED: "Planned",
+  BLOCKED: "Blocked",
+  UNAVAILABLE: "Unavailable",
+};
+
+/** Capability stamp: what the product can do. The five terms are fixed. */
 export function StatusPill({
   status,
   className,
@@ -16,15 +26,38 @@ export function StatusPill({
   status: ImplementationStatus;
   className?: string;
 }) {
+  return <span className={cn(stamp[status], className)}>{label[status]}</span>;
+}
+
+/**
+ * Scope tag: marks a fact that holds on the isolated regtest network only. It
+ * sits beside other status and never stands in for public-network readiness.
+ */
+export function ScopeTag({ className }: { className?: string }) {
+  return <span className={cn("scope", className)}>Regtest</span>;
+}
+
+const networkStamp = {
+  verified: "cap",
+  ready: "cap cap-hatched",
+  pending: "cap cap-hatched",
+  blocked: "cap cap-blocked",
+} as const;
+
+/** A network claim produced by `networkClaims`; the label is the claim. */
+export function NetworkStamp({
+  label: text,
+  tone,
+  scope,
+}: {
+  label: string;
+  tone: keyof typeof networkStamp;
+  scope?: "Regtest";
+}) {
   return (
-    <span
-      className={cn(
-        "inline-flex rounded-full px-2.5 py-1 font-mono text-[10px] font-semibold tracking-wider ring-1 ring-inset",
-        tone[status],
-        className,
-      )}
-    >
-      {status}
+    <span className="stamps">
+      <span className={networkStamp[tone]}>{text}</span>
+      {scope && <ScopeTag />}
     </span>
   );
 }

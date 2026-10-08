@@ -1,109 +1,65 @@
-import {
-  BarChart3,
-  Building2,
-  CheckSquare,
-  FileCheck2,
-  FileText,
-  Landmark,
-  Library,
-  Settings,
-  SlidersHorizontal,
-} from "lucide-react";
-import Link from "next/link";
+import { SideNav, TabNav } from "./app-nav";
 import { Brand } from "./brand";
-import { StatusPill } from "./status-pill";
 import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
-export const appSections = [
-  ["Overview", "/app", BarChart3, "IMPLEMENTED"],
-  ["Obligations", "/app/obligations", FileText, "IMPLEMENTED"],
-  ["Vendors", "/app/vendors", Building2, "IMPLEMENTED"],
-  ["Approvals", "/app/approvals", CheckSquare, "IMPLEMENTED"],
-  ["Settlements", "/app/settlements", Landmark, "IMPLEMENTED"],
-  ["Ledger", "/app/ledger", Library, "PLANNED"],
-  ["Evidence", "/app/evidence", FileCheck2, "IMPLEMENTED"],
-  ["Policies", "/app/policies", SlidersHorizontal, "IMPLEMENTED"],
-  ["Settings", "/app/settings", Settings, "PLANNED"],
-] as const;
+export { appSections } from "./app-sections";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const runtime = getRuntimeSecurityConfig();
   return (
-    <div className="min-h-screen bg-[#eef0eb] lg:grid lg:grid-cols-[244px_1fr]">
-      <aside className="bg-ink hidden min-h-screen border-r border-white/10 p-5 text-white lg:flex lg:flex-col">
+    <div className="bg-canvas min-h-screen lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+      <aside className="side-nav on-ink sticky top-0 hidden h-screen overflow-y-auto p-5 lg:flex lg:flex-col">
         <Brand inverse />
-        <div className="mt-9 rounded-xl border border-white/10 bg-white/5 p-3">
-          <p className="text-xs font-medium">Obliq Studio</p>
-          <p className="mt-1 text-[11px] text-white/45">
+        <div className="border-carbon-2 mt-7 rounded-[9px] border bg-[rgb(255_255_255/0.05)] p-3">
+          <p className="text-sm font-semibold">Obliq Studio</p>
+          <p className="text-on-carbon-2 mt-0.5 text-xs">
             {runtime.deploymentMode === "production"
               ? "Production workspace"
               : "Development workspace"}
           </p>
         </div>
-        <nav className="mt-6 space-y-1" aria-label="Application">
-          {appSections.map(([label, href, Icon, status]) => (
-            <Link
-              key={href}
-              href={href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-white/65 transition hover:bg-white/7 hover:text-white"
-            >
-              <Icon size={16} />
-              <span className="flex-1">{label}</span>
-              {status !== "IMPLEMENTED" && (
-                <span
-                  className="size-1.5 rounded-full bg-white/25"
-                  title={status}
-                />
-              )}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto border-t border-white/10 pt-5 text-[11px] leading-5 text-white/45">
+        <SideNav />
+        <div className="border-carbon-2 text-on-carbon-2 mt-auto border-t pt-5 text-xs leading-5">
           Phase 6 · Hardened boundaries · {runtime.network.toUpperCase()}
         </div>
       </aside>
-      <div>
-        <header className="hairline bg-panel flex h-16 items-center justify-between border-b px-4 md:px-7">
+      <div className="min-w-0">
+        <header className="hairline bg-panel flex h-16 items-center justify-between gap-3 border-b px-4 md:px-8">
           <div className="lg:hidden">
             <Brand />
           </div>
           <div className="hidden items-center gap-2 lg:flex">
-            <span className="size-2 rounded-full bg-emerald-600" />
-            <span className="text-muted text-xs">
+            <span className="glyph glyph-done text-emerald-600" aria-hidden />
+            <span className="text-muted text-[0.8125rem]">
               {runtime.authMode === "oidc"
                 ? "OIDC session"
                 : "Development identity"}
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <StatusPill status="IMPLEMENTED" />
+            {/* Hatched unless this workspace runs on the public network. */}
+            <span
+              className={
+                runtime.network === "mainnet" ? "cap" : "cap cap-hatched"
+              }
+            >
+              {runtime.network.toUpperCase()}
+            </span>
             {runtime.authMode === "oidc" && (
               <form action="/auth/logout" method="post">
-                <button className="text-muted text-xs underline underline-offset-4">
-                  Sign out
-                </button>
+                <button className="nav-link cursor-pointer">Sign out</button>
               </form>
             )}
-            <div className="bg-forest grid size-8 place-items-center rounded-full text-xs font-semibold text-white">
+            <div
+              className="bg-gold text-carbon grid size-9 place-items-center rounded-full text-xs font-bold"
+              aria-hidden
+            >
               OS
             </div>
           </div>
         </header>
-        <nav
-          className="hairline bg-panel flex gap-2 overflow-x-auto border-b px-3 py-2 lg:hidden"
-          aria-label="Application mobile"
-        >
-          {appSections.map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className="text-muted hover:bg-paper rounded-full px-3 py-1.5 text-xs whitespace-nowrap"
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-        {children}
+        <TabNav />
+        <div className="app-main">{children}</div>
       </div>
     </div>
   );

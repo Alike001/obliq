@@ -1,4 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="32" fill="#14211d"/>
-  <circle cx="32" cy="32" r="10" fill="#bfe8d0"/>
+  <g transform="rotate(-8 32 32)">
+    <path d="M22 6h20a16 16 0 0 1 16 16v20a16 16 0 0 1-16 16H12a6 6 0 0 1-6-6V22A16 16 0 0 1 22 6Z" fill="#ecb244"/>
+  </g>
+  <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+    <rect width="64" height="64" fill="#fff"/>
+    <path d="M43 10 21 54" stroke="#000" stroke-width="6"/>
+  </mask>
+  <circle cx="32" cy="32" r="13" fill="none" stroke="#161616" stroke-width="8" mask="url(#cut)"/>
 </svg>

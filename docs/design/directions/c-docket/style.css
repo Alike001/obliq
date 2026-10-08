@@ -1,0 +1,507 @@
+/*
+ * Direction C, "Docket": every bill is a docket that passes across three
+ * desks. Top bar instead of a side rail, work grouped by whose turn it is,
+ * state shown as ink stamps. Static proposal stylesheet; not imported by
+ * apps/web.
+ */
+
+:root {
+  --desk: #e4e7ea;
+  --sheet: #ffffff;
+  --ink: #111418;
+  --ink-2: #454c55;
+  --line: #c5cbd2;
+  --line-strong: #79828d;
+  --bar: #111418;
+  --blue: #1d3fa6;
+  --blue-bg: #e8edfa;
+  --green: #1b6b3a;
+  --green-bg: #e4f1e8;
+  --red: #b3261e;
+  --red-bg: #fbe7e5;
+  --amber: #8a5a00;
+  --amber-bg: #fbefcf;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: "Archivo", "Segoe UI", system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+h1,
+h2,
+h3,
+p,
+dl,
+dd,
+ol,
+ul {
+  margin: 0;
+}
+ol,
+ul {
+  padding: 0;
+  list-style: none;
+}
+a {
+  color: var(--blue);
+  text-underline-offset: 3px;
+}
+:focus-visible {
+  outline: 3px solid var(--blue);
+  outline-offset: 2px;
+}
+.on-bar :focus-visible {
+  outline-color: #9db4f5;
+}
+.specimen {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--amber-bg);
+  font-size: 0.8125rem;
+  text-align: center;
+}
+.ink-2 {
+  color: var(--ink-2);
+}
+.small {
+  font-size: 0.8125rem;
+}
+
+/* Figures and identifiers are set in a fixed-width face: this direction
+   treats every record as a printed docket. */
+.fig {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.amount {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 1.75rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+/* Type: one family, two widths */
+.display {
+  max-width: 14ch;
+  font-size: clamp(2.75rem, 7.2vw, 6rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 0.94;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.h2 {
+  font-size: clamp(1.75rem, 3.6vw, 2.75rem);
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1;
+  text-wrap: balance;
+}
+.h-page {
+  font-size: 2rem;
+  font-weight: 800;
+  font-stretch: 75%;
+  line-height: 1.05;
+}
+.h-col {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+.lede {
+  max-width: 60ch;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+/* Buttons: square, heavy */
+.btn {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn-solid {
+  background: var(--ink);
+  color: #fff;
+}
+.btn-solid:hover {
+  background: #2a3038;
+}
+.btn-danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Stamps: record state as ink on paper */
+.stamp {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border: 2px solid currentColor;
+  border-radius: 3px;
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+  margin: 3px;
+  color: var(--blue);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transform: rotate(-1.5deg);
+}
+.stamp-green {
+  color: var(--green);
+}
+.stamp-red {
+  color: var(--red);
+}
+.stamp-amber {
+  color: var(--amber);
+}
+/* A test-network stamp is dashed: it is never mistaken for a live one. */
+.stamp-test {
+  border-style: dashed;
+  outline-style: dashed;
+  color: var(--ink-2);
+}
+
+/* Sheets */
+.sheet {
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--sheet);
+}
+.sheet-pad {
+  padding: 1.25rem 1.5rem;
+}
+.tear {
+  border-bottom: 2px dashed var(--line-strong);
+}
+.stack > * + * {
+  margin-top: 1.25rem;
+}
+.stack-sm > * + * {
+  margin-top: 0.6rem;
+}
+.notice {
+  padding: 0.9rem 1.1rem;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--sheet);
+}
+.notice-ok {
+  border-color: var(--green);
+  background: var(--green-bg);
+}
+.notice-test {
+  border-style: dashed;
+  background: var(--amber-bg);
+}
+.field {
+  display: grid;
+  gap: 0.35rem;
+}
+.field label {
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+.input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: #fff;
+  font: inherit;
+}
+
+/* Top bar */
+.bar {
+  background: var(--bar);
+  color: #fff;
+}
+.bar-in {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.5rem;
+  max-width: 82rem;
+  margin-inline: auto;
+  padding: 0.4rem 1.5rem;
+}
+.brand {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  font-size: 1.375rem;
+  font-weight: 800;
+  font-stretch: 75%;
+  letter-spacing: 0.01em;
+  color: inherit;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 0.25rem;
+}
+.tabs a {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0 0.8rem;
+  border-bottom: 3px solid transparent;
+  color: #c9cfd6;
+  text-decoration: none;
+}
+.tabs a[aria-current="page"] {
+  border-bottom-color: #fff;
+  color: #fff;
+  font-weight: 700;
+}
+.bar-end {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-left: auto;
+  font-size: 0.8125rem;
+}
+.bar .stamp-test {
+  color: #fff;
+  transform: none;
+}
+.page {
+  max-width: 82rem;
+  margin-inline: auto;
+  padding: 1.75rem 1.5rem 4rem;
+}
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+/* The desk: three columns, one per authority whose turn it is */
+.desks {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+.desk-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 3px solid var(--ink);
+}
+.desk-head span {
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.slip {
+  display: block;
+  margin-top: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--sheet);
+  color: inherit;
+  text-decoration: none;
+}
+.slip-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.slip strong {
+  display: block;
+}
+.slip .act {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  margin-top: 0.4rem;
+  font-weight: 700;
+  color: var(--blue);
+  text-decoration: underline;
+}
+.tally {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--line-strong);
+  background: var(--sheet);
+}
+.tally a {
+  display: block;
+  padding: 0.75rem 1rem;
+  border-right: 1px solid var(--line);
+  color: inherit;
+  text-decoration: none;
+}
+.tally a:last-child {
+  border-right: 0;
+}
+.tally b {
+  display: block;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+/* Docket */
+.docket {
+  max-width: 62rem;
+  margin-inline: auto;
+}
+.docket-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.75rem 1.5rem;
+}
+.rule-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.rule-table th,
+.rule-table td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+.rule-table th {
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.kv {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 1rem 1.5rem;
+}
+.kv dt {
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+.kv dd {
+  font-weight: 600;
+}
+
+/* Public */
+.wrap {
+  max-width: 76rem;
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+}
+.band {
+  padding-block: 4.5rem;
+}
+.band-sheet {
+  border-block: 1px solid var(--line-strong);
+  background: var(--sheet);
+}
+.cols {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  align-items: start;
+  gap: 2rem 3.5rem;
+}
+.foot {
+  padding-block: 2rem;
+  background: var(--bar);
+  font-size: 0.8125rem;
+  color: #c9cfd6;
+}
+.foot a {
+  color: #fff;
+}
+
+@media (max-width: 899px) {
+  .desks,
+  .cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .desks {
+    gap: 1.75rem;
+  }
+  .tally {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tally a:nth-child(2n) {
+    border-right: 0;
+  }
+  .tally a:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+  .bar-in,
+  .page,
+  .wrap {
+    padding-inline: 1rem;
+  }
+  .bar-end .who {
+    display: none;
+  }
+  .band {
+    padding-block: 3rem;
+  }
+  .docket-head {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rule-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .rule-table,
+  .rule-table tbody,
+  .rule-table tr,
+  .rule-table td {
+    display: block;
+  }
+  .rule-table tr {
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .rule-table td {
+    padding: 0.15rem 0;
+    border: 0;
+  }
+}

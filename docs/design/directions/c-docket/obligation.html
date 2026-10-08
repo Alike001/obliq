@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direction C, Docket: Obligation detail — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <p class="specimen">
+      Direction C, Docket. Design specimen. Vendors, people, amounts, dates and
+      hashes are placeholders, not product data.
+    </p>
+    <header class="bar on-bar">
+      <div class="bar-in">
+        <a class="brand" href="#">Obliq</a>
+        <nav class="tabs" aria-label="Workspace">
+          <a href="#">Desk</a><a href="#" aria-current="page">Obligations</a
+          ><a href="#">Vendors</a><a href="#">Settlements</a
+          ><a href="#">Evidence</a><a href="#">Policies</a>
+        </nav>
+        <div class="bar-end">
+          <span class="stamp stamp-test">Regtest</span
+          ><span class="who">Specimen organization, Finance</span>
+        </div>
+      </div>
+    </header>
+    <main class="page">
+      <div class="docket stack">
+        <p class="small"><a href="dashboard.html">Desk</a></p>
+        <article class="sheet">
+          <header class="sheet-pad tear docket-head">
+            <div class="stack-sm">
+              <h1 class="h-page">SPECIMEN-0006</h1>
+              <p>Specimen vendor A. Due 21 Oct 2026. Record version 2</p>
+            </div>
+            <div style="text-align: right">
+              <p class="amount">USD 8,400.00</p>
+              <span class="stamp stamp-amber">Approval required</span>
+            </div>
+          </header>
+          <section class="sheet-pad tear stack-sm" aria-labelledby="next">
+            <h2 class="h-col" id="next">Your turn: approve or reject</h2>
+            <p>
+              Finance approval, 0 of 1 recorded. Approving records business
+              authorization only. It does not sign or send a payment.
+            </p>
+            <form class="stack-sm">
+              <div class="field" style="max-width: 34rem">
+                <label for="note">Note for the audit record (optional)</label
+                ><input class="input" id="note" />
+              </div>
+              <div class="row">
+                <button class="btn btn-solid" type="button">
+                  Approve USD 8,400.00</button
+                ><button class="btn btn-danger" type="button">Reject</button>
+              </div>
+              <p class="small ink-2">
+                You will be asked to confirm the amount and vendor before the
+                approval is recorded.
+              </p>
+            </form>
+          </section>
+          <section class="sheet-pad tear" aria-labelledby="desks">
+            <h2 class="h-col" id="desks" style="margin-bottom: 0.75rem">
+              Where this docket is
+            </h2>
+            <div class="desks">
+              <div>
+                <div class="desk-head">
+                  <h3 class="h-col">Business approval</h3>
+                  <span>In Obliq</span>
+                </div>
+                <ul class="stack-sm" style="margin-top: 0.75rem">
+                  <li><span class="stamp stamp-green">Captured</span></li>
+                  <li>
+                    <span class="stamp stamp-green">Policy evaluated</span>
+                  </li>
+                  <li>
+                    <span class="stamp stamp-amber">Approval required</span>
+                    <span class="small ink-2">Waiting on Finance</span>
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <div class="desk-head">
+                  <h3 class="h-col">Signature</h3>
+                  <span>Outside Obliq</span>
+                </div>
+                <p class="ink-2 small" style="margin-top: 0.75rem">
+                  Not started. An exact payment request is prepared after
+                  approval.
+                </p>
+              </div>
+              <div>
+                <div class="desk-head">
+                  <h3 class="h-col">Observation</h3>
+                  <span>Read-only</span>
+                </div>
+                <p class="ink-2 small" style="margin-top: 0.75rem">
+                  No payment observed. Ready to settle is not paid.
+                </p>
+              </div>
+            </div>
+          </section>
+          <section class="sheet-pad tear" aria-labelledby="pol">
+            <div class="row" style="justify-content: space-between">
+              <h2 class="h-col" id="pol">Policy findings</h2>
+              <button class="btn" type="button">Re-evaluate</button>
+            </div>
+            <table class="rule-table" style="margin-top: 0.5rem">
+              <thead>
+                <tr>
+                  <th scope="col">Check</th>
+                  <th scope="col">Finding</th>
+                  <th scope="col">Outcome</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Destination verified</strong></td>
+                  <td>The vendor has a manually verified destination.</td>
+                  <td><span class="stamp stamp-green">Pass</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Duplicates</strong></td>
+                  <td>No open duplicate finding.</td>
+                  <td><span class="stamp stamp-green">Pass</span></td>
+                </tr>
+                <tr>
+                  <td><strong>Amount tier</strong></td>
+                  <td>Requires one Finance approval.</td>
+                  <td>
+                    <span class="stamp stamp-amber">Requires approval</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </section>
+          <section class="sheet-pad" aria-labelledby="det">
+            <h2 class="h-col" id="det" style="margin-bottom: 0.75rem">
+              Business details
+            </h2>
+            <dl class="kv">
+              <div>
+                <dt>Vendor</dt>
+                <dd>Specimen vendor A</dd>
+              </div>
+              <div>
+                <dt>Type</dt>
+                <dd>Vendor invoice</dd>
+              </div>
+              <div>
+                <dt>Category</dt>
+                <dd>Infrastructure</dd>
+              </div>
+              <div>
+                <dt>Source</dt>
+                <dd>Manual entry</dd>
+              </div>
+            </dl>
+          </section>
+        </article>
+      </div>
+    </main>
+  </body>
+</html>

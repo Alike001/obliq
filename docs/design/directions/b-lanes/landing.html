@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direction B, Lanes: Landing page — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../../proposals/obliq.css" />
+  </head>
+  <body>
+    <p class="specimen">
+      Direction B, Lanes. Design proposal. Network labels show what the main
+      branch reports today; nothing here is a new product claim.
+    </p>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-head">
+      <div class="site-head-in">
+        <a class="brand" href="#">obliq</a>
+        <nav class="site-nav" aria-label="Primary">
+          <a href="#">Documentation</a><a href="#">Security</a
+          ><a href="#">What is proven</a
+          ><a class="btn btn-primary" href="#">Open the workspace</a>
+        </nav>
+      </div>
+    </header>
+    <main id="main">
+      <section class="wrap hero">
+        <h1 class="t-display">
+          Pay your business bills without publishing your business.
+        </h1>
+        <p class="t-lede">
+          Obliq is accounts payable for crypto-native finance teams. Capture an
+          invoice, approve it under policy, settle it in shielded Zcash from a
+          signer you operate, and reconcile the payment back to the bill.
+        </p>
+        <p class="t-lede">
+          <strong>Obliq never holds a spending key.</strong> It can record an
+          approval. It cannot sign a payment.
+        </p>
+        <div class="btn-row">
+          <a class="btn btn-primary" href="#">Open the workspace</a
+          ><a class="btn btn-secondary" href="#">See what is proven</a>
+        </div>
+        <div class="notice notice-hatched" role="note">
+          <span class="glyph glyph-attn" aria-hidden="true"></span>
+          <div>
+            <strong>Shielded settlement is verified on regtest only.</strong>
+            <p>Public-network operation is blocked.</p>
+          </div>
+        </div>
+      </section>
+      <section class="band band-surface" aria-labelledby="lanes-h">
+        <div class="wrap stack">
+          <div class="stack-sm">
+            <h2 class="t-title" id="lanes-h">
+              From invoice to reconciled payment, in separate hands
+            </h2>
+            <p class="t-lede">
+              A bill crosses from one lane to the next only by a deliberate
+              hand-off. No lane can act for another.
+            </p>
+          </div>
+          <div class="track">
+            <div class="lane lane-1">
+              <div class="lane-name">
+                <strong>Business approval</strong
+                ><span>Your finance team, in Obliq</span>
+              </div>
+              <ol>
+                <li class="step">Capture the invoice</li>
+                <li class="step">Approve under policy</li>
+              </ol>
+            </div>
+            <div class="lane lane-2">
+              <div class="lane-name">
+                <strong>Signature</strong
+                ><span>Your signer, outside Obliq</span>
+              </div>
+              <ol>
+                <li class="step">Settle privately</li>
+              </ol>
+            </div>
+            <div class="lane lane-3">
+              <div class="lane-name">
+                <strong>Observation</strong><span>Read-only observer</span>
+              </div>
+              <ol>
+                <li class="step">Reconcile</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+      <section class="band" aria-labelledby="status-h">
+        <div class="wrap cols-2">
+          <div class="stack-sm">
+            <h2 class="t-title" id="status-h">What is proven, and where</h2>
+            <p class="t-lede">
+              A hatched label means it is not live. Each network is listed on
+              its own line.
+            </p>
+          </div>
+          <div class="sheet">
+            <table class="ledger">
+              <thead>
+                <tr>
+                  <th scope="col">Network</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Detail</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="lead" data-label="Network">
+                    Regtest shielded settlement
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap">Verified</span>
+                    <span class="scope">Regtest</span>
+                  </td>
+                  <td data-label="Detail">
+                    Signing, broadcast and reconciliation, end to end on an
+                    isolated test network.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Network">
+                    Public testnet read-only synchronization
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap cap-blocked">Blocked</span>
+                  </td>
+                  <td data-label="Detail">
+                    Not proven on a public network in this release.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Network">
+                    Public funded settlement
+                  </td>
+                  <td data-label="Status">
+                    <span class="cap cap-hatched">Not verified</span>
+                  </td>
+                  <td data-label="Detail">
+                    No funded shielded payment has been settled on a public
+                    network.
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Network">Mainnet</td>
+                  <td data-label="Status">
+                    <span class="cap cap-blocked">Blocked</span>
+                  </td>
+                  <td data-label="Detail">Mainnet operation is blocked.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer class="site-foot on-ink">
+      <div class="wrap">
+        <p>
+          Obliq. Private financial operations. Shielded settlement is verified
+          on regtest only.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

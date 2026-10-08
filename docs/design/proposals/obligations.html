@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Proposal: obligations list — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="obliq.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <p class="specimen">
+      Design specimen. Vendors, references, amounts and dates are placeholders,
+      not product data.
+    </p>
+
+    <div class="shell">
+      <aside class="rail on-ink">
+        <a class="brand" href="#">obliq</a>
+        <p class="who">
+          <strong>Specimen organization</strong>
+          <span>Signed in as Finance</span>
+        </p>
+        <nav class="nav" aria-label="Workspace">
+          <a href="#">Overview</a>
+          <a href="#" aria-current="page">Obligations</a>
+          <a href="#">Vendors</a>
+          <a href="#">Approvals</a>
+          <a href="#">Settlements</a>
+          <a href="#">Evidence</a>
+          <a href="#">Policies</a>
+          <a href="#">Ledger <span class="planned">Planned</span></a>
+          <a href="#">Settings <span class="planned">Planned</span></a>
+        </nav>
+        <p class="rail-foot">Development workspace</p>
+      </aside>
+
+      <div>
+        <header class="topbar">
+          <a class="brand" href="#">obliq</a>
+          <div class="topbar-end">
+            <span class="scope">Regtest</span>
+            <span class="t-small session">OIDC session</span>
+            <a class="btn btn-quiet session" href="#">Sign out</a>
+            <details class="mnav">
+              <summary>Menu</summary>
+              <nav aria-label="Workspace">
+                <a href="#">Overview</a>
+                <a href="#" aria-current="page">Obligations</a>
+                <a href="#">Vendors</a>
+                <a href="#">Approvals</a>
+                <a href="#">Settlements</a>
+                <a href="#">Evidence</a>
+                <a href="#">Policies</a>
+                <a href="#"
+                  >Ledger <span class="cap cap-hatched">Planned</span></a
+                >
+                <a href="#"
+                  >Settings <span class="cap cap-hatched">Planned</span></a
+                >
+                <a href="#">Sign out</a>
+              </nav>
+            </details>
+          </div>
+        </header>
+
+        <main class="page" id="main">
+          <div class="page-head">
+            <div>
+              <h1 class="t-title">Obligations</h1>
+              <p class="t-small">
+                Bills your organization has recorded. 6 shown.
+              </p>
+            </div>
+            <div class="btn-row">
+              <a class="btn btn-secondary" href="#">Upload an invoice</a>
+              <a class="btn btn-primary" href="#">Record an obligation</a>
+            </div>
+          </div>
+
+          <div class="stack-sm">
+            <form class="searchbar" role="search">
+              <div class="field">
+                <label for="q">Search by vendor, reference or purpose</label>
+                <input class="input" id="q" name="q" type="search" />
+              </div>
+              <button class="btn btn-secondary">Search</button>
+            </form>
+            <nav class="filters" aria-label="Filter by state">
+              <a href="#" aria-current="true">All</a>
+              <a href="#">Under review</a>
+              <a href="#">Approval required</a>
+              <a href="#">Ready to settle</a>
+              <a href="#">Settled</a>
+              <a href="#">Blocked</a>
+            </nav>
+          </div>
+
+          <div class="sheet" style="margin-top: var(--s5)">
+            <table class="ledger">
+              <caption class="sr">
+                Obligations, most recently created first
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">Reference</th>
+                  <th scope="col">Vendor</th>
+                  <th scope="col" class="right">Amount</th>
+                  <th scope="col">Due</th>
+                  <th scope="col">State</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="lead" data-label="Reference">
+                    <a href="obligation.html">SPECIMEN-0006</a>
+                  </td>
+                  <td data-label="Vendor">Specimen vendor A</td>
+                  <td class="right num" data-label="Amount">USD 8,400.00</td>
+                  <td data-label="Due">
+                    <time datetime="2026-10-21">21 Oct 2026</time>
+                  </td>
+                  <td data-label="State">
+                    <span class="tag tag-hold"
+                      ><span class="glyph glyph-wait" aria-hidden="true"></span
+                      >Approval required</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Reference">
+                    <a href="#">SPECIMEN-0005</a>
+                  </td>
+                  <td data-label="Vendor">Specimen vendor B</td>
+                  <td class="right num" data-label="Amount">USD 3,250.00</td>
+                  <td data-label="Due">
+                    <time datetime="2026-10-18">18 Oct 2026</time>
+                  </td>
+                  <td data-label="State">
+                    <span class="tag"
+                      ><span class="glyph glyph-open" aria-hidden="true"></span
+                      >Under review</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Reference">
+                    <a href="#">SPECIMEN-0004</a>
+                  </td>
+                  <td data-label="Vendor">Specimen vendor C</td>
+                  <td class="right num" data-label="Amount">USD 12,000.00</td>
+                  <td data-label="Due">
+                    <time datetime="2026-10-15">15 Oct 2026</time>
+                  </td>
+                  <td data-label="State">
+                    <span class="tag tag-clear"
+                      ><span class="glyph glyph-wait" aria-hidden="true"></span
+                      >Ready to settle</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Reference">
+                    <a href="#">SPECIMEN-0003</a>
+                  </td>
+                  <td data-label="Vendor">Specimen vendor A</td>
+                  <td class="right num" data-label="Amount">USD 640.00</td>
+                  <td data-label="Due">
+                    <time datetime="2026-10-12">12 Oct 2026</time>
+                  </td>
+                  <td data-label="State">
+                    <span class="tag tag-stop"
+                      ><span class="glyph glyph-stop" aria-hidden="true"></span
+                      >Blocked</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Reference">
+                    <a href="#">SPECIMEN-0002</a>
+                  </td>
+                  <td data-label="Vendor">Specimen vendor B</td>
+                  <td class="right num" data-label="Amount">USD 1,975.50</td>
+                  <td data-label="Due">
+                    <time datetime="2026-10-09">9 Oct 2026</time>
+                  </td>
+                  <td data-label="State">
+                    <span class="tag tag-unknown"
+                      ><span
+                        class="glyph glyph-unknown"
+                        aria-hidden="true"
+                      ></span
+                      >Reconciliation exception</span
+                    >
+                  </td>
+                </tr>
+                <tr>
+                  <td class="lead" data-label="Reference">
+                    <a href="#">SPECIMEN-0001</a>
+                  </td>
+                  <td data-label="Vendor">Specimen vendor C</td>
+                  <td class="right num" data-label="Amount">USD 5,100.00</td>
+                  <td data-label="Due">
+                    <time datetime="2026-10-02">2 Oct 2026</time>
+                  </td>
+                  <td data-label="State">
+                    <span class="tag tag-clear"
+                      ><span class="glyph glyph-done" aria-hidden="true"></span
+                      >Settled <span class="scope">Regtest</span></span
+                    >
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
