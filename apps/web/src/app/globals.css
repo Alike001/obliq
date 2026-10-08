@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * The EthSaas layout language in the Zcash palette: Zcash gold (#ecb244) for
+ * The Obliq layout language in the Zcash palette: Zcash gold (#ecb244) for
  * the one action that should win attention, carbon black for focus, neutral
  * greys and generous space around everything else. Components reference the
  * role, never the hex.
@@ -888,6 +888,13 @@ samp {
   .tag-clear .glyph {
     color: var(--color-clear);
   }
+  /* Approved but unpaid: an open ring, never the filled disc of settled. */
+  .tag-ready {
+    background: var(--color-hold-bg);
+  }
+  .tag-ready .glyph {
+    color: var(--color-hold);
+  }
   .tag-hold {
     background: var(--color-hold-bg);
   }
@@ -1310,18 +1317,16 @@ samp {
   }
   .app-main
     :is(input, select, textarea):not([type="checkbox"], [type="radio"]) {
-    border-color: var(--color-stone-300);
+    /* A field's edge must reach 3:1 against the page. */
+    border-color: var(--color-line-strong);
     border-radius: 8px;
     background: #fff;
     color: var(--color-carbon);
-    transition:
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
+    transition: border-color 0.2s ease;
   }
+  /* The shared bronze outline stays on; the border joins it. */
   .app-main :is(input, select, textarea):focus-visible {
-    border-color: #c9912a;
-    outline: none;
-    box-shadow: 0 0 0 3px rgb(236 178 68 / 0.35);
+    border-color: var(--color-bronze);
   }
   .app-main :is(input[type="checkbox"], input[type="radio"]) {
     accent-color: var(--color-carbon);
@@ -1456,6 +1461,19 @@ samp {
       padding: 1.5rem 1.25rem;
     }
   }
+}
+
+/* Animated content starts hidden. If scripts load but never start, show it
+   anyway; the no-script case is handled in the root layout. */
+@keyframes reveal-failsafe {
+  to {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+  }
+}
+:root:not([data-motion]) [data-reveal] {
+  animation: reveal-failsafe 1ms linear 3s forwards;
 }
 
 @media (prefers-reduced-motion: reduce) {

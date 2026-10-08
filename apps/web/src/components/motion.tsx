@@ -1,11 +1,19 @@
 "use client";
 
 import { MotionConfig, motion } from "motion/react";
+import { useEffect } from "react";
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 
-/** Honours the visitor's reduced-motion setting for every Motion component. */
+/**
+ * Honours the visitor's reduced-motion setting for every Motion component.
+ * `data-motion` tells the stylesheet that scripts started; until it is set, a
+ * failsafe shows content that would otherwise wait for an animation.
+ */
 export function MotionProvider({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    document.documentElement.dataset.motion = "on";
+  }, []);
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>;
 }
 

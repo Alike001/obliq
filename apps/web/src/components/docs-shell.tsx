@@ -1,17 +1,22 @@
 import Link from "next/link";
 import { Brand } from "./brand";
 import { docGroups, docs } from "@/content/docs";
+import { isReadOnlyPreview } from "@/lib/site-links";
 
 export function DocsShell({ children }: { children: React.ReactNode }) {
+  // The read-only preview serves no workspace, so it offers no link to one.
+  const readOnlyPreview = isReadOnlyPreview();
   return (
     <div className="min-h-screen">
       <header className="site-nav">
         <div className="page-wrap flex h-16 items-center justify-between">
           <Brand />
           <div className="flex items-center gap-5 text-sm">
-            <Link href="/app" className="nav-link">
-              Product
-            </Link>
+            {!readOnlyPreview && (
+              <Link href="/app" className="nav-link">
+                Product
+              </Link>
+            )}
             <Link href="/security" className="nav-link">
               Security
             </Link>

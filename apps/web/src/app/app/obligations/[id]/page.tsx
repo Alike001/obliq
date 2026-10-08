@@ -338,7 +338,7 @@ export default async function ObligationDetail({
                 </ul>
               )}{" "}
               {o.state === "READY_TO_SETTLE" && (
-                <p className="mt-3 font-semibold text-emerald-800">
+                <p className="text-hold mt-3 font-semibold">
                   READY TO SETTLE · An exact intent may be prepared. Obliq still
                   cannot sign independently.
                 </p>
