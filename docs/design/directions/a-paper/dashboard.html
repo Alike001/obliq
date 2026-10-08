@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direction A, Paper: Dashboard — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <p class="specimen">
+      Direction A, Paper. Design specimen. Vendors, people, amounts, dates and
+      hashes are placeholders, not product data.
+    </p>
+    <div class="shell">
+      <aside class="side on-dark">
+        <a class="brand" href="#">obliq</a>
+        <p class="who">
+          <strong>Specimen organization</strong
+          ><span>Signed in as Finance</span>
+        </p>
+        <nav aria-label="Workspace">
+          <a href="#" aria-current="page">Overview</a>
+          <a href="#">Obligations</a>
+          <a href="#">Vendors</a>
+          <a href="#">Approvals</a>
+          <a href="#">Settlements</a>
+          <a href="#">Evidence</a>
+          <a href="#">Policies</a>
+        </nav>
+      </aside>
+      <div>
+        <header class="top">
+          <a class="brand" href="#">obliq</a>
+          <div class="row">
+            <span class="pill pill-test">Regtest</span>
+            <details class="menu">
+              <summary>Menu</summary>
+              <nav aria-label="Workspace">
+                <a href="#" aria-current="page">Overview</a>
+                <a href="#">Obligations</a>
+                <a href="#">Vendors</a>
+                <a href="#">Approvals</a>
+                <a href="#">Settlements</a>
+                <a href="#">Evidence</a>
+                <a href="#">Policies</a>
+              </nav>
+            </details>
+          </div>
+        </header>
+        <main class="page">
+          <div class="page-head">
+            <div>
+              <h1 class="h-page">Overview</h1>
+              <p class="muted">
+                What needs you, and what is waiting on someone else.
+              </p>
+            </div>
+            <a class="btn btn-dark" href="#">Record an obligation</a>
+          </div>
+          <div class="stack">
+            <div class="notice notice-ok" role="status">
+              <strong>Approval recorded for SPECIMEN-0005.</strong> It is
+              approved. It has not been signed or paid.
+            </div>
+            <section class="card" aria-labelledby="you">
+              <div class="card-head">
+                <h2 class="h-card" id="you">Needs you</h2>
+                <span class="muted small">2 items</span>
+              </div>
+              <ul class="rows">
+                <li>
+                  <div>
+                    <strong>SPECIMEN-0006, Specimen vendor A</strong
+                    ><span class="muted small"
+                      >Finance approval, 0 of 1. Due 21 Oct 2026.</span
+                    >
+                  </div>
+                  <span class="num">USD 8,400.00</span
+                  ><a class="btn btn-dark" href="obligation.html">Review</a>
+                </li>
+                <li>
+                  <div>
+                    <strong>Specimen vendor B</strong
+                    ><span class="muted small"
+                      >Destination recorded but not verified.</span
+                    >
+                  </div>
+                  <span></span><a class="btn btn-light" href="#">Verify</a>
+                </li>
+              </ul>
+            </section>
+            <section class="card" aria-labelledby="signer">
+              <div class="card-head">
+                <h2 class="h-card" id="signer">Waiting on the signer</h2>
+                <span class="muted small">1 item</span>
+              </div>
+              <ul class="rows">
+                <li>
+                  <div>
+                    <strong>SPECIMEN-0004, Specimen vendor C</strong
+                    ><span class="muted small"
+                      >Awaiting signature. Quote expires in 11 minutes.</span
+                    >
+                  </div>
+                  <span class="num">USD 12,000.00</span
+                  ><span class="pill pill-wait">Awaiting signature</span>
+                </li>
+              </ul>
+            </section>
+            <section class="card" aria-labelledby="net">
+              <div class="card-head">
+                <h2 class="h-card" id="net">Waiting on the network</h2>
+                <span class="muted small">1 item</span>
+              </div>
+              <ul class="rows">
+                <li>
+                  <div>
+                    <strong>SPECIMEN-0003, Specimen vendor A</strong
+                    ><span class="muted small"
+                      >Confirming, 1 of 3 confirmations.</span
+                    >
+                  </div>
+                  <span class="num">USD 640.00</span
+                  ><span class="pill pill-test">Regtest</span>
+                </li>
+              </ul>
+            </section>
+            <nav class="counts" aria-label="Obligations by state">
+              <a href="#"
+                ><span class="muted small">Under review</span><b>3</b></a
+              ><a href="#"
+                ><span class="muted small">Approval required</span><b>2</b></a
+              ><a href="#"
+                ><span class="muted small">Ready to settle</span><b>1</b></a
+              ><a href="#"><span class="muted small">Blocked</span><b>1</b></a>
+            </nav>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direction C, Docket: Dashboard — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <p class="specimen">
+      Direction C, Docket. Design specimen. Vendors, people, amounts, dates and
+      hashes are placeholders, not product data.
+    </p>
+    <header class="bar on-bar">
+      <div class="bar-in">
+        <a class="brand" href="#">Obliq</a>
+        <nav class="tabs" aria-label="Workspace">
+          <a href="#" aria-current="page">Desk</a><a href="#">Obligations</a
+          ><a href="#">Vendors</a><a href="#">Settlements</a
+          ><a href="#">Evidence</a><a href="#">Policies</a>
+        </nav>
+        <div class="bar-end">
+          <span class="stamp stamp-test">Regtest</span
+          ><span class="who">Specimen organization, Finance</span>
+        </div>
+      </div>
+    </header>
+    <main class="page">
+      <div class="page-head">
+        <div>
+          <h1 class="h-page">Desk</h1>
+          <p class="ink-2">Every open bill, sorted by whose turn it is.</p>
+        </div>
+        <a class="btn btn-solid" href="#">Record an obligation</a>
+      </div>
+      <div class="stack">
+        <div class="notice notice-ok" role="status">
+          <strong>Approval recorded for SPECIMEN-0005.</strong> It is approved.
+          It has not been signed or paid.
+        </div>
+        <div class="desks">
+          <section aria-labelledby="you">
+            <div class="desk-head">
+              <h2 class="h-col" id="you">Your turn</h2>
+              <span>2</span>
+            </div>
+            <a class="slip" href="obligation.html"
+              ><div class="slip-top">
+                <strong>SPECIMEN-0006</strong
+                ><span class="stamp stamp-amber">Approval required</span>
+              </div>
+              <p class="ink-2 small">Specimen vendor A. Due 21 Oct 2026</p>
+              <p class="fig">USD 8,400.00</p>
+              <span class="act">Review and approve</span></a
+            >
+            <a class="slip" href="#"
+              ><div class="slip-top">
+                <strong>Specimen vendor B</strong
+                ><span class="stamp stamp-amber">Unverified</span>
+              </div>
+              <p class="ink-2 small">Destination recorded but not verified.</p>
+              <span class="act">Verify the destination</span></a
+            >
+          </section>
+          <section aria-labelledby="signer">
+            <div class="desk-head">
+              <h2 class="h-col" id="signer">With the signer</h2>
+              <span>1</span>
+            </div>
+            <a class="slip" href="#"
+              ><div class="slip-top">
+                <strong>SPECIMEN-0004</strong
+                ><span class="stamp">Awaiting signature</span>
+              </div>
+              <p class="ink-2 small">
+                Specimen vendor C. Quote expires in 11 minutes.
+              </p>
+              <p class="fig">USD 12,000.00</p></a
+            >
+          </section>
+          <section aria-labelledby="net">
+            <div class="desk-head">
+              <h2 class="h-col" id="net">With the network</h2>
+              <span>1</span>
+            </div>
+            <a class="slip" href="#"
+              ><div class="slip-top">
+                <strong>SPECIMEN-0003</strong
+                ><span class="stamp stamp-test">Regtest</span>
+              </div>
+              <p class="ink-2 small">Specimen vendor A. Confirming, 1 of 3.</p>
+              <p class="fig">USD 640.00</p></a
+            >
+          </section>
+        </div>
+        <nav class="tally" aria-label="Obligations by state">
+          <a href="#"><span class="ink-2 small">Under review</span><b>3</b></a
+          ><a href="#"
+            ><span class="ink-2 small">Approval required</span><b>2</b></a
+          ><a href="#"
+            ><span class="ink-2 small">Ready to settle</span><b>1</b></a
+          ><a href="#"><span class="ink-2 small">Blocked</span><b>1</b></a>
+        </nav>
+      </div>
+    </main>
+  </body>
+</html>

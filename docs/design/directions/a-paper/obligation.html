@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Direction A, Paper: Obligation detail — Obliq</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <p class="specimen">
+      Direction A, Paper. Design specimen. Vendors, people, amounts, dates and
+      hashes are placeholders, not product data.
+    </p>
+    <div class="shell">
+      <aside class="side on-dark">
+        <a class="brand" href="#">obliq</a>
+        <p class="who">
+          <strong>Specimen organization</strong
+          ><span>Signed in as Finance</span>
+        </p>
+        <nav aria-label="Workspace">
+          <a href="#">Overview</a>
+          <a href="#" aria-current="page">Obligations</a>
+          <a href="#">Vendors</a>
+          <a href="#">Approvals</a>
+          <a href="#">Settlements</a>
+          <a href="#">Evidence</a>
+          <a href="#">Policies</a>
+        </nav>
+      </aside>
+      <div>
+        <header class="top">
+          <a class="brand" href="#">obliq</a>
+          <div class="row">
+            <span class="pill pill-test">Regtest</span>
+            <details class="menu">
+              <summary>Menu</summary>
+              <nav aria-label="Workspace">
+                <a href="#">Overview</a>
+                <a href="#" aria-current="page">Obligations</a>
+                <a href="#">Vendors</a>
+                <a href="#">Approvals</a>
+                <a href="#">Settlements</a>
+                <a href="#">Evidence</a>
+                <a href="#">Policies</a>
+              </nav>
+            </details>
+          </div>
+        </header>
+        <main class="page">
+          <p class="small"><a href="dashboard.html">Overview</a></p>
+          <div class="page-head">
+            <div class="stack-sm">
+              <h1 class="h-page">SPECIMEN-0006</h1>
+              <p>
+                Specimen vendor A, <span class="num">USD 8,400.00</span>, due 21
+                Oct 2026
+              </p>
+              <p><span class="pill pill-wait">Approval required</span></p>
+            </div>
+            <a class="btn btn-light" href="#">Edit record</a>
+          </div>
+          <div class="stack">
+            <section class="card" aria-labelledby="next">
+              <div class="card-head">
+                <h2 class="h-card" id="next">Your approval is needed</h2>
+                <span class="muted small">Finance, 0 of 1 recorded</span>
+              </div>
+              <form class="pad stack-sm">
+                <p>
+                  Approving records business authorization only. It does not
+                  sign or send a payment.
+                </p>
+                <div class="field" style="max-width: 34rem">
+                  <label for="note">Note for the audit record (optional)</label
+                  ><input class="input" id="note" />
+                </div>
+                <div class="row">
+                  <button class="btn btn-dark" type="button">
+                    Approve USD 8,400.00</button
+                  ><button class="btn btn-danger" type="button">Reject</button>
+                </div>
+                <p class="small muted">
+                  You will be asked to confirm the amount and vendor before the
+                  approval is recorded.
+                </p>
+              </form>
+            </section>
+            <ol class="progress" aria-label="Where this obligation is">
+              <li class="done"><strong>Captured</strong><small>Done</small></li>
+              <li class="done">
+                <strong>Policy evaluated</strong><small>Done</small>
+              </li>
+              <li class="now">
+                <strong>Approval</strong><small>Waiting on Finance</small>
+              </li>
+              <li class="">
+                <strong>Signature</strong><small>Not started</small>
+              </li>
+              <li class="">
+                <strong>Observation</strong><small>Not observed</small>
+              </li>
+            </ol>
+            <div class="split">
+              <section class="card" aria-labelledby="pol">
+                <div class="card-head">
+                  <h2 class="h-card" id="pol">Policy findings</h2>
+                  <button class="btn btn-light" type="button">
+                    Re-evaluate
+                  </button>
+                </div>
+                <ul class="rows">
+                  <li>
+                    <div>
+                      <strong>Destination verified</strong
+                      ><span class="muted small"
+                        >The vendor has a manually verified destination.</span
+                      >
+                    </div>
+                    <span></span><span class="pill pill-done">Pass</span>
+                  </li>
+                  <li>
+                    <div>
+                      <strong>Duplicates</strong
+                      ><span class="muted small"
+                        >No open duplicate finding.</span
+                      >
+                    </div>
+                    <span></span><span class="pill pill-done">Pass</span>
+                  </li>
+                  <li>
+                    <div>
+                      <strong>Amount tier</strong
+                      ><span class="muted small"
+                        >Requires one Finance approval.</span
+                      >
+                    </div>
+                    <span></span
+                    ><span class="pill pill-wait">Requires approval</span>
+                  </li>
+                </ul>
+              </section>
+              <aside class="card pad" aria-labelledby="det">
+                <h2 class="h-card" id="det">Business details</h2>
+                <dl class="kv" style="margin-top: 1rem">
+                  <div>
+                    <dt>Vendor</dt>
+                    <dd>Specimen vendor A</dd>
+                  </div>
+                  <div>
+                    <dt>Amount</dt>
+                    <dd class="num">USD 8,400.00</dd>
+                  </div>
+                  <div>
+                    <dt>Due</dt>
+                    <dd>21 Oct 2026</dd>
+                  </div>
+                  <div>
+                    <dt>Type</dt>
+                    <dd>Vendor invoice</dd>
+                  </div>
+                  <div>
+                    <dt>Source</dt>
+                    <dd>Manual entry</dd>
+                  </div>
+                </dl>
+              </aside>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
