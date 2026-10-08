@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { EvidenceArtifact } from "@/components/evidence-artifact";
+import { Notice } from "@/components/notice";
 import { getDatabase } from "@/lib/db";
 import { rateLimitRequest, requestSubject } from "@/lib/request-security";
 import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
@@ -46,6 +47,7 @@ export default async function VerifyEvidencePage({
     if (error instanceof RateLimitExceededError) rateLimited = true;
     else throw error;
   }
+  const status = result?.evidence.status;
   return (
     <main>
       <SiteHeader />
@@ -56,32 +58,79 @@ export default async function VerifyEvidencePage({
             Controlled payment evidence
           </h1>
           {rateLimited ? (
-            <div className="card mt-8 border-amber-300 p-8" role="status">
-              <h2 className="font-semibold">Too many verification requests</h2>
-              <p className="text-muted mt-3 text-sm leading-6">
-                Wait before trying this verification link again.
-              </p>
-            </div>
+            <Notice
+              tone="hold"
+              title="Verification is temporarily unavailable"
+              live
+              className="mt-8"
+            >
+              Too many verification requests came from this connection. Nothing
+              was checked and nothing is shown. Wait a minute, then open the
+              link again.
+            </Notice>
           ) : !result ? (
-            <div className="card mt-8 border-red-200 p-8">
-              <h2 className="font-semibold">Evidence not found</h2>
-              <p className="text-muted mt-3 text-sm leading-6">
-                This verification identifier is invalid or does not correspond
-                to an issued package. No organization data has been disclosed.
-              </p>
-            </div>
+            <Notice
+              tone="stop"
+              title="No evidence at this link"
+              live
+              className="mt-8"
+            >
+              This verification identifier is invalid or does not correspond to
+              an issued package. No organization data has been disclosed. Ask
+              the sender for the link again; do not treat this as proof of
+              anything.
+            </Notice>
           ) : (
             <>
-              {!result.integrityValid && (
-                <div className="mt-8 rounded-lg border border-red-300 bg-red-50 p-5 text-sm font-semibold text-red-900">
-                  Integrity verification failed. Do not rely on this artifact.
-                </div>
-              )}
-              {result.evidence.status !== "ACTIVE" && (
-                <div className="mt-8 rounded-lg border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950">
-                  This package is {result.evidence.status}. Historical content
-                  remains visible for transparency, but it is not current.
-                </div>
+              {/* One verdict first: can this receipt be relied on today? */}
+              {!result.integrityValid ? (
+                <Notice
+                  tone="stop"
+                  title="Integrity check failed. Do not rely on this receipt"
+                  live
+                  className="mt-8"
+                >
+                  The content below does not match the hash recorded when it was
+                  issued. Contact the issuer through a channel you already
+                  trust.
+                </Notice>
+              ) : status === "REVOKED" ? (
+                <Notice
+                  tone="stop"
+                  title="Revoked. Do not rely on this receipt"
+                  live
+                  className="mt-8"
+                >
+                  The issuer withdrew this package. Its content is shown for the
+                  record only and is not current.
+                </Notice>
+              ) : status === "SUPERSEDED" ? (
+                <Notice
+                  tone="hold"
+                  title="Superseded. A newer version replaces this receipt"
+                  live
+                  className="mt-8"
+                >
+                  The issuer replaced this package. Its content is shown for the
+                  record only and is not current. Ask the issuer for the current
+                  link.
+                </Notice>
+              ) : status === "ACTIVE" ? (
+                <Notice
+                  tone="done"
+                  title="Current and intact"
+                  live
+                  className="mt-8"
+                >
+                  This is the issuer&apos;s current package, and its content
+                  matches the hash recorded when it was issued. It shows only
+                  the fields the issuer chose to disclose.
+                </Notice>
+              ) : (
+                <Notice tone="hold" title="Not current" live className="mt-8">
+                  This package is not the issuer&apos;s current evidence. Its
+                  content is shown for the record only.
+                </Notice>
               )}
               <div className="mt-8">
                 <EvidenceArtifact
@@ -99,9 +148,11 @@ export default async function VerifyEvidencePage({
                   Download canonical JSON
                 </a>
               </div>
-              <p className="text-muted mt-3 text-xs print:hidden">
-                PDF generation is not implemented. The browser print control can
-                render this verified receipt; JSON is the canonical artifact.
+              <p className="text-muted mt-3 max-w-[68ch] text-xs leading-5 print:hidden">
+                The JSON file is the canonical artifact: the receipt above is
+                drawn from it and adds nothing to it. PDF generation is not
+                implemented; your browser&apos;s print command can print this
+                page.
               </p>
             </>
           )}

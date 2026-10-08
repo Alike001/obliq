@@ -1,12 +1,13 @@
 import {
-  ArrowDown,
   Bot,
   Database,
   Eye,
   KeyRound,
+  MoveRight,
   Server,
   UserCheck,
 } from "lucide-react";
+import { Notice } from "@/components/notice";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { StatusPill } from "@/components/status-pill";
@@ -34,12 +35,77 @@ const principles = [
   ],
 ] as const;
 
+// Three authorities, held by three different parties. Each says who holds it,
+// what it allows and what it can never do.
+const authorities = [
+  {
+    icon: UserCheck,
+    name: "Business approval",
+    holder: "Your finance team, recorded in Obliq",
+    can: [
+      "Approve or reject an obligation under a versioned policy",
+      "Pass the readiness gate, after which an exact intent can be prepared",
+    ],
+    cannot: [
+      "Sign or broadcast a transaction",
+      "Stand in for a wallet signature",
+    ],
+  },
+  {
+    icon: Eye,
+    name: "Viewing authority",
+    holder: "A dedicated, server-only read-only observer",
+    can: [
+      "See shielded payments to the account, through a UFVK imported as ViewOnly",
+      "Match a payment back to its obligation",
+    ],
+    cannot: [
+      "Spend or move funds",
+      "Be treated as harmless: it is high-value privacy secret material",
+    ],
+  },
+  {
+    icon: KeyRound,
+    name: "Spending authority",
+    holder: "A wallet or signer you control, outside Obliq",
+    can: [
+      "Inspect, sign and broadcast the transaction in a human-operated ceremony",
+      "Spend the wallet it controls, which is why it stays with you",
+    ],
+    cannot: [
+      "Be held by the Obliq backend, which has none by architecture",
+      "Return anything to Obliq but sanitized receipts: no PCZT, raw transaction, credential or key",
+    ],
+  },
+] as const;
+
+// The current limits, one statement each, in the order they were written.
+const limits = [
+  "Uploaded files are validated by signature, size and MIME agreement, stored under generated private identifiers, and never exposed by a public raw-file route.",
+  "Production mode requires private quarantine storage and a real scanner CLEAN result; local unscanned storage is development-only.",
+  "Destination verification is a recorded manual process, not cryptographic proof of receiver ownership.",
+  "A destination replacement or material obligation edit invalidates authorization.",
+  "OIDC/session and shared rate-limit architectures are implemented, but provider credentials and production infrastructure are not bundled.",
+  "Hardware-backed signer operations, live quote integrity, observer HA and independent audit anchoring remain planned.",
+  "The proven observer can reveal account activity if its UFVK, memo plaintext, logs or correlation metadata are compromised.",
+  "Regtest proof does not qualify mainnet operations. External signing and broadcast are verified on regtest only; public-network execution is BLOCKED.",
+  "The earlier Zaino subtree-root defect is fixed upstream, but Obliq public sync, reorg recovery and a funded shielded flow remain unproved.",
+  "A compromised signer can spend its wallet, while compromise of both app and signer could substitute a transaction unless the human independently checks the Zallet PCZT inspection.",
+  "Evidence links use 256-bit random identifiers but remain bearer-like: anyone with a link can read its deliberately disclosed fields.",
+  "Responses use no-store/no-referrer/noindex and shared rate limits, yet copied links or downloaded JSON can still leak.",
+  "Secure delivery and recipient-bound expiry remain planned.",
+  "Revoked and superseded evidence remains historical and visibly non-current.",
+] as const;
+
 export default function SecurityPage() {
   const preview = process.env.OBLIQ_DEPLOYMENT_MODE === "preview";
   return (
     <main>
+      <a href="#main" className="button button-dark skip-link">
+        Skip to content
+      </a>
       <SiteHeader />
-      <section className="hairline border-b">
+      <section id="main" tabIndex={-1} className="hairline border-b">
         <div className="page-wrap py-20 md:py-28">
           <div className="max-w-3xl">
             <p className="eyebrow">Security architecture</p>
@@ -60,29 +126,25 @@ export default function SecurityPage() {
       </section>
       {preview && (
         <section className="page-wrap pt-10">
-          <div className="rounded-xl border border-amber-300 bg-amber-50 p-5">
-            <p className="text-sm font-semibold">Public preview boundary</p>
-            <p className="text-muted mt-2 text-sm leading-6">
-              This host has no database, authentication provider, document
-              storage, observer or signer. Product, authentication, external
-              evidence-verification and every mutation route are unavailable.
-            </p>
-          </div>
+          <Notice tone="hatched" title="Public preview boundary">
+            This host has no database, authentication provider, document
+            storage, observer or signer. Product, authentication, external
+            evidence-verification and every mutation route are unavailable.
+          </Notice>
         </section>
       )}
       <section className="page-wrap py-20">
-        <div className="grid gap-12 lg:grid-cols-[.75fr_1.25fr]">
-          <div>
-            <h2 className="text-2xl font-semibold tracking-tight">
-              Key separation
-            </h2>
-            <p className="text-muted mt-4 leading-7">
-              Approval records express business intent. They never substitute
-              for a wallet signature.
-            </p>
-          </div>
-          <AuthorityDiagram />
+        <div className="max-w-3xl">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Key separation
+          </h2>
+          <p className="text-muted mt-4 leading-7">
+            Approval records express business intent. They never substitute for
+            a wallet signature. Three separate authorities are involved, and no
+            single party holds all of them.
+          </p>
         </div>
+        <AuthorityDiagram />
       </section>
       <section className="hairline bg-panel border-y">
         <div className="page-wrap grid md:grid-cols-2">
@@ -133,37 +195,25 @@ export default function SecurityPage() {
             text="Production stores generated private objects and requires an authenticated scanner CLEAN result. Unknown or unavailable scanning fails ingestion closed."
           />
         </div>
-        <div className="mt-8 rounded-xl border border-amber-300 bg-amber-50 p-5">
-          <p className="text-sm font-semibold">Current limits</p>
-          <p className="text-muted mt-2 text-sm leading-6">
-            Uploaded files are validated by signature, size and MIME agreement,
-            stored under generated private identifiers, and never exposed by a
-            public raw-file route. Production mode requires private quarantine
-            storage and a real scanner CLEAN result; local unscanned storage is
-            development-only. Destination verification is a recorded manual
-            process, not cryptographic proof of receiver ownership. A
-            destination replacement or material obligation edit invalidates
-            authorization. OIDC/session and shared rate-limit architectures are
-            implemented, but provider credentials and production infrastructure
-            are not bundled. Hardware-backed signer operations, live quote
-            integrity, observer HA and independent audit anchoring remain
-            planned. The proven observer can reveal account activity if its
-            UFVK, memo plaintext, logs or correlation metadata are compromised.
-            Regtest proof does not qualify mainnet operations. External signing
-            and broadcast are verified on regtest only; public-network execution
-            is BLOCKED. The earlier Zaino subtree-root defect is fixed upstream,
-            but Obliq public sync, reorg recovery and a funded shielded flow
-            remain unproved. A compromised signer can spend its wallet, while
-            compromise of both app and signer could substitute a transaction
-            unless the human independently checks the Zallet PCZT inspection.
-            Evidence links use 256-bit random identifiers but remain
-            bearer-like: anyone with a link can read its deliberately disclosed
-            fields. Responses use no-store/no-referrer/noindex and shared rate
-            limits, yet copied links or downloaded JSON can still leak. Secure
-            delivery and recipient-bound expiry remain planned. Revoked and
-            superseded evidence remains historical and visibly non-current.
-          </p>
-        </div>
+        <section className="notice notice-hold mt-8" aria-labelledby="limits-h">
+          <span className="glyph glyph-attn" aria-hidden />
+          <div>
+            <h2 id="limits-h" className="font-semibold">
+              Current limits
+            </h2>
+            <ul className="mt-3 max-w-[78ch] space-y-2 text-sm leading-6">
+              {limits.map((limit) => (
+                <li key={limit} className="flex gap-3">
+                  <span
+                    className="bg-hold mt-[0.6rem] size-1.5 shrink-0 rounded-full"
+                    aria-hidden
+                  />
+                  {limit}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
       </section>
       <SiteFooter />
     </main>
@@ -172,52 +222,72 @@ export default function SecurityPage() {
 
 function AuthorityDiagram() {
   return (
-    <div className="card bg-panel p-5 md:p-8">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Node
-          icon={<UserCheck />}
-          label="Finance team"
-          detail="Business approval"
-        />
-        <Node icon={<Server />} label="Obliq" detail="Intent, no spend key" />
-        <Node
-          icon={<KeyRound />}
-          label="External signer"
-          detail="Cryptographic authority"
-        />
-      </div>
-      <div className="text-muted my-5 flex items-center justify-center gap-3 text-xs">
-        <span>checks</span>
-        <ArrowDown className="rotate-[-90deg]" size={15} />
+    <div className="mt-10">
+      <ol className="grid gap-4 lg:grid-cols-3">
+        {authorities.map(({ icon: Icon, name, holder, can, cannot }, index) => (
+          <li key={name} className="card bg-panel relative p-5 md:p-6">
+            <div className="flex items-center gap-3">
+              <span className="text-carbon" aria-hidden>
+                <Icon />
+              </span>
+              <span className="text-ink-3 text-xs font-bold">
+                Authority {index + 1} of {authorities.length}
+              </span>
+            </div>
+            <h3 className="mt-4 text-lg font-semibold">{name}</h3>
+            <p className="text-muted mt-1 text-sm">Held by: {holder}</p>
+            <AuthorityList label="Can" glyph="glyph glyph-done" items={can} />
+            <AuthorityList
+              label="Cannot"
+              glyph="glyph glyph-stop text-stop"
+              items={cannot}
+            />
+          </li>
+        ))}
+      </ol>
+      <p className="text-muted mt-5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        <span className="text-ink font-semibold">How they connect:</span>
+        <span>policy checks and approval</span>
+        <MoveRight size={15} aria-hidden />
+        <span className="sr-only">then</span>
         <span>exact intent</span>
-        <ArrowDown className="rotate-[-90deg]" size={15} />
-        <span>user authorization</span>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Node
-          icon={<Eye />}
-          label="Read-only observer"
-          detail="UFVK; privacy access, no spend"
-        />
-        <Node icon={<Bot />} label="AI boundary" detail="Suggestions only" />
-      </div>
+        <MoveRight size={15} aria-hidden />
+        <span className="sr-only">then</span>
+        <span>your authorization on the external signer</span>
+        <MoveRight size={15} aria-hidden />
+        <span className="sr-only">then</span>
+        <span>read-only observation</span>
+      </p>
+      <p className="text-muted mt-3 flex items-start gap-2 text-sm">
+        <Bot size={17} className="text-carbon mt-0.5 shrink-0" aria-hidden />
+        <span>
+          <span className="text-ink font-semibold">AI holds none of them.</span>{" "}
+          It offers suggestions only, and each one requires human review.
+        </span>
+      </p>
     </div>
   );
 }
-function Node({
-  icon,
+function AuthorityList({
   label,
-  detail,
+  glyph,
+  items,
 }: {
-  icon: React.ReactNode;
   label: string;
-  detail: string;
+  glyph: string;
+  items: readonly string[];
 }) {
   return (
-    <div className="hairline rounded-xl border bg-white p-4">
-      <div className="text-carbon">{icon}</div>
-      <p className="mt-4 text-sm font-semibold">{label}</p>
-      <p className="text-muted mt-1 text-[11px]">{detail}</p>
+    <div className="hairline mt-5 border-t pt-4">
+      <p className="fact-label">{label}</p>
+      <ul className="mt-2 space-y-2 text-sm leading-6">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2.5">
+            <span className={`${glyph} mt-[0.4rem]`} aria-hidden />
+            {item}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -232,7 +302,9 @@ function SecurityCard({
 }) {
   return (
     <article className="card bg-panel p-6">
-      <div className="text-carbon">{icon}</div>
+      <div className="text-carbon" aria-hidden>
+        {icon}
+      </div>
       <h3 className="mt-8 font-semibold">{title}</h3>
       <p className="text-muted mt-3 text-sm leading-6">{text}</p>
     </article>

@@ -1,10 +1,15 @@
-import { verifyEvidenceArtifact } from "@obliq/evidence";
+import {
+  evidenceFields,
+  verifyEvidenceArtifact,
+  type EvidenceFieldKey,
+} from "@obliq/evidence";
 import { getEvidencePreview } from "@obliq/database";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EvidenceArtifact } from "@/components/evidence-artifact";
 import { Notice } from "@/components/notice";
 import { BackLink } from "@/components/record";
+import { stateLabel } from "@/components/state-tone";
 import { SubmitButton } from "@/components/submit-button";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
@@ -26,6 +31,11 @@ export default async function EvidencePreviewPage({
     preview.artifactHash,
   );
   const expired = preview.expiresAt <= new Date();
+  // Read from the artifact that will be frozen, not from the form that made it.
+  const disclosed = preview.artifactJson.disclosedFields;
+  const withheld = (Object.keys(evidenceFields) as EvidenceFieldKey[]).filter(
+    (field) => !disclosed.includes(field),
+  );
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-4xl">
@@ -63,6 +73,66 @@ export default async function EvidencePreviewPage({
             Nothing was shared.
           </Notice>
         )}
+        <section
+          className="card mt-6 grid gap-6 p-5 md:grid-cols-2"
+          aria-labelledby="disclosure-h"
+        >
+          <h2 id="disclosure-h" className="font-semibold md:col-span-2">
+            Exactly what the recipient will and will not see
+          </h2>
+          <div>
+            <h3 className="fact-label">
+              Will see ({disclosed.length}{" "}
+              {disclosed.length === 1 ? "field" : "fields"})
+            </h3>
+            <ul className="mt-3 space-y-2 text-sm">
+              {disclosed.map((field) => (
+                <li key={field} className="flex items-start gap-2">
+                  <span
+                    className="glyph glyph-done text-clear mt-[0.3rem]"
+                    aria-hidden
+                  />
+                  <span>
+                    <span className="font-semibold">
+                      {evidenceFields[field].label}
+                    </span>
+                    <span className="text-muted">
+                      {" "}
+                      · {stateLabel(evidenceFields[field].classification)}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h3 className="fact-label">
+              Will not see ({withheld.length}{" "}
+              {withheld.length === 1 ? "field" : "fields"})
+            </h3>
+            {withheld.length ? (
+              <ul className="text-muted mt-3 space-y-2 text-sm">
+                {withheld.map((field) => (
+                  <li key={field} className="flex items-start gap-2">
+                    <span
+                      className="glyph glyph-unknown mt-[0.3rem]"
+                      aria-hidden
+                    />
+                    {evidenceFields[field].label}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-muted mt-3 text-sm">
+                Nothing is withheld: every available field is disclosed.
+              </p>
+            )}
+          </div>
+          <p className="text-muted text-xs leading-5 md:col-span-2">
+            Anyone who has the link sees the same fields. Nothing else about the
+            obligation, vendor or organization is included in the package.
+          </p>
+        </section>
         <div className="mt-7">
           <EvidenceArtifact
             artifact={preview.artifactJson}
