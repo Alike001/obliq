@@ -8,11 +8,11 @@ export function SiteFooter() {
   const { lead, rest } = networkSummary(readNetworkStatus().status);
   const preview = isReadOnlyPreview();
   return (
-    <footer className="on-ink bg-ink text-[#c3ccd8]">
-      <div className="page-wrap flex flex-wrap items-end justify-between gap-x-10 gap-y-6 py-10">
+    <footer className="site-footer">
+      <div className="page-wrap flex flex-wrap items-end justify-between gap-x-10 gap-y-5 py-8">
         <div>
-          <Brand inverse />
-          <p className="mt-3 max-w-xl text-[0.8125rem] leading-[1.45]">
+          <Brand />
+          <p className="mt-2 max-w-xl leading-[1.55]">
             Private financial operations for crypto-native organizations. {lead}{" "}
             {rest}
             {preview &&
@@ -21,11 +21,7 @@ export function SiteFooter() {
         </div>
         <nav className="flex flex-wrap gap-x-6" aria-label="Footer">
           {siteLinks(preview).nav.map(({ label, href }) => (
-            <Link
-              key={href}
-              href={href}
-              className="inline-flex min-h-11 items-center text-white hover:underline"
-            >
+            <Link key={href} href={href} className="nav-link">
               {label}
             </Link>
           ))}

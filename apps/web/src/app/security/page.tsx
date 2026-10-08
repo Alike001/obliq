@@ -215,7 +215,7 @@ function Node({
 }) {
   return (
     <div className="hairline rounded-xl border bg-white p-4">
-      <div className="text-forest">{icon}</div>
+      <div className="text-carbon">{icon}</div>
       <p className="mt-4 text-sm font-semibold">{label}</p>
       <p className="text-muted mt-1 text-[11px]">{detail}</p>
     </div>
@@ -232,7 +232,7 @@ function SecurityCard({
 }) {
   return (
     <article className="card bg-panel p-6">
-      <div className="text-forest">{icon}</div>
+      <div className="text-carbon">{icon}</div>
       <h3 className="mt-8 font-semibold">{title}</h3>
       <p className="text-muted mt-3 text-sm leading-6">{text}</p>
     </article>

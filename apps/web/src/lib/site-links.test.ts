@@ -10,7 +10,7 @@ const all = (links: ReturnType<typeof siteLinks>) => [
 describe("public site links", () => {
   it("offers the workspace when one is served", () => {
     expect(siteLinks(false).primary).toEqual({
-      label: "Open the workspace",
+      label: "Open App",
       href: "/app",
     });
   });

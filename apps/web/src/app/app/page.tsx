@@ -6,9 +6,10 @@ import {
   listVendorDestinations,
   listVendors,
 } from "@obliq/database";
-import { ArrowUpRight, FilePlus2 } from "lucide-react";
+import { FilePlus2 } from "lucide-react";
 import Link from "next/link";
 import { FirstRunGuide } from "@/components/first-run-guide";
+import { StateTag } from "@/components/state-tag";
 import { StatusPill } from "@/components/status-pill";
 import { getDatabase } from "@/lib/db";
 import { firstRunSteps } from "@/lib/first-run";
@@ -44,7 +45,7 @@ export default async function AppOverviewPage() {
         </div>
         {firstRun && <FirstRunGuide steps={firstRun} />}
         <section
-          className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-5"
+          className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6"
           aria-label="Real control metrics"
         >
           <Metric
@@ -59,6 +60,7 @@ export default async function AppOverviewPage() {
           <Metric
             label="Ready to settle"
             value={String(metrics.readyToSettle ?? 0)}
+            highlight={(metrics.readyToSettle ?? 0) > 0}
           />
           <Metric label="Due in 14 days" value={String(metrics.dueSoon ?? 0)} />
           <Metric
@@ -73,10 +75,7 @@ export default async function AppOverviewPage() {
                 <h2 className="font-semibold">Recent obligations</h2>
                 <p className="text-muted mt-1 text-xs">Persisted—not seeded</p>
               </div>
-              <Link
-                href="/app/obligations"
-                className="text-forest text-xs font-semibold"
-              >
+              <Link href="/app/obligations" className="text-link min-h-0!">
                 View all
               </Link>
             </div>
@@ -85,25 +84,35 @@ export default async function AppOverviewPage() {
                 <Link
                   key={o.id}
                   href={`/app/obligations/${o.id}`}
-                  className="hairline grid grid-cols-[1fr_auto] gap-3 border-t p-5"
+                  className="hairline grid grid-cols-[1fr_auto] items-center gap-3 border-t px-5 py-4 transition-colors hover:bg-stone-50"
                 >
                   <div>
                     <strong className="text-sm">
                       {vendor?.displayName} · {o.reference}
                     </strong>
                     <p className="text-muted mt-1 text-xs">
-                      {o.state} · due {o.dueAt?.toLocaleDateString()}
+                      Due {o.dueAt?.toLocaleDateString() ?? "date not set"}
                     </p>
                   </div>
-                  <span className="font-mono text-sm">
-                    {formatMinorUnits(o.amountMinor, o.currency)}
-                  </span>
+                  <div className="grid justify-items-end gap-1.5">
+                    <span className="font-mono text-sm font-semibold">
+                      {formatMinorUnits(o.amountMinor, o.currency)}
+                    </span>
+                    <StateTag state={o.state} />
+                  </div>
                 </Link>
               ))
             ) : (
-              <p className="text-muted p-8 text-center text-sm">
-                No obligations yet.
-              </p>
+              <div className="empty hairline border-t">
+                <span className="empty-icon">
+                  <FilePlus2 size={20} aria-hidden />
+                </span>
+                <h3 className="font-semibold">No obligations yet</h3>
+                <p className="text-muted max-w-sm text-sm">
+                  Record your first bill and it will appear here with its state
+                  and due date.
+                </p>
+              </div>
             )}
           </section>
           <section className="card p-5">
@@ -119,11 +128,8 @@ export default async function AppOverviewPage() {
                 status="IMPLEMENTED"
               />
             </div>
-            <a
-              href="/proof"
-              className="text-forest mt-6 inline-flex items-center gap-2 text-xs font-semibold"
-            >
-              Open proof surface <ArrowUpRight size={14} />
+            <a href="/proof" className="text-link mt-4">
+              Open proof surface
             </a>
           </section>
         </div>
@@ -156,17 +162,16 @@ async function getFirstRunSteps(
 function Metric({
   label,
   value,
-  note,
+  highlight = false,
 }: {
   label: string;
   value: string;
-  note?: string;
+  highlight?: boolean;
 }) {
   return (
-    <article className="card p-5">
-      <p className="text-muted text-xs">{label}</p>
-      <p className="mt-4 text-2xl font-medium tracking-tight">{value}</p>
-      {note && <p className="text-muted mt-2 text-[10px] leading-4">{note}</p>}
+    <article className={highlight ? "metric metric-attn" : "metric"}>
+      <p className="metric-label">{label}</p>
+      <p className="metric-value">{value}</p>
     </article>
   );
 }

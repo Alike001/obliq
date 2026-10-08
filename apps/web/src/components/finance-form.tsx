@@ -10,7 +10,7 @@ export function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block text-sm font-medium">
+    <label className="block text-[0.8125rem] font-bold">
       {label}
       {children}
       {hint && (

@@ -5,17 +5,17 @@ import { docGroups, docs } from "@/content/docs";
 export function DocsShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen">
-      <header className="hairline bg-paper/92 sticky top-0 z-20 border-b backdrop-blur">
+      <header className="site-nav">
         <div className="page-wrap flex h-16 items-center justify-between">
           <Brand />
           <div className="flex items-center gap-5 text-sm">
-            <Link href="/app" className="text-muted hover:text-ink">
+            <Link href="/app" className="nav-link">
               Product
             </Link>
-            <Link href="/security" className="text-muted hover:text-ink">
+            <Link href="/security" className="nav-link">
               Security
             </Link>
-            <span className="bg-ink rounded-full px-3 py-1.5 text-xs text-white">
+            <span className="bg-carbon rounded-full px-3 py-1.5 text-xs font-semibold text-white">
               Docs · Phase 5
             </span>
           </div>

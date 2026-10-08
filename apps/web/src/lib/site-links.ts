@@ -39,7 +39,7 @@ export function siteLinks(readOnlyPreview: boolean): SiteLinks {
     };
   return {
     nav,
-    primary: { label: "Open the workspace", href: "/app" },
+    primary: { label: "Open App", href: "/app" },
     secondary: { label: "See what is proven", href: "/proof" },
   };
 }

@@ -9,6 +9,7 @@ import {
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
+import { StateTag } from "@/components/state-tag";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import {
@@ -54,9 +55,7 @@ export default async function ObligationDetail({
               <h1 className="text-3xl font-medium tracking-tight">
                 {o.reference}
               </h1>
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold">
-                {o.state}
-              </span>
+              <StateTag state={o.state} />
             </div>
             <p className="text-muted mt-2 text-sm">
               Persisted financial record · version {o.version} · business

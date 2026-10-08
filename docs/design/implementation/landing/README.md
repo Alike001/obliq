@@ -215,6 +215,6 @@ vendor whose destination is recorded but not verified.
   committed instead.
 - `/docs` and `/security` are prerendered, so their header takes the
   deployment mode from the build environment, not the runtime one.
-- In an OIDC deployment "Open the workspace" still redirects straight to the
+- In an OIDC deployment "Open App" still redirects straight to the
   identity provider. A sign-in page touches the authentication route and needs
   its own review.

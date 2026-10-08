@@ -60,14 +60,14 @@ export default async function DocArticle({
                         key={bullet}
                         className="text-muted flex gap-3 text-sm leading-6"
                       >
-                        <span className="bg-forest mt-2 size-1.5 shrink-0 rounded-full" />
+                        <span className="bg-carbon mt-2 size-1.5 shrink-0 rounded-full" />
                         {bullet}
                       </li>
                     ))}
                   </ul>
                 )}
                 {section.code && (
-                  <pre className="bg-ink text-mint mt-5 overflow-x-auto rounded-xl p-5 font-mono text-xs leading-6">
+                  <pre className="bg-carbon text-mint mt-5 overflow-x-auto rounded-xl p-5 font-mono text-xs leading-6">
                     <code>{section.code}</code>
                   </pre>
                 )}
