@@ -40,7 +40,7 @@ export default async function ApprovalsPage() {
                     <th>Due</th>
                     <th>Requested capacity</th>
                     <th>Reason</th>
-                    <th></th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -59,7 +59,7 @@ export default async function ApprovalsPage() {
                           obligation.currency,
                         )}
                       </td>
-                      <td>{obligation.dueAt?.toLocaleDateString()}</td>
+                      <td>{obligation.dueAt?.toLocaleDateString() ?? "—"}</td>
                       <td>
                         {requirement.role} · {requirement.approvedCount}/
                         {requirement.requiredCount}

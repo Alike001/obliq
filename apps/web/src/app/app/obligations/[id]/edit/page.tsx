@@ -1,6 +1,7 @@
 import { getObligation, listVendors } from "@obliq/database";
 import { notFound } from "next/navigation";
 import { ObligationForm } from "@/components/obligation-form";
+import { BackLink } from "@/components/record";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import { updateObligationAction } from "../../../actions";
@@ -33,7 +34,8 @@ export default async function EditObligationPage({
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-4xl">
-        <p className="eyebrow">Version {o.version}</p>
+        <BackLink href={`/app/obligations/${id}`} label={o.reference} />
+        <p className="eyebrow mt-3">Version {o.version}</p>
         <h1 className="mt-3 text-3xl font-medium tracking-tight">
           Edit obligation
         </h1>

@@ -31,6 +31,31 @@ const tones: Record<ObligationState | SettlementState, Tone> = {
   UNAVAILABLE: "neutral",
 };
 
+// Words used by other records: destinations, approval requirements, control
+// findings, readiness, duplicate findings and evidence packages. A word that
+// is also an obligation or settlement state keeps the tone it has above.
+const recordTones: Record<string, Tone> = {
+  UNVERIFIED: "hold",
+  PENDING: "hold",
+  VERIFIED: "clear",
+  VERIFIED_MANUALLY: "clear",
+  SUPERSEDED: "neutral",
+  ACTIVE: "clear",
+  INACTIVE: "neutral",
+  REVOKED: "stop",
+  PREVIEW: "hold",
+  PASS: "clear",
+  BLOCK: "stop",
+  REQUIRE_APPROVAL: "hold",
+  NOT_REQUIRED: "neutral",
+  READY: "ready",
+  NOT_READY: "hold",
+  OPEN: "hold",
+  RESOLVED: "clear",
+  INVALIDATED: "neutral",
+  BROADCAST_UNKNOWN: "hold",
+};
+
 /** `UNDER_REVIEW` reads as "Under review". The stored value is unchanged. */
 export function stateLabel(state: string) {
   const words = state.toLowerCase().replaceAll("_", " ");
@@ -39,5 +64,7 @@ export function stateLabel(state: string) {
 
 /** An unknown state is neutral, so it can never read as settled. */
 export function stateTone(state: string): Tone {
-  return (tones as Record<string, Tone>)[state] ?? "neutral";
+  return (
+    (tones as Record<string, Tone>)[state] ?? recordTones[state] ?? "neutral"
+  );
 }

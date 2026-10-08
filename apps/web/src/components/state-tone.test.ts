@@ -26,6 +26,16 @@ describe("state tag tones", () => {
     expect(stateTone("SOMETHING_NEW")).toBe("neutral");
   });
 
+  it("never shows a record word as settled by accident", () => {
+    expect(stateTone("UNVERIFIED")).toBe("hold");
+    expect(stateTone("NOT_READY")).toBe("hold");
+    expect(stateTone("BROADCAST_UNKNOWN")).toBe("hold");
+    expect(stateTone("REVOKED")).toBe("stop");
+    expect(stateTone("BLOCK")).toBe("stop");
+    // "Ready" is a gate passed, like an approved obligation: not a payment.
+    expect(stateTone("READY")).toBe("ready");
+  });
+
   it("keeps the stored word in the label", () => {
     expect(stateLabel("READY_TO_SETTLE")).toBe("Ready to settle");
   });

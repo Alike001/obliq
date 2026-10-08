@@ -4,6 +4,11 @@ import {
   listEvidencePackages,
 } from "@obliq/database";
 import Link from "next/link";
+import { Field, Select } from "@/components/finance-form";
+import { Notice } from "@/components/notice";
+import { StateTag } from "@/components/state-tag";
+import { stateLabel } from "@/components/state-tone";
+import { SubmitButton } from "@/components/submit-button";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import { previewEvidenceAction } from "../actions";
@@ -41,36 +46,42 @@ export default async function EvidencePage({
             until you review that exact artifact.
           </p>
           {eligible.length === 0 ? (
-            <div className="mt-6 rounded-lg border border-dashed p-6 text-sm">
-              No settled obligations are eligible yet. Evidence can only derive
-              from a matching SETTLED reconciliation record.
+            <div className="border-line-strong mt-6 rounded-lg border border-dashed p-6 text-sm">
+              <p className="font-semibold">Nothing is eligible yet</p>
+              <p className="text-muted mt-1">
+                Evidence can only be issued for an obligation that is settled
+                and matched by the read-only observer. Approved or broadcast is
+                not enough.
+              </p>
+              <Link href="/app/settlements" className="text-link mt-3">
+                See settlements
+              </Link>
             </div>
           ) : (
             <form action={previewEvidenceAction} className="mt-6 space-y-6">
               <div className="grid gap-4 md:grid-cols-2">
-                <label className="text-xs font-medium">
-                  Settled obligation
-                  <select
+                <Field label="Settled obligation">
+                  <Select
                     name="obligationId"
                     defaultValue={
                       query.obligationId ?? eligible[0]?.obligation.id
                     }
                     required
-                    className="mt-2 min-h-11 w-full rounded-lg border bg-white px-3"
                   >
                     {eligible.map(({ obligation, vendor }) => (
                       <option key={obligation.id} value={obligation.id}>
                         {obligation.reference} · {vendor.displayName}
                       </option>
                     ))}
-                  </select>
-                </label>
-                <label className="text-xs font-medium">
-                  Disclosure template
-                  <select
+                  </Select>
+                </Field>
+                <Field
+                  label="Disclosure template"
+                  hint="Sets which fields are shown unless you choose them below."
+                >
+                  <Select
                     name="template"
                     defaultValue="MINIMAL_PAYMENT_CONFIRMATION"
-                    className="mt-2 min-h-11 w-full rounded-lg border bg-white px-3"
                   >
                     <option value="MINIMAL_PAYMENT_CONFIRMATION">
                       Minimal payment confirmation
@@ -79,12 +90,12 @@ export default async function EvidencePage({
                     <option value="ACCOUNTANT_EVIDENCE">
                       Accountant evidence
                     </option>
-                  </select>
-                </label>
+                  </Select>
+                </Field>
               </div>
               <fieldset>
-                <legend className="text-xs font-semibold">
-                  Or explicitly choose disclosed fields
+                <legend className="text-[0.8125rem] font-bold">
+                  Or choose the disclosed fields yourself
                 </legend>
                 <p className="text-muted mt-1 text-xs">
                   If none are checked, the selected template defaults apply.
@@ -95,7 +106,7 @@ export default async function EvidencePage({
                   {fieldOrder.map((field) => (
                     <label
                       key={field}
-                      className="flex min-h-14 items-start gap-3 rounded-lg border bg-white p-3 text-xs"
+                      className="bg-surface border-line-strong flex min-h-14 cursor-pointer items-start gap-3 rounded-lg border p-3 text-xs"
                     >
                       <input
                         type="checkbox"
@@ -107,22 +118,26 @@ export default async function EvidencePage({
                         <span className="font-semibold">
                           {evidenceFields[field].label}
                         </span>
-                        <span className="text-muted mt-1 block font-mono text-[10px]">
-                          {evidenceFields[field].classification}
+                        <span className="text-muted mt-1 block text-[0.6875rem]">
+                          {stateLabel(evidenceFields[field].classification)}
                         </span>
                       </span>
                     </label>
                   ))}
                 </div>
               </fieldset>
-              <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 text-xs leading-5">
-                FINANCE and AUDIT fields can expose approval, ZEC, network, or
-                transaction information. Server-side role checks apply even if a
-                request bypasses this form.
-              </div>
-              <button className="button button-dark">
+              <Notice
+                tone="hold"
+                title="Finance and audit fields disclose more"
+                className="text-xs"
+              >
+                They can expose approval, ZEC, network or transaction
+                information. Your role is checked on the server for every field,
+                whatever this form sends.
+              </Notice>
+              <SubmitButton pendingLabel="Building preview…">
                 Preview recipient view
-              </button>
+              </SubmitButton>
             </form>
           )}
         </section>
@@ -133,7 +148,7 @@ export default async function EvidencePage({
           </div>
           {packages.length === 0 ? (
             <p className="text-muted p-6 text-sm">
-              No evidence has been issued.
+              No evidence has been issued. A preview is not an issued package.
             </p>
           ) : (
             <div className="divide-y">
@@ -141,18 +156,19 @@ export default async function EvidencePage({
                 <Link
                   key={item.id}
                   href={`/app/evidence/${item.id}`}
-                  className="grid gap-2 p-5 hover:bg-stone-50 md:grid-cols-[1fr_auto_auto] md:items-center"
+                  className="grid gap-x-4 gap-y-2 p-5 transition-colors hover:bg-stone-50 md:grid-cols-[1fr_auto_auto] md:items-center"
                 >
                   <div>
                     <p className="text-sm font-semibold">
                       {obligation.reference}
                     </p>
                     <p className="text-muted mt-1 text-xs">
-                      {item.template.replaceAll("_", " ")} · version{" "}
-                      {item.version}
+                      {stateLabel(item.template)} · version {item.version}
                     </p>
                   </div>
-                  <span className="font-mono text-xs">{item.status}</span>
+                  <span>
+                    <StateTag state={item.status} />
+                  </span>
                   <span className="text-muted text-xs">
                     {item.createdAt.toLocaleDateString()}
                   </span>

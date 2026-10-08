@@ -11,6 +11,7 @@ import Link from "next/link";
 import { FirstRunGuide } from "@/components/first-run-guide";
 import { StateTag } from "@/components/state-tag";
 import { StatusPill } from "@/components/status-pill";
+import { attentionQueue } from "@/lib/attention";
 import { getDatabase } from "@/lib/db";
 import { firstRunSteps } from "@/lib/first-run";
 import { getTenantContext } from "@/lib/session";
@@ -25,6 +26,16 @@ export default async function AppOverviewPage() {
   ]);
   const firstRun =
     recent.length === 0 ? await getFirstRunSteps(db, tenant) : null;
+  const queue = attentionQueue(
+    recent.map(({ obligation, vendor }) => ({
+      id: obligation.id,
+      state: obligation.state,
+      dueAt: obligation.dueAt,
+      reference: obligation.reference,
+      vendorName: vendor?.displayName,
+      amount: formatMinorUnits(obligation.amountMinor, obligation.currency),
+    })),
+  );
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -51,16 +62,23 @@ export default async function AppOverviewPage() {
           <Metric
             label="Awaiting review"
             value={String(metrics.awaitingReview ?? 0)}
+            href="/app/obligations?state=UNDER_REVIEW"
           />
           <Metric
             label="Awaiting approval"
             value={String(metrics.awaitingApproval ?? 0)}
+            href="/app/obligations?state=APPROVAL_REQUIRED"
           />
-          <Metric label="Blocked" value={String(metrics.blocked ?? 0)} />
+          <Metric
+            label="Blocked"
+            value={String(metrics.blocked ?? 0)}
+            href="/app/obligations?state=BLOCKED"
+          />
           <Metric
             label="Ready to settle"
             value={String(metrics.readyToSettle ?? 0)}
             highlight={(metrics.readyToSettle ?? 0) > 0}
+            href="/app/obligations?state=READY_TO_SETTLE"
           />
           <Metric label="Due in 14 days" value={String(metrics.dueSoon ?? 0)} />
           <Metric
@@ -68,6 +86,60 @@ export default async function AppOverviewPage() {
             value={String(metrics.possibleDuplicates)}
           />
         </section>
+        {queue.length > 0 && (
+          <section
+            className="card mt-5 overflow-hidden"
+            aria-labelledby="attention-h"
+          >
+            <div className="hairline flex flex-wrap items-baseline justify-between gap-2 border-b p-5">
+              <div>
+                <h2 id="attention-h" className="font-semibold">
+                  Needs attention
+                </h2>
+                <p className="text-muted mt-1 text-xs">
+                  Waiting on a person, most urgent first. Opening a record
+                  changes nothing.
+                </p>
+              </div>
+              <p className="text-muted text-xs">
+                {queue.length} {queue.length === 1 ? "record" : "records"}
+              </p>
+            </div>
+            <ul>
+              {queue.slice(0, 6).map((item) => (
+                <li
+                  key={item.id}
+                  className="hairline border-t first:border-t-0"
+                >
+                  <Link
+                    href={`/app/obligations/${item.id}`}
+                    className="grid gap-x-4 gap-y-2 px-5 py-4 transition-colors hover:bg-stone-50 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold">{item.next}</p>
+                      <p className="text-muted mt-1 text-xs break-words">
+                        {item.vendorName ?? "No vendor"} · {item.reference} ·
+                        Due {item.dueAt?.toLocaleDateString() ?? "date not set"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+                      <span className="font-mono text-sm font-semibold">
+                        {item.amount}
+                      </span>
+                      <StateTag state={item.state} />
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            {queue.length > 6 && (
+              <p className="hairline text-muted border-t px-5 py-3 text-xs">
+                {queue.length - 6} more. Use the counts above to open each
+                queue.
+              </p>
+            )}
+          </section>
+        )}
         <div className="mt-5 grid gap-5 xl:grid-cols-[1.4fr_.6fr]">
           <section className="card overflow-hidden">
             <div className="hairline flex justify-between border-b p-5">
@@ -163,16 +235,27 @@ function Metric({
   label,
   value,
   highlight = false,
+  href,
 }: {
   label: string;
   value: string;
   highlight?: boolean;
+  /** The list this count is drawn from, when one exists. */
+  href?: string;
 }) {
-  return (
-    <article className={highlight ? "metric metric-attn" : "metric"}>
+  const className = highlight ? "metric metric-attn" : "metric";
+  const body = (
+    <>
       <p className="metric-label">{label}</p>
       <p className="metric-value">{value}</p>
-    </article>
+    </>
+  );
+  return href ? (
+    <Link href={href} className={className}>
+      {body}
+    </Link>
+  ) : (
+    <article className={className}>{body}</article>
   );
 }
 function Ready({

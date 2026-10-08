@@ -8,7 +8,12 @@ import { getSettlement, listObligationObservations } from "@obliq/database";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
+import { Field, Input, Select } from "@/components/finance-form";
+import { Notice } from "@/components/notice";
+import { BackLink, Fact } from "@/components/record";
 import { StateTag } from "@/components/state-tag";
+import { stateLabel } from "@/components/state-tone";
+import { SubmitButton } from "@/components/submit-button";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import {
@@ -22,10 +27,13 @@ export const dynamic = "force-dynamic";
 
 export default async function SettlementDetail({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ signing?: string; broadcast?: string }>;
 }) {
   const { id } = await params;
+  const notice = await searchParams;
   const tenant = await getTenantContext();
   const record = await getSettlement(getDatabase(), tenant.organizationId, id);
   if (!record) notFound();
@@ -48,13 +56,14 @@ export default async function SettlementDetail({
     settlement.state === "AWAITING_SIGNATURE" &&
     !settlement.signerRequestId &&
     intent.quoteExpiresAt > new Date();
+  const quoteExpired =
+    settlement.state === "AWAITING_SIGNATURE" &&
+    intent.quoteExpiresAt <= new Date();
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
-        <Link href="/app/settlements" className="text-muted text-sm">
-          ← Settlements
-        </Link>
-        <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+        <BackLink href="/app/settlements" label="Settlements" />
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Signing review</p>
             <h1 className="mt-3 text-3xl font-medium">
@@ -67,23 +76,80 @@ export default async function SettlementDetail({
           </div>
           <StateTag state={settlement.state} />
         </div>
-        <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
+        {notice.signing === "requested" && (
+          <Notice
+            tone="hold"
+            title="Signing review started, nothing signed"
+            live
+            className="mt-6"
+          >
+            Carry the request to your external signer. When the ceremony ends,
+            record its outcome below.
+          </Notice>
+        )}
+        {notice.signing === "recorded" && (
+          <Notice
+            tone="hold"
+            title="External authorization recorded, not yet settled"
+            live
+            className="mt-6"
+          >
+            The transaction still has to be broadcast and then seen by the
+            read-only observer before this counts as settled.
+          </Notice>
+        )}
+        {notice.signing === "closed" && (
+          <Notice
+            tone="info"
+            title="Non-success outcome recorded"
+            live
+            className="mt-6"
+          >
+            Nothing was signed under this request. The current state is shown
+            above.
+          </Notice>
+        )}
+        {notice.broadcast === "recorded" && (
+          <Notice
+            tone="hold"
+            title="Broadcast outcome recorded, not yet settled"
+            live
+            className="mt-6"
+          >
+            Recording an outcome does not confirm payment. Only the read-only
+            observer can mark this settled.
+          </Notice>
+        )}
+        <section className="summary mt-6" aria-label="Summary">
+          <div>
+            <p className="fact-label">Shielded amount</p>
+            <p className="figure mt-2">
+              {formatZecAmount(intent.zatoshiAmount)} ZEC
+            </p>
+          </div>
+          <dl className="grid gap-4 sm:grid-cols-3">
+            <Fact label="Business amount">
+              {formatMinorUnits(
+                intent.businessAmountMinor,
+                intent.businessCurrency,
+              )}
+            </Fact>
+            <Fact label="Vendor">{vendor.displayName}</Fact>
+            <Fact label="Obligation">
+              <Link
+                href={`/app/obligations/${obligation.id}`}
+                className="underline decoration-[#d9a43e] decoration-2"
+              >
+                {obligation.reference}
+              </Link>
+            </Fact>
+          </dl>
+        </section>
+        <div className="mt-5 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
           <section className="card p-6">
             <h2 className="font-semibold">What is being authorized</h2>
             <dl className="mt-6 grid gap-5 sm:grid-cols-2">
-              <Detail label="Vendor" value={vendor.displayName} />
-              <Detail
-                label="Business amount"
-                value={formatMinorUnits(
-                  intent.businessAmountMinor,
-                  intent.businessCurrency,
-                )}
-              />
-              <Detail
-                label="Shielded amount"
-                value={`${formatZecAmount(intent.zatoshiAmount)} ZEC`}
-              />
-              <Detail label="Network" value="REGTEST — not public network" />
+              <Detail label="Network" value="Regtest, not a public network" />
               <Detail
                 label="Quote"
                 value={`${quote.source} · expires ${quote.expiresAt.toLocaleString()}`}
@@ -101,11 +167,14 @@ export default async function SettlementDetail({
                 value={`obligation v${intent.obligationVersion} · decision ${intent.policyDecisionId.slice(0, 8)}…`}
               />
             </dl>
-            <div className="mt-6 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm leading-6">
-              Business approval does not sign this transaction. Review these
-              exact values in the external Zallet PCZT inspection before
-              authorizing it.
-            </div>
+            <Notice
+              tone="hold"
+              title="Business approval does not sign this transaction"
+              className="mt-6 text-sm"
+            >
+              Review these exact values in the external Zallet PCZT inspection
+              before authorizing it.
+            </Notice>
           </section>
           <section className="card p-6">
             <h2 className="font-semibold">External signer handoff</h2>
@@ -115,7 +184,7 @@ export default async function SettlementDetail({
               passphrase, or spending key.
             </p>
             <p className="mt-5 text-xs font-semibold">ZIP-321 request</p>
-            <code className="mt-2 block max-h-28 overflow-auto rounded-lg bg-stone-950 p-3 text-[11px] break-all text-stone-100">
+            <code className="code-block mt-2" tabIndex={0}>
               {handoff.paymentRequest}
             </code>
             {canRequest && (
@@ -131,17 +200,21 @@ export default async function SettlementDetail({
                   name="signerRequestId"
                   value={randomUUID()}
                 />
-                <button className="button button-dark">
+                <SubmitButton pendingLabel="Starting…">
                   Begin deliberate signing review
-                </button>
+                </SubmitButton>
               </form>
             )}
-            {settlement.state === "AWAITING_SIGNATURE" &&
-              intent.quoteExpiresAt <= new Date() && (
-                <p className="mt-5 text-sm font-semibold text-red-800">
-                  Quote expired. Re-quote; this intent cannot be signed.
-                </p>
-              )}
+            {quoteExpired && (
+              <Notice
+                tone="stop"
+                title="Quote expired, this intent cannot be signed"
+                className="mt-5 text-sm"
+              >
+                It expired {intent.quoteExpiresAt.toLocaleString()}. Nothing was
+                signed or paid. A new intent with a fresh quote is needed.
+              </Notice>
+            )}
           </section>
         </div>
         {settlement.state === "AWAITING_SIGNATURE" &&
@@ -162,20 +235,37 @@ export default async function SettlementDetail({
                 )}
                 className="mt-5 grid gap-3 md:grid-cols-3"
               >
-                <Input
-                  name="txid"
-                  label="Transaction ID"
-                  pattern="[0-9a-fA-F]{64}"
-                />
-                <Input
-                  name="signedTxHash"
+                <Field label="Transaction ID" hint="64 hexadecimal characters.">
+                  <Input
+                    name="txid"
+                    pattern="[0-9a-fA-F]{64}"
+                    required
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="font-mono"
+                  />
+                </Field>
+                <Field
                   label="Signed transaction hash"
-                  pattern="[0-9a-fA-F]{64}"
-                />
-                <Input name="signerVersion" label="Zallet version" />
-                <button className="button button-dark md:col-span-3">
-                  Record external authorization
-                </button>
+                  hint="64 hexadecimal characters."
+                >
+                  <Input
+                    name="signedTxHash"
+                    pattern="[0-9a-fA-F]{64}"
+                    required
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="font-mono"
+                  />
+                </Field>
+                <Field label="Zallet version">
+                  <Input name="signerVersion" required autoComplete="off" />
+                </Field>
+                <div className="md:col-span-3">
+                  <SubmitButton pendingLabel="Recording…">
+                    Record external authorization
+                  </SubmitButton>
+                </div>
               </form>
               <form
                 action={recordSigningFailureAction.bind(
@@ -185,21 +275,30 @@ export default async function SettlementDetail({
                 )}
                 className="mt-6 grid gap-3 border-t pt-5 md:grid-cols-2"
               >
-                <label className="text-xs">
-                  Non-success outcome
-                  <select
-                    name="outcome"
-                    className="mt-2 min-h-11 w-full rounded-lg border px-3"
-                  >
+                <h3 className="text-sm font-semibold md:col-span-2">
+                  Or, if signing did not succeed
+                </h3>
+                <Field label="Non-success outcome">
+                  <Select name="outcome">
                     <option value="REJECTED">User rejected signing</option>
                     <option value="UNAVAILABLE">Signer unavailable</option>
                     <option value="FAILED">Signing failed</option>
-                  </select>
-                </label>
-                <Input name="errorCode" label="Safe error code" />
-                <button className="button md:col-span-2">
-                  Record non-success outcome
-                </button>
+                  </Select>
+                </Field>
+                <Field
+                  label="Safe error code"
+                  hint="A short code only. Never a key, seed or transaction."
+                >
+                  <Input name="errorCode" required autoComplete="off" />
+                </Field>
+                <div className="md:col-span-2">
+                  <SubmitButton
+                    className="button button-light"
+                    pendingLabel="Recording…"
+                  >
+                    Record non-success outcome
+                  </SubmitButton>
+                </div>
               </form>
             </section>
           )}
@@ -209,7 +308,7 @@ export default async function SettlementDetail({
             <section className="card mt-5 p-6">
               <h2 className="font-semibold">Record broadcast outcome</h2>
               <p className="text-muted mt-2 text-xs">
-                A timeout is UNKNOWN—not failure and never settlement. The
+                A timeout is Unknown: not a failure, and never settlement. The
                 read-only observer determines detection and confirmation.
               </p>
               <form
@@ -226,20 +325,18 @@ export default async function SettlementDetail({
                   name="broadcastRequestId"
                   value={settlement.broadcastRequestId ?? randomUUID()}
                 />
-                <label className="text-xs">
-                  Outcome
-                  <select
-                    name="outcome"
-                    className="mt-2 min-h-11 w-full rounded-lg border px-3"
-                  >
-                    <option>BROADCAST</option>
-                    <option>UNKNOWN</option>
-                    <option>FAILED</option>
-                  </select>
-                </label>
-                <button className="button button-dark md:col-span-2">
-                  Record outcome
-                </button>
+                <Field label="Outcome">
+                  <Select name="outcome">
+                    <option value="BROADCAST">Broadcast accepted</option>
+                    <option value="UNKNOWN">Unknown (timed out)</option>
+                    <option value="FAILED">Broadcast failed</option>
+                  </Select>
+                </Field>
+                <div className="md:col-span-2">
+                  <SubmitButton pendingLabel="Recording…">
+                    Record outcome
+                  </SubmitButton>
+                </div>
               </form>
             </section>
           )}
@@ -247,30 +344,36 @@ export default async function SettlementDetail({
           <div className="border-b p-5">
             <h2 className="font-semibold">Execution and reconciliation</h2>
           </div>
-          <div className="grid gap-4 p-5 sm:grid-cols-3">
+          <dl className="grid gap-4 p-5 sm:grid-cols-3">
             <Detail
               label="Signing"
               value={
                 settlement.signedAt
-                  ? `SIGNED · ${settlement.signerType}`
-                  : settlement.state
+                  ? `Signed · ${settlement.signerType}`
+                  : stateLabel(settlement.state)
               }
             />
             <Detail
               label="Broadcast"
               value={
-                settlement.broadcastAt ? settlement.state : "NOT BROADCAST"
+                settlement.broadcastAt
+                  ? stateLabel(settlement.state)
+                  : "Not broadcast"
               }
             />
             <Detail
               label="Observer evidence"
               value={
                 observations[0]
-                  ? `${observations[0].state} · ${observations[0].confirmations} confirmations`
-                  : "NOT OBSERVED"
+                  ? `${stateLabel(observations[0].state)} · ${observations[0].confirmations} confirmations`
+                  : "Not observed"
               }
             />
-          </div>
+          </dl>
+          <p className="text-muted hairline border-t px-5 py-4 text-xs">
+            Only observer evidence can make this settled. A recorded signature
+            or broadcast is not proof of payment.
+          </p>
         </section>
       </div>
     </main>
@@ -280,29 +383,8 @@ export default async function SettlementDetail({
 function Detail({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-muted text-xs">{label}</dt>
-      <dd className="mt-1 text-sm font-medium break-all">{value}</dd>
+      <dt className="fact-label">{label}</dt>
+      <dd className="fact-value">{value}</dd>
     </div>
-  );
-}
-function Input({
-  name,
-  label,
-  pattern,
-}: {
-  name: string;
-  label: string;
-  pattern?: string;
-}) {
-  return (
-    <label className="text-xs">
-      {label}
-      <input
-        name={name}
-        pattern={pattern}
-        required
-        className="mt-2 min-h-11 w-full rounded-lg border px-3 font-mono text-sm"
-      />
-    </label>
   );
 }

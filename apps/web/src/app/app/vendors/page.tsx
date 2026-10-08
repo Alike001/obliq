@@ -1,6 +1,7 @@
 import { listVendors } from "@obliq/database";
 import { Building2, Plus } from "lucide-react";
 import Link from "next/link";
+import { StateTag } from "@/components/state-tag";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 export const dynamic = "force-dynamic";
@@ -62,7 +63,9 @@ export default async function VendorsPage() {
                       </td>
                       <td>{v.legalName}</td>
                       <td>{v.category ?? "—"}</td>
-                      <td>{v.status}</td>
+                      <td>
+                        <StateTag state={v.status} />
+                      </td>
                       <td>{v.createdAt.toLocaleDateString()}</td>
                     </tr>
                   ))}

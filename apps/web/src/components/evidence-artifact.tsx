@@ -5,6 +5,7 @@ import {
   type JsonValue,
 } from "@obliq/evidence";
 import { CheckCircle2, CircleAlert } from "lucide-react";
+import { StateTag } from "./state-tag";
 
 const provenanceLabels = {
   OBLIQ_BUSINESS_RECORD: "Obliq business record",
@@ -24,8 +25,8 @@ export function EvidenceArtifact({
   integrityValid: boolean;
 }) {
   return (
-    <article className="card overflow-hidden bg-white">
-      <header className="border-b bg-stone-50 p-6 md:p-8">
+    <article className="card overflow-hidden">
+      <header className="bg-sunken border-b p-6 md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="eyebrow">Obliq financial evidence</p>
@@ -39,15 +40,7 @@ export function EvidenceArtifact({
               Artifact created {new Date(artifact.createdAt).toLocaleString()}
             </p>
           </div>
-          <div
-            className={`rounded-full px-3 py-1 font-mono text-xs font-semibold ${
-              status === "ACTIVE" || status === "PREVIEW"
-                ? "bg-emerald-100 text-emerald-900"
-                : "bg-amber-100 text-amber-950"
-            }`}
-          >
-            {status}
-          </div>
+          <StateTag state={status} />
         </div>
       </header>
       <div className="p-6 md:p-8">
@@ -82,11 +75,11 @@ export function EvidenceArtifact({
           </div>
           <div className="flex items-center gap-2 text-xs font-semibold">
             {integrityValid ? (
-              <CheckCircle2 className="text-emerald-700" size={18} />
+              <CheckCircle2 className="text-clear" size={18} aria-hidden />
             ) : (
-              <CircleAlert className="text-red-700" size={18} />
+              <CircleAlert className="text-stop" size={18} aria-hidden />
             )}
-            {integrityValid ? "Content hash matches" : "INTEGRITY FAILURE"}
+            {integrityValid ? "Content hash matches" : "Integrity failure"}
           </div>
         </div>
         <p className="text-muted mt-7 text-xs leading-5">
