@@ -2,6 +2,7 @@ import { formatMinorUnits } from "@obliq/domain";
 import { listObligations } from "@obliq/database";
 import { FilePlus2, Upload } from "lucide-react";
 import Link from "next/link";
+import { StateTag } from "@/components/state-tag";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ export default async function ObligationsPage({
               Persisted bills awaiting control evaluation.
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3">
             <Link
               className="button button-light"
               href="/app/obligations/upload"
@@ -44,22 +45,44 @@ export default async function ObligationsPage({
             </Link>
           </div>
         </div>
-        <form className="mt-7 flex gap-2" role="search">
+        <form className="mt-7 flex gap-3" role="search">
           <input
             name="q"
             defaultValue={query.q}
+            aria-label="Search obligations"
             placeholder="Search vendor, reference or purpose"
             className="hairline bg-panel min-h-11 flex-1 rounded-lg border px-3 text-sm"
           />
           <button className="button button-light">Search</button>
         </form>
         {items.length === 0 ? (
-          <section className="card mt-5 p-10 text-center">
-            <FilePlus2 className="mx-auto" />
-            <h2 className="mt-4 font-semibold">No obligations found</h2>
-            <p className="text-muted mt-2 text-sm">
-              Create one manually or begin with an invoice document.
+          <section className="card empty mt-5">
+            <span className="empty-icon">
+              <FilePlus2 size={20} aria-hidden />
+            </span>
+            <h2 className="font-semibold">
+              {query.q ? `Nothing matches “${query.q}”` : "No obligations yet"}
+            </h2>
+            <p className="text-muted max-w-sm text-sm">
+              {query.q
+                ? "Try a vendor name, a reference number or part of the purpose."
+                : "Create one manually or begin with an invoice document."}
             </p>
+            {query.q ? (
+              <Link
+                className="button button-light mt-3"
+                href="/app/obligations"
+              >
+                Clear search
+              </Link>
+            ) : (
+              <Link
+                className="button button-dark mt-3"
+                href="/app/obligations/new"
+              >
+                Record obligation
+              </Link>
+            )}
           </section>
         ) : (
           <div className="card mt-5 overflow-hidden">
@@ -85,7 +108,9 @@ export default async function ObligationsPage({
                         </Link>
                       </td>
                       <td>{vendor?.displayName ?? "—"}</td>
-                      <td>{o.state}</td>
+                      <td>
+                        <StateTag state={o.state} />
+                      </td>
                       <td className="font-mono">
                         {formatMinorUnits(o.amountMinor, o.currency)}
                       </td>

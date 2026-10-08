@@ -181,11 +181,11 @@ export default async function ProofPage() {
   return (
     <main>
       <SiteHeader />
-      <section className="hairline bg-ink border-b text-white">
+      <section className="on-ink bg-[#161616] text-white">
         <div className="page-wrap py-20 md:py-24">
-          <p className="eyebrow !text-mint">Technical proof surface</p>
+          <p className="eyebrow">Technical proof surface</p>
           <h1 className="section-title mt-5 max-w-3xl">
-            Claims should be inspectable—or marked unavailable.
+            Claims should be inspectable or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/60">
             Phase 6 reports hardened runtime boundaries alongside the real

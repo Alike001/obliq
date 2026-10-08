@@ -11,7 +11,7 @@ export default async function VendorsPage() {
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Counterparties</p>
             <h1 className="mt-3 text-3xl font-medium tracking-tight">
@@ -27,13 +27,15 @@ export default async function VendorsPage() {
           </Link>
         </div>
         {vendors.length === 0 ? (
-          <section className="card mt-8 p-10 text-center">
-            <Building2 className="mx-auto" />
-            <h2 className="mt-4 font-semibold">Create your first vendor</h2>
-            <p className="text-muted mt-2 text-sm">
+          <section className="card empty mt-8">
+            <span className="empty-icon">
+              <Building2 size={20} aria-hidden />
+            </span>
+            <h2 className="font-semibold">Create your first vendor</h2>
+            <p className="text-muted max-w-sm text-sm">
               A vendor is required before an obligation can be recorded.
             </p>
-            <Link className="button button-dark mt-5" href="/app/vendors/new">
+            <Link className="button button-dark mt-3" href="/app/vendors/new">
               Create vendor
             </Link>
           </section>

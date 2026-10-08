@@ -21,7 +21,7 @@ export default async function FoundationSection({
   return (
     <main className="grid min-h-[calc(100vh-4rem)] place-items-center p-6">
       <section className="card bg-panel max-w-xl p-8 text-center md:p-12">
-        <span className="mx-auto grid size-12 place-items-center rounded-full bg-stone-100">
+        <span className="empty-icon mx-auto">
           <Construction size={21} />
         </span>
         <div className="mt-6">

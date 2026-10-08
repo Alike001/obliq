@@ -8,6 +8,7 @@ import { getSettlement, listObligationObservations } from "@obliq/database";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
+import { StateTag } from "@/components/state-tag";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import {
@@ -64,9 +65,7 @@ export default async function SettlementDetail({
               {intent.intentVersion}
             </p>
           </div>
-          <span className="rounded-full bg-stone-100 px-3 py-1 font-mono text-xs font-semibold">
-            {settlement.state}
-          </span>
+          <StateTag state={settlement.state} />
         </div>
         <div className="mt-8 grid gap-5 lg:grid-cols-[1.1fr_.9fr]">
           <section className="card p-6">
