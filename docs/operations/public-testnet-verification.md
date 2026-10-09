@@ -164,7 +164,7 @@ quote for exactly 100,000 zatoshis, and an immutable intent. The quote is
 requires `FullPrivacy`, and contains the exact receiver, amount, opaque memo,
 network, expiry, and intent hash. It does not sign or broadcast.
 
-## Ceremony 3: bounded unfunded compatibility preflight
+## Ceremony 3: live preflight and offline assertion validation
 
 Complete this gate on the isolated signer host before creating or funding a
 wallet. It does not require a UFVK, seed, account, proving parameters, signing,
@@ -214,20 +214,41 @@ Use private file-based loopback RPC requests to:
 4. record that `pczt_prove`, `pczt_sign`, extraction, broadcast, and any wallet
    mutation were not attempted.
 
+The commands above are the live evidence collection step. They must be run
+against the pinned processes on the isolated signer host, with their sanitized
+outputs and artifact hashes retained immutably and reviewed by a second human.
+Self-authored JSON is not evidence that those commands ran.
+
 Store only sanitized booleans, versions, commits, checksums, RPC method names,
 and the observer preflight fields in a new regular `0600` JSON file. Do not
 retain account identifiers, receivers, credentials, request bodies, PCZTs, or
-error payloads in the sanitized evidence. Validate it with:
+error payloads in the sanitized record. The following command performs only an
+offline consistency and policy validation of that operator-authored summary:
 
 ```sh
-OBLIQ_TESTNET_PREFLIGHT_FILE="$CEREMONY_DIR/signer-preflight.json" \
-npm run zcash:testnet:preflight
+OBLIQ_TESTNET_OPERATOR_EVIDENCE_FILE="$CEREMONY_DIR/signer-preflight.json" \
+npm run zcash:testnet:validate-operator-evidence
 ```
 
-A `PASS` proves bounded compatibility only. Its classification intentionally
-remains `PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`; it is not payment evidence.
+A `CONSISTENT_UNTRUSTED` result explicitly reports
+`evidenceBoundary=OPERATOR_ASSERTED_JSON`, `liveCompatibility=UNVERIFIED`,
+`fundedCeremonyAuthorized=false`, and the operational blocker
+`INDEPENDENT_LIVE_RPC_EVIDENCE_REQUIRED`. The command deliberately exits 2 even
+for internally consistent input, preventing a successful shell exit from being
+used as a funded-ceremony gate; malformed or inconsistent input exits 1. A
+fabricated but schema-valid file can produce `CONSISTENT_UNTRUSTED`; it can
+never produce a live-compatibility PASS or authorize Ceremony 4. Proceeding
+requires independent review of the direct Zebra/Zallet RPC evidence described
+above. This repository does not yet contain an authenticated live-RPC
+collector, so operational readiness remains blocked until that evidence is
+collected and reviewed. The overall public network classification remains
+`PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`; neither result is payment evidence.
 
 ## Ceremony 4: independent sender and faucet
+
+**Stop gate:** do not begin this ceremony from the offline validator output.
+Require the independently collected live Zebra/Zallet evidence and second-human
+review from Ceremony 3. In their absence, the funded ceremony is unauthorized.
 
 1. Create a Zallet v0.1.0-beta.3 datadir, encryption identity, mnemonic,
    confirmed backup, and account on the isolated signer host. This is the

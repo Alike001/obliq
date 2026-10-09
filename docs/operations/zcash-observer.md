@@ -31,6 +31,12 @@ environment variable, process argument, `.env`, application log, proof output,
 screenshot, browser state, PostgreSQL, or CI variable. The `sync` command reads
 the imported account from the private cache and accepts no viewing key.
 
+The encoded input is held in a zeroizing buffer even when reading or decoding
+fails, and remote birthday data is resolved before the prompt. The decoded UFVK
+type in the pinned library does not document in-memory zeroization, so keep the
+observer host isolated and terminate the initialization process promptly after
+import; do not describe this as a complete process-memory erasure guarantee.
+
 The application rejects `OBSERVER_UFVK` in every runtime mode. Restrict the
 SQLite cache to its dedicated observer identity and encrypt its volume and
 backups because both the imported viewing authority and decrypted transaction

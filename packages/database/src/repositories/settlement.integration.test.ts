@@ -290,7 +290,29 @@ suite("Phase 4 non-custodial settlement repositories", () => {
         outcome: "AUTHORIZED",
         txid,
         signedTxHash: "cd".repeat(32),
+        signerVersion: "v".repeat(65),
+        networkFeeZat: 10_000n,
+      }),
+    ).rejects.toThrow("sanitized external signing receipt");
+    await expect(
+      recordExternalSigning(connection.db, actor, {
+        settlementId,
+        signerRequestId: "sign-1",
+        outcome: "AUTHORIZED",
+        txid,
+        signedTxHash: "cd".repeat(32),
         signerVersion: "v0.1.0-beta.3",
+      }),
+    ).rejects.toThrow("sanitized external signing receipt");
+    await expect(
+      recordExternalSigning(connection.db, actor, {
+        settlementId,
+        signerRequestId: "sign-1",
+        outcome: "AUTHORIZED",
+        txid,
+        signedTxHash: "cd".repeat(32),
+        signerVersion: "v0.1.0-beta.3",
+        networkFeeZat: 25_000_001n,
       }),
     ).rejects.toThrow("sanitized external signing receipt");
     const signed = await recordExternalSigning(connection.db, actor, {

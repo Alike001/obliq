@@ -18,7 +18,7 @@
     "sourceCommit": "987382f67e622915228686e9f956c6a9c9a7514c",
     "binary": "zallet-zaino",
     "backend": "zaino",
-    "nu7Compatibility": "MUST_PASS_UNFUNDED_PREFLIGHT",
+    "nu7Compatibility": "REQUIRES_INDEPENDENT_LIVE_RPC_EVIDENCE",
     "release": "https://github.com/zcash/wallet/releases/tag/zallet-v0.1.0-beta.3",
     "archives": {
       "x86_64-unknown-linux-gnu": {

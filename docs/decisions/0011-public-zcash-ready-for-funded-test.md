@@ -149,14 +149,22 @@ topology. Release archives/source commits are pinned in
 `docs/operations/public-testnet-artifacts.json`.
 
 The beta.3 release predates ZIP 259's finalized branch ID, so the artifact pin
-does not assert NU7 compatibility. The bounded preflight requires inspection
-of a v6 `FullPrivacy` fixture bound to `77190ad9` and fails closed otherwise.
-No funded ceremony may start merely because the version and checksum match.
+does not assert NU7 compatibility. Live inspection must show a v6 `FullPrivacy`
+fixture bound to `77190ad9`. The repository's JSON command is intentionally an
+offline consistency validator for operator assertions: even a valid report
+states that live compatibility is unverified and funding is unauthorized.
+Independent live Zebra/Zallet RPC evidence plus second-human review is required
+before the funded ceremony. No ceremony may start merely because a version,
+checksum, or self-authored JSON file matches.
 
 The observer no longer accepts viewing authority through `OBSERVER_UFVK`.
 Initialization uses a hidden terminal prompt or operator-controlled standard
-input, stores authority only in its private cache, and zeroizes the transient
-encoded value. Subsequent synchronization opens that imported view-only state.
+input, stores authority only in its private cache, and wraps the transient
+encoded value in a zeroizing buffer on success and error paths. Network and
+birthday work finishes before the prompt to minimize the decoded authority's
+in-process lifetime. The pinned UFVK type does not expose a documented zeroize
+guarantee, so the process remains privacy-sensitive until it exits. Subsequent
+synchronization opens the imported view-only state.
 This correction does not add funded evidence or change the public-network
 classification.
 

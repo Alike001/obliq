@@ -1,19 +1,26 @@
 import { readFile } from "node:fs/promises";
 import { assertPrivateRegularFile } from "@obliq/zcash/qualification-files";
 import {
-  evaluateUnfundedSignerPreflight,
-  type UnfundedSignerPreflightInput,
+  offlineEvidenceValidatorExitCode,
+  validateOperatorAssertedSignerEvidence,
+  type OperatorAssertedSignerEvidence,
 } from "@obliq/zcash/signer-preflight";
 
-const evidenceFile = process.env.OBLIQ_TESTNET_PREFLIGHT_FILE;
-if (!evidenceFile) throw new Error("OBLIQ_TESTNET_PREFLIGHT_FILE is required");
-await assertPrivateRegularFile(evidenceFile, "Signer preflight evidence file");
+const evidenceFile = process.env.OBLIQ_TESTNET_OPERATOR_EVIDENCE_FILE;
+if (!evidenceFile)
+  throw new Error("OBLIQ_TESTNET_OPERATOR_EVIDENCE_FILE is required");
+await assertPrivateRegularFile(
+  evidenceFile,
+  "Operator-asserted signer evidence file",
+);
 const input = parseInput(JSON.parse(await readFile(evidenceFile, "utf8")));
-const report = evaluateUnfundedSignerPreflight(input);
+const report = validateOperatorAssertedSignerEvidence(input);
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
-if (report.status !== "PASS") process.exitCode = 1;
+// A self-asserted summary never yields process success: exit 2 means the file
+// is internally consistent but operationally untrusted; exit 1 means invalid.
+process.exitCode = offlineEvidenceValidatorExitCode(report);
 
-function parseInput(value: unknown): UnfundedSignerPreflightInput {
+function parseInput(value: unknown): OperatorAssertedSignerEvidence {
   if (!value || typeof value !== "object")
     throw new Error("Signer preflight evidence is malformed");
   const item = value as Record<string, unknown>;

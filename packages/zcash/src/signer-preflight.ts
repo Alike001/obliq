@@ -16,7 +16,7 @@ export const publicTestnetPins = {
   },
 } as const;
 
-export interface UnfundedSignerPreflightInput {
+export interface OperatorAssertedSignerEvidence {
   observer: {
     network: string;
     serviceChain: string;
@@ -51,19 +51,30 @@ export interface UnfundedSignerPreflightInput {
   };
 }
 
-export interface UnfundedSignerPreflightReport {
-  status: "PASS" | "BLOCKED";
+export interface OfflineSignerEvidenceValidationReport {
+  status: "CONSISTENT_UNTRUSTED" | "REJECTED";
+  evidenceBoundary: "OPERATOR_ASSERTED_JSON";
+  liveCompatibility: "UNVERIFIED";
+  fundedCeremonyAuthorized: false;
   classification: "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST";
   expectedConsensusBranchId: string;
   checks: Record<string, boolean>;
   blockers: readonly string[];
+  operationalBlockers: readonly ["INDEPENDENT_LIVE_RPC_EVIDENCE_REQUIRED"];
 }
 
 const requiredPcztMethods = ["pczt_create", "pczt_inspect"] as const;
 
-export function evaluateUnfundedSignerPreflight(
-  input: UnfundedSignerPreflightInput,
-): UnfundedSignerPreflightReport {
+/**
+ * Validates the internal consistency of operator-authored JSON only.
+ *
+ * This function does not contact Zebra or Zallet, authenticate an RPC peer,
+ * inspect a PCZT, or establish provenance. Its result can never authorize a
+ * funded ceremony.
+ */
+export function validateOperatorAssertedSignerEvidence(
+  input: OperatorAssertedSignerEvidence,
+): OfflineSignerEvidenceValidationReport {
   const expectedZalletHashes = new Set<string>([
     publicTestnetPins.zallet.linuxAmd64ArchiveSha256,
     publicTestnetPins.zallet.linuxArm64ArchiveSha256,
@@ -114,10 +125,21 @@ export function evaluateUnfundedSignerPreflight(
         `PREFLIGHT_${name.replace(/[A-Z]/gu, (c) => `_${c}`).toUpperCase()}`,
     );
   return {
-    status: blockers.length === 0 ? "PASS" : "BLOCKED",
+    status: blockers.length === 0 ? "CONSISTENT_UNTRUSTED" : "REJECTED",
+    evidenceBoundary: "OPERATOR_ASSERTED_JSON",
+    liveCompatibility: "UNVERIFIED",
+    fundedCeremonyAuthorized: false,
     classification: "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST",
     expectedConsensusBranchId: publicTestnetPins.nu7ConsensusBranchId,
     checks,
     blockers,
+    operationalBlockers: ["INDEPENDENT_LIVE_RPC_EVIDENCE_REQUIRED"],
   };
+}
+
+/** Offline assertions deliberately never return a successful process code. */
+export function offlineEvidenceValidatorExitCode(
+  report: OfflineSignerEvidenceValidationReport,
+): 1 | 2 {
+  return report.status === "REJECTED" ? 1 : 2;
 }

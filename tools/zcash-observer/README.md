@@ -7,10 +7,14 @@ builder, signer or broadcast API.
 
 On first initialization, the UFVK is accepted through a hidden terminal prompt.
 For non-interactive secret-manager integration, `init --ufvk-stdin` reads it
-from standard input. The process never accepts it in an environment variable or
-command argument and never prints it. After import, `sync` uses only the private
-observer database. The wallet scan cache belongs outside the web application
-database. See ADR 0006 and `docs/operations/zcash-observer.md` before running it.
+from standard input. The encoded input is held in a zeroizing buffer on success
+and error paths; all network/birthday work completes before it is read. The
+pinned decoded UFVK type has no documented memory-zeroization guarantee, so the
+observer process remains privacy-sensitive until exit. The process never
+accepts the UFVK in an environment variable or command argument and never
+prints it. After import, `sync` uses only the private observer database. The
+wallet scan cache belongs outside the web application database. See ADR 0006
+and `docs/operations/zcash-observer.md` before running it.
 
 The current Z3/Zaino `0.6.0-no-tls` regtest image rejects the new Ironwood
 subtree-root enum from `zcash_client_backend 0.24.0`, so the preserved regtest

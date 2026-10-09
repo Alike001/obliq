@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  evaluateUnfundedSignerPreflight,
+  offlineEvidenceValidatorExitCode,
   publicTestnetPins,
-  type UnfundedSignerPreflightInput,
+  validateOperatorAssertedSignerEvidence,
+  type OperatorAssertedSignerEvidence,
 } from "./signer-preflight";
 
-const validInput = (): UnfundedSignerPreflightInput => ({
+const validInput = (): OperatorAssertedSignerEvidence => ({
   observer: {
     network: "testnet",
     serviceChain: "test",
@@ -40,29 +41,48 @@ const validInput = (): UnfundedSignerPreflightInput => ({
   },
 });
 
-describe("public-testnet signer preflight", () => {
-  it("accepts an exact NU7, pinned, zallet-zaino unfunded preflight", () => {
-    expect(evaluateUnfundedSignerPreflight(validInput())).toMatchObject({
-      status: "PASS",
+describe("offline public-testnet signer evidence validation", () => {
+  it("validates internally consistent NU7 zallet-zaino assertions without treating them as live evidence", () => {
+    expect(validateOperatorAssertedSignerEvidence(validInput())).toMatchObject({
+      status: "CONSISTENT_UNTRUSTED",
+      evidenceBoundary: "OPERATOR_ASSERTED_JSON",
+      liveCompatibility: "UNVERIFIED",
+      fundedCeremonyAuthorized: false,
       classification: "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST",
       blockers: [],
+      operationalBlockers: ["INDEPENDENT_LIVE_RPC_EVIDENCE_REQUIRED"],
     });
+  });
+
+  it("does not authorize funding from fabricated but schema-valid assertions", () => {
+    const fabricated = validInput();
+    const report = validateOperatorAssertedSignerEvidence(fabricated);
+    expect(report.status).toBe("CONSISTENT_UNTRUSTED");
+    expect(report.fundedCeremonyAuthorized).toBe(false);
+    expect(report.liveCompatibility).toBe("UNVERIFIED");
+    expect(report.operationalBlockers).toContain(
+      "INDEPENDENT_LIVE_RPC_EVIDENCE_REQUIRED",
+    );
+    expect(offlineEvidenceValidatorExitCode(report)).toBe(2);
+    expect(offlineEvidenceValidatorExitCode(report)).not.toBe(0);
   });
 
   it("rejects the stale NU6.3 consensus branch after NU7 activation", () => {
     const input = validInput();
     input.observer.activeConsensusBranchId = "37a5165b";
-    expect(evaluateUnfundedSignerPreflight(input)).toMatchObject({
-      status: "BLOCKED",
+    const report = validateOperatorAssertedSignerEvidence(input);
+    expect(report).toMatchObject({
+      status: "REJECTED",
       blockers: ["PREFLIGHT_CONSENSUS_BRANCH"],
     });
+    expect(offlineEvidenceValidatorExitCode(report)).toBe(1);
   });
 
   it("rejects a PCZT fixture bound to the stale NU6.3 branch", () => {
     const input = validInput();
     input.rpc.inspectedConsensusBranchId = "37a5165b";
-    expect(evaluateUnfundedSignerPreflight(input)).toMatchObject({
-      status: "BLOCKED",
+    expect(validateOperatorAssertedSignerEvidence(input)).toMatchObject({
+      status: "REJECTED",
       blockers: ["PREFLIGHT_PCZT_INSPECTION_MATCHES_NU7"],
     });
   });
@@ -72,8 +92,8 @@ describe("public-testnet signer preflight", () => {
     input.zallet.binaryName = "zallet-zebra";
     input.zallet.backend = "zebra";
     input.zallet.archiveSha256 = "00".repeat(32);
-    const report = evaluateUnfundedSignerPreflight(input);
-    expect(report.status).toBe("BLOCKED");
+    const report = validateOperatorAssertedSignerEvidence(input);
+    expect(report.status).toBe("REJECTED");
     expect(report.blockers).toContain("PREFLIGHT_ZALLET_PINNED");
     expect(report.blockers).toContain("PREFLIGHT_ZAINO_BACKEND");
   });
@@ -81,8 +101,8 @@ describe("public-testnet signer preflight", () => {
   it("cannot pass if proving, signing, or broadcast was attempted", () => {
     const input = validInput();
     input.rpc.signingAttempted = true;
-    expect(evaluateUnfundedSignerPreflight(input)).toMatchObject({
-      status: "BLOCKED",
+    expect(validateOperatorAssertedSignerEvidence(input)).toMatchObject({
+      status: "REJECTED",
       blockers: ["PREFLIGHT_NO_EXECUTION_ATTEMPT"],
     });
   });

@@ -37,7 +37,7 @@ use zcash_protocol::{
     consensus::{BlockHeight, BranchId, Network, NetworkType, NetworkUpgrade, Parameters},
     local_consensus::LocalNetwork,
 };
-use zeroize::Zeroize;
+use zeroize::Zeroizing;
 
 #[cfg(unix)]
 use std::{
@@ -222,16 +222,14 @@ fn read_viewing_key(
     params: &ObserverParameters,
     read_from_stdin: bool,
 ) -> Result<UnifiedFullViewingKey, Box<dyn Error>> {
-    let mut encoded = if read_from_stdin {
-        let mut value = String::new();
+    let encoded = if read_from_stdin {
+        let mut value = Zeroizing::new(String::new());
         io::stdin().read_line(&mut value)?;
         value
     } else {
         read_hidden_terminal_line("Observer UFVK (hidden): ")?
     };
-    let decoded = UnifiedFullViewingKey::decode(params, encoded.trim());
-    encoded.zeroize();
-    decoded.map_err(Into::into)
+    UnifiedFullViewingKey::decode(params, encoded.trim()).map_err(Into::into)
 }
 
 #[cfg(unix)]
@@ -248,7 +246,7 @@ fn set_terminal_echo(tty: &File, enabled: bool) -> io::Result<()> {
 }
 
 #[cfg(unix)]
-fn read_hidden_terminal_line(prompt: &str) -> io::Result<String> {
+fn read_hidden_terminal_line(prompt: &str) -> io::Result<Zeroizing<String>> {
     struct EchoGuard(File);
     impl Drop for EchoGuard {
         fn drop(&mut self) {
@@ -257,12 +255,11 @@ fn read_hidden_terminal_line(prompt: &str) -> io::Result<String> {
     }
 
     let mut tty = OpenOptions::new().read(true).write(true).open("/dev/tty")?;
-    let guard_file = tty.try_clone()?;
+    let guard = EchoGuard(tty.try_clone()?);
     set_terminal_echo(&tty, false)?;
-    let guard = EchoGuard(guard_file);
     tty.write_all(prompt.as_bytes())?;
     tty.flush()?;
-    let mut value = String::new();
+    let mut value = Zeroizing::new(String::new());
     BufReader::new(tty.try_clone()?).read_line(&mut value)?;
     tty.write_all(b"\n")?;
     drop(guard);
@@ -270,7 +267,7 @@ fn read_hidden_terminal_line(prompt: &str) -> io::Result<String> {
 }
 
 #[cfg(not(unix))]
-fn read_hidden_terminal_line(_prompt: &str) -> io::Result<String> {
+fn read_hidden_terminal_line(_prompt: &str) -> io::Result<Zeroizing<String>> {
     Err(io::Error::new(
         io::ErrorKind::Unsupported,
         "hidden UFVK input requires a Unix terminal; use operator-controlled stdin",
@@ -479,7 +476,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     if command == "init" {
         if wallet.get_account_ids()?.is_empty() {
-            let ufvk = read_viewing_key(&params, ufvk_stdin)?;
             let tip = client
                 .get_latest_block(Request::new(ChainSpec {}))
                 .await?
@@ -507,6 +503,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 tree,
                 Some(BlockHeight::from_u32(birthday_height)),
             )?;
+            // Resolve all fallible network/birthday inputs before reading the
+            // privacy-sensitive authority, then keep its decoded lifetime to
+            // the immediate import operation.
+            let ufvk = read_viewing_key(&params, ufvk_stdin)?;
             wallet.import_account_ufvk(
                 "obliq-view-only",
                 &ufvk,

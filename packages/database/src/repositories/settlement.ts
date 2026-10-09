@@ -44,6 +44,7 @@ const executionRoles: readonly MembershipRole[] = [
   "SIGNER",
 ];
 const txidPattern = /^[0-9a-f]{64}$/u;
+const controlCharacterPattern = /[\u0000-\u001f\u007f]/u;
 
 function requireRole(role: MembershipRole, allowed: readonly MembershipRole[]) {
   if (!allowed.includes(role))
@@ -573,8 +574,12 @@ export async function recordExternalSigning(
         !input.signedTxHash ||
         !txidPattern.test(input.signedTxHash) ||
         !input.signerVersion ||
+        input.signerVersion !== input.signerVersion.trim() ||
+        input.signerVersion.length > 64 ||
+        controlCharacterPattern.test(input.signerVersion) ||
         input.networkFeeZat === undefined ||
         input.networkFeeZat <= 0n ||
+        input.networkFeeZat > execution.intent.zatoshiAmount ||
         input.networkFeeZat > 2_100_000_000_000_000n
       )
         throw new Error("A sanitized external signing receipt is required");

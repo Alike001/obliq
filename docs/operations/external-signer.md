@@ -34,7 +34,8 @@ and, after broadcast, independent UFVK decryption.
 
 The pinned v0.1.0-beta.3 artifact predates the finalized NU7 testnet branch ID.
 It is therefore an artifact candidate, not sufficient compatibility evidence.
-Before funding, the bounded unfunded preflight in
+Before funding, independently collected live RPC evidence described in
 `public-testnet-verification.md` must demonstrate a version-6 PCZT bound to the
-live testnet NU7 branch `77190ad9`. The default co-located `zebra` backend and
-any PCZT carrying the earlier NU6.3 branch are rejected.
+live testnet NU7 branch `77190ad9`. The offline JSON validator checks operator
+assertions only and can never authorize funding. The default co-located `zebra`
+backend and any PCZT carrying the earlier NU6.3 branch are rejected.
