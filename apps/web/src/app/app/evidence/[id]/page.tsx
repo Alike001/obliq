@@ -81,6 +81,8 @@ export default async function EvidenceDetailPage({
             The stored content no longer matches its hash. Treat it as
             untrusted: do not share this package, rely on it or use it as proof.
             The JSON download is refused while the check fails.
+            The stored content no longer matches its hash. Do not share this
+            package or rely on it.
           </Notice>
         )}
         <div className="mt-7">
