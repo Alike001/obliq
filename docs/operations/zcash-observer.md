@@ -1,6 +1,6 @@
 # Zcash observer operations
 
-Status: **IMPLEMENTED for isolated regtest; public-network operation BLOCKED**
+Status: **REGTEST VERIFIED; PUBLIC NETWORK READY FOR FUNDED TEST**
 
 ## Components
 
@@ -16,24 +16,38 @@ Status: **IMPLEMENTED for isolated regtest; public-network operation BLOCKED**
 
 The observer interface contains status and observe operations only. It contains
 no transaction builder, proposal, signer, seed import, or broadcaster.
-The current process adapter accepts only `regtest`; `testnet` or `mainnet`
-returns `MISCONFIGURED / PUBLIC_NETWORK_UNAVAILABLE` without starting the
-observer. Public-network operation remains gated on the compatibility and
-operational work below.
+The process adapter accepts `regtest`, `testnet`, or `mainnet`, passes the
+selection to the sidecar, and rejects any mismatch between application,
+sidecar, and data-service chain identity. Runtime policy permits testnet only
+with `PUBLIC_NETWORK_READY_FOR_FUNDED_TEST` or stronger status. Mainnet remains
+blocked until `PUBLIC_NETWORK_VERIFIED` is backed by real evidence.
 
-## Secret injection
+## Private initialization
 
-Supply `OBSERVER_UFVK` to the isolated observer process from a production secret
-manager. Do not put it in `.env`, process arguments, application logs, proof
-output, screenshots, browser state, PostgreSQL, or CI variables available to
-untrusted jobs. Restrict and encrypt the SQLite scan cache and backups because
-decrypted transaction metadata can compromise commercial privacy.
+Import the UFVK once into a new isolated observer database using the observer's
+hidden terminal prompt. For a non-interactive operator-controlled secret
+manager, pipe it on standard input with `init --ufvk-stdin`; never put it in an
+environment variable, process argument, `.env`, application log, proof output,
+screenshot, browser state, PostgreSQL, or CI variable. The `sync` command reads
+the imported account from the private cache and accepts no viewing key.
+
+The encoded input is held in a zeroizing buffer even when reading or decoding
+fails, and remote birthday data is resolved before the prompt. The decoded UFVK
+type in the pinned library does not document in-memory zeroization, so keep the
+observer host isolated and terminate the initialization process promptly after
+import; do not describe this as a complete process-memory erasure guarantee.
+
+The application rejects `OBSERVER_UFVK` in every runtime mode. Restrict the
+SQLite cache to its dedicated observer identity and encrypt its volume and
+backups because both the imported viewing authority and decrypted transaction
+metadata can compromise commercial privacy.
 
 Non-secret settings:
 
 ```text
 OBSERVER_ENDPOINT=https://private-lightwalletd.example
 OBSERVER_DB=/var/lib/obliq-observer/wallet.sqlite
+OBSERVER_NETWORK=testnet
 ```
 
 After creating tenant-scoped observation targets, operators run
@@ -49,14 +63,18 @@ and fully-scanned heights. If either the node or observer is unavailable, or the
 scan lags, record infrastructure status and leave the last financial conclusion
 unchanged.
 
-The isolated tracer used Zaino `0.6.0-no-tls`. Current Zaino 0.10.1 includes the
-Ironwood subtree-root correction introduced in Zaino Serve 0.7.0. Phase 6 did
-not silently inherit that result: Obliq still uses regtest `LocalNetwork` and
-has not qualified public birthdays, sync, restart or reorg behavior. ADR 0010
-therefore retains `PUBLIC_NETWORK_BLOCKED`. Do not deploy an h2c Zaino endpoint
-publicly; a remote data service requires authenticated TLS/private transport.
+The isolated tracer used Zaino `0.6.0-no-tls`. Public networks now use the
+maintained librustzcash sync driver, which imports Sapling, Orchard, and Ironwood
+subtree roots and verifies recent ranges before scanning. On a continuity error
+it truncates and rescans. The 2026-10-07 public-testnet qualification scanned
+heights 4,472,946 through 4,472,968 from authenticated tree state and ended
+fully synchronized. See ADR 0011.
 
-The sidecar returns `network: regtest`; the process adapter rejects a mismatch.
+The public compatibility endpoint was not Obliq-operated. Production must use
+an owned Zebra/Zaino stack over private authenticated TLS; do not expose Zaino
+h2c or Zebra/lightwalletd-style unauthenticated RPC publicly.
+
+The sidecar returns its exact network; the process adapter rejects a mismatch.
 Its SQLite file is set owner-only on Unix after a scan. Production must also use
 an encrypted volume and encrypted restricted backups. Corruption or restart
 failure reports observer UNAVAILABLE and preserves the last financial result.
@@ -77,3 +95,16 @@ is an exception. `UNAVAILABLE` describes infrastructure, not paid/unpaid state.
 Use the official Z3 regtest guide and ADR 0006. The external sender must remain
 outside Obliq. Export only its recipient account UFVK to the observer. Never
 import a mnemonic or spending key to simplify the demonstration.
+
+## Public funded-test boundary
+
+Do not fund the deterministic key used for compatibility qualification. A
+funded test requires a fresh external testnet wallet account with its mnemonic
+backed up outside Obliq. Export only the account UFVK to the observer, initialize
+the observer from a birthday preceding the payment, and send to the
+observer-derived `utest1...` receiver from a separate externally controlled
+wallet. Obliq must never receive either wallet's mnemonic or spending key.
+
+The complete preparation, external-wallet ceremony, fee boundary, and
+sanitized verification procedure are in
+[Public testnet settlement verification](./public-testnet-verification.md).

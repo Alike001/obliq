@@ -38,6 +38,8 @@ export default async function SettlementDetail({
   const record = await getSettlement(getDatabase(), tenant.organizationId, id);
   if (!record) notFound();
   const { settlement, intent, quote, obligation, vendor } = record;
+  if (intent.network !== "regtest" && intent.network !== "testnet")
+    throw new Error("Settlement intent network is not eligible for review");
   const observations = await listObligationObservations(
     getDatabase(),
     tenant.organizationId,
@@ -46,7 +48,7 @@ export default async function SettlementDetail({
   const handoff = createExternalSignerHandoff({
     intentId: intent.id,
     intentHash: intent.intentHash,
-    network: "regtest",
+    network: intent.network,
     receiver: intent.destinationReceiver,
     amountZat: intent.zatoshiAmount,
     quoteExpiresAt: intent.quoteExpiresAt,
@@ -149,7 +151,14 @@ export default async function SettlementDetail({
           <section className="card p-6">
             <h2 className="font-semibold">What is being authorized</h2>
             <dl className="mt-6 grid gap-5 sm:grid-cols-2">
-              <Detail label="Network" value="Regtest, not a public network" />
+              <Detail
+                label="Network"
+                value={
+                  intent.network === "testnet"
+                    ? "ZCASH PUBLIC TESTNET — test funds only"
+                    : "REGTEST — not public network"
+                }
+              />
               <Detail
                 label="Quote"
                 value={`${quote.source} · expires ${quote.expiresAt.toLocaleString()}`}
@@ -166,6 +175,12 @@ export default async function SettlementDetail({
                 label="Approval binding"
                 value={`obligation v${intent.obligationVersion} · decision ${intent.policyDecisionId.slice(0, 8)}…`}
               />
+              {settlement.networkFeeZat && (
+                <Detail
+                  label="Inspected network fee"
+                  value={`${settlement.networkFeeZat.toString()} zatoshis`}
+                />
+              )}
             </dl>
             <Notice
               tone="hold"
@@ -233,7 +248,7 @@ export default async function SettlementDetail({
                   settlement.id,
                   settlement.signerRequestId,
                 )}
-                className="mt-5 grid gap-3 md:grid-cols-3"
+                className="mt-5 grid gap-3 md:grid-cols-2"
               >
                 <Field label="Transaction ID" hint="64 hexadecimal characters.">
                   <Input
@@ -261,7 +276,20 @@ export default async function SettlementDetail({
                 <Field label="Zallet version">
                   <Input name="signerVersion" required autoComplete="off" />
                 </Field>
-                <div className="md:col-span-3">
+                <Field
+                  label="Inspected network fee (zatoshis)"
+                  hint="Whole zatoshis, as shown in the Zallet inspection."
+                >
+                  <Input
+                    name="networkFeeZat"
+                    inputMode="numeric"
+                    pattern="[1-9][0-9]*"
+                    required
+                    autoComplete="off"
+                    className="font-mono"
+                  />
+                </Field>
+                <div className="md:col-span-2">
                   <SubmitButton pendingLabel="Recording…">
                     Record external authorization
                   </SubmitButton>

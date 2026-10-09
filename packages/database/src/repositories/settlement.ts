@@ -44,6 +44,7 @@ const executionRoles: readonly MembershipRole[] = [
   "SIGNER",
 ];
 const txidPattern = /^[0-9a-f]{64}$/u;
+const controlCharacterPattern = /[\u0000-\u001f\u007f]/u;
 
 function requireRole(role: MembershipRole, allowed: readonly MembershipRole[]) {
   if (!allowed.includes(role))
@@ -136,13 +137,35 @@ async function currentAuthorization(
   return current;
 }
 
-export async function createControlledRegtestQuote(
+type QualificationNetwork = "regtest" | "testnet";
+
+function quoteSourceForNetwork(network: QualificationNetwork) {
+  if (network === "testnet")
+    return { source: "TESTNET_FIXED", sourceKind: "CONTROLLED_TESTNET" };
+  if (network === "regtest")
+    return { source: "REGTEST_FIXED", sourceKind: "CONTROLLED_REGTEST" };
+  throw new Error("Network is not eligible for shielded qualification");
+}
+
+function networkForQuoteSource(sourceKind: string): QualificationNetwork {
+  if (sourceKind === "CONTROLLED_REGTEST") return "regtest";
+  if (sourceKind === "CONTROLLED_TESTNET") return "testnet";
+  throw new Error("Quote source is not eligible for shielded qualification");
+}
+
+function requireQualificationNetwork(network: string): QualificationNetwork {
+  if (network === "regtest" || network === "testnet") return network;
+  throw new Error("Settlement intent network is not eligible for execution");
+}
+
+export async function createControlledQualificationQuote(
   db: Database,
   actor: TenantActor,
   input: {
     obligationId: string;
     zatoshiAmount: bigint;
     idempotencyKey: string;
+    network: QualificationNetwork;
     expiresAt?: Date;
   },
 ) {
@@ -173,6 +196,7 @@ export async function createControlledRegtestQuote(
       input.expiresAt ?? new Date(quotedAt.getTime() + 15 * 60_000);
     if (expiresAt <= quotedAt)
       throw new Error("Quote expiry must be in the future");
+    const quoteSource = quoteSourceForNetwork(input.network);
     const [quote] = await tx
       .insert(settlementQuotes)
       .values({
@@ -182,8 +206,8 @@ export async function createControlledRegtestQuote(
         businessCurrency: current.obligation.currency,
         businessAmountMinor: current.obligation.amountMinor,
         zatoshiAmount: input.zatoshiAmount,
-        source: "REGTEST_FIXED",
-        sourceKind: "CONTROLLED_REGTEST",
+        source: quoteSource.source,
+        sourceKind: quoteSource.sourceKind,
         idempotencyKey: input.idempotencyKey,
         quotedAt,
         expiresAt,
@@ -202,6 +226,22 @@ export async function createControlledRegtestQuote(
       },
     });
     return quote;
+  });
+}
+
+export function createControlledRegtestQuote(
+  db: Database,
+  actor: TenantActor,
+  input: {
+    obligationId: string;
+    zatoshiAmount: bigint;
+    idempotencyKey: string;
+    expiresAt?: Date;
+  },
+) {
+  return createControlledQualificationQuote(db, actor, {
+    ...input,
+    network: "regtest",
   });
 }
 
@@ -255,6 +295,7 @@ export async function prepareSettlementIntent(
       quote.businessAmountMinor !== current.obligation.amountMinor
     )
       throw new Error("Quote no longer matches the obligation");
+    const network = networkForQuoteSource(quote.sourceKind);
     const intentId = randomUUID();
     const memoReference = memoReferenceForIntent(intentId);
     const binding: SettlementIntentBinding = {
@@ -274,13 +315,13 @@ export async function prepareSettlementIntent(
       quoteExpiresAt: quote.expiresAt.toISOString(),
       amountZat: quote.zatoshiAmount.toString(),
       memoReference,
-      network: "regtest",
+      network,
       privacyMode: "SHIELDED",
       intentVersion: 1,
     };
     const intentHash = settlementIntentHash(binding);
     const paymentRequestUri = createZip321PaymentRequest({
-      network: "regtest",
+      network,
       receiver: current.destination.receiver,
       amountZat: quote.zatoshiAmount,
       memoReference,
@@ -303,7 +344,7 @@ export async function prepareSettlementIntent(
         quoteSource: quote.source,
         quotedAt: quote.quotedAt,
         quoteExpiresAt: quote.expiresAt,
-        network: "regtest",
+        network,
         privacyMode: "SHIELDED",
         memoReferenceHash: memoReferenceHash(memoReference),
         paymentRequestUri,
@@ -429,6 +470,11 @@ async function revalidateExecution(
     throw new Error(
       "Settlement intent no longer matches current authorization",
     );
+  if (
+    requireQualificationNetwork(execution.intent.network) !==
+    networkForQuoteSource(execution.quote.sourceKind)
+  )
+    throw new Error("Settlement intent network does not match its quote");
 }
 
 export async function requestExternalSignature(
@@ -482,7 +528,7 @@ export async function requestExternalSignature(
     return createExternalSignerHandoff({
       intentId: execution.intent.id,
       intentHash: execution.intent.intentHash,
-      network: "regtest",
+      network: requireQualificationNetwork(execution.intent.network),
       receiver: execution.intent.destinationReceiver,
       amountZat: execution.intent.zatoshiAmount,
       quoteExpiresAt: execution.intent.quoteExpiresAt,
@@ -499,6 +545,7 @@ export async function recordExternalSigning(
     outcome: "AUTHORIZED" | "REJECTED" | "UNAVAILABLE" | "FAILED";
     signerType?: "ZALLET_PCZT";
     signerVersion?: string;
+    networkFeeZat?: bigint;
     txid?: string;
     signedTxHash?: string;
     errorCode?: string;
@@ -526,13 +573,21 @@ export async function recordExternalSigning(
         !txidPattern.test(input.txid) ||
         !input.signedTxHash ||
         !txidPattern.test(input.signedTxHash) ||
-        !input.signerVersion
+        !input.signerVersion ||
+        input.signerVersion !== input.signerVersion.trim() ||
+        input.signerVersion.length > 64 ||
+        controlCharacterPattern.test(input.signerVersion) ||
+        input.networkFeeZat === undefined ||
+        input.networkFeeZat <= 0n ||
+        input.networkFeeZat > execution.intent.zatoshiAmount ||
+        input.networkFeeZat > 2_100_000_000_000_000n
       )
         throw new Error("A sanitized external signing receipt is required");
       if (execution.settlement.txRefPrivate) {
         if (
           execution.settlement.txRefPrivate !== input.txid ||
-          execution.settlement.signedTxHash !== input.signedTxHash
+          execution.settlement.signedTxHash !== input.signedTxHash ||
+          execution.settlement.networkFeeZat !== input.networkFeeZat
         )
           throw new Error("Conflicting signing receipt");
         return execution.settlement;
@@ -552,6 +607,7 @@ export async function recordExternalSigning(
           state: "SIGNED",
           signerType: "ZALLET_PCZT",
           signerVersion: input.signerVersion,
+          networkFeeZat: input.networkFeeZat,
           signedTxHash: input.signedTxHash,
           txRefPrivate: input.txid,
           signedAt: new Date(),
@@ -571,13 +627,17 @@ export async function recordExternalSigning(
         payload: {
           signerType: "ZALLET_PCZT",
           signerVersion: input.signerVersion,
+          networkFeeZat: input.networkFeeZat.toString(),
         },
       });
       await appendAuditEvent(tx, actor, {
         eventType: "TRANSACTION_SIGNED",
         subjectType: "SETTLEMENT",
         subjectId: input.settlementId,
-        payload: { txid: input.txid },
+        payload: {
+          txid: input.txid,
+          networkFeeZat: input.networkFeeZat.toString(),
+        },
       });
       return stored;
     }

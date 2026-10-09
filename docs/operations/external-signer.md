@@ -8,12 +8,15 @@ wallet password, mnemonic or spending key.
 The operator boundary must:
 
 1. accept a request only over an authenticated encrypted private channel;
-2. verify schema, regtest network, quote expiry and intent fingerprint;
-3. construct the PCZT in an isolated Zallet;
+2. verify schema, the exact qualified regtest/testnet network, quote expiry and
+   intent fingerprint;
+3. construct the PCZT in an isolated `zallet-zaino` process configured with
+   backend `zaino` and a private Zebra JSON-RPC endpoint;
 4. compare Zallet inspection output with the Obliq human review screen;
 5. require an explicit human authorization on the signer side;
 6. prove/sign/extract/broadcast outside the application;
-7. return only request ID, signer/version, txid and signed-artifact hash;
+7. return only request ID, signer/version, txid, signed-artifact hash and the
+   explicitly inspected positive network fee in integer zatoshis;
 8. reject replay or a conflicting request ID;
 9. redact RPC credentials, PCZT, raw transaction and wallet material from logs.
 
@@ -22,3 +25,17 @@ private host reached through mutually authenticated TLS/SSH, host firewalling,
 process isolation and a dedicated operator account. Compromise of both Obliq
 and the signer can substitute a payment; independent review is the mitigation,
 not a claim that the app can cryptographically prevent a compromised signer.
+
+The sanitized receipt's fee is persisted and included in chained audit
+metadata. Zallet inspection metadata is still creator-recorded rather than
+cryptographically verified until extraction. In v0.1.0-beta.3, inspection does
+not reveal memo plaintext; memo correctness is established by handoff custody
+and, after broadcast, independent UFVK decryption.
+
+The pinned v0.1.0-beta.3 artifact predates the finalized NU7 testnet branch ID.
+It is therefore an artifact candidate, not sufficient compatibility evidence.
+Before funding, independently collected live RPC evidence described in
+`public-testnet-verification.md` must demonstrate a version-6 PCZT bound to the
+live testnet NU7 branch `77190ad9`. The offline JSON validator checks operator
+assertions only and can never authorize funding. The default co-located `zebra`
+backend and any PCZT carrying the earlier NU6.3 branch are rejected.

@@ -98,7 +98,7 @@ describe("runtime security configuration", () => {
     ).toThrow("must not configure DATABASE_URL");
     expect(() =>
       parseRuntimeSecurityConfig({ ...preview, OBSERVER_UFVK: "secret" }),
-    ).toThrow("must not configure OBSERVER_UFVK");
+    ).toThrow("OBSERVER_UFVK is forbidden");
     expect(() =>
       parseRuntimeSecurityConfig({
         ...preview,
@@ -135,11 +135,36 @@ describe("runtime security configuration", () => {
       parseRuntimeSecurityConfig({
         NODE_ENV: "test",
         OBLIQ_SESSION_MODE: "development",
-        OBLIQ_ZCASH_NETWORK: "regtest",
-        OBSERVER_NETWORK: "regtest",
+        OBLIQ_ZCASH_NETWORK: "mainnet",
+        OBSERVER_NETWORK: "mainnet",
+        OBLIQ_PUBLIC_NETWORK_STATUS: "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST",
+      }),
+    ).toThrow("Mainnet remains blocked");
+    expect(() =>
+      parseRuntimeSecurityConfig({
+        NODE_ENV: "test",
+        OBLIQ_SESSION_MODE: "development",
+        OBLIQ_ZCASH_NETWORK: "testnet",
+        OBSERVER_NETWORK: "testnet",
         OBLIQ_PUBLIC_NETWORK_STATUS: "PUBLIC_NETWORK_VERIFIED",
       }),
-    ).toThrow("cannot claim");
+    ).toThrow("has not verified");
+  });
+
+  it("allows an explicitly qualified testnet observer without claiming verification", () => {
+    expect(
+      parseRuntimeSecurityConfig({
+        NODE_ENV: "test",
+        OBLIQ_SESSION_MODE: "development",
+        OBLIQ_ZCASH_NETWORK: "testnet",
+        OBSERVER_NETWORK: "testnet",
+        OBLIQ_PUBLIC_NETWORK_STATUS: "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST",
+      }),
+    ).toMatchObject({
+      network: "testnet",
+      observerNetwork: "testnet",
+      publicNetworkStatus: "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST",
+    });
   });
 });
 

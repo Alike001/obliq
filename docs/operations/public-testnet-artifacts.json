@@ -1,0 +1,32 @@
+{
+  "schema": "obliq.public-testnet-artifacts.v1",
+  "reviewedAt": "2026-10-08",
+  "network": "testnet",
+  "nu7": {
+    "activationHeight": 4465026,
+    "consensusBranchId": "77190ad9",
+    "source": "https://zips.z.cash/zip-0259"
+  },
+  "zebra": {
+    "version": "7.0.0-rc.0",
+    "sourceCommit": "6d1e414d6f55e4180d0e47baaa934bf97d5b4fec",
+    "release": "https://github.com/ZcashFoundation/zebra/releases/tag/v7.0.0-rc.0",
+    "verification": "Verify the official release checksum and Sigstore bundle before installation. The immutable source commit is the acceptance pin."
+  },
+  "zallet": {
+    "version": "0.1.0-beta.3",
+    "sourceCommit": "987382f67e622915228686e9f956c6a9c9a7514c",
+    "binary": "zallet-zaino",
+    "backend": "zaino",
+    "nu7Compatibility": "REQUIRES_INDEPENDENT_LIVE_RPC_EVIDENCE",
+    "release": "https://github.com/zcash/wallet/releases/tag/zallet-v0.1.0-beta.3",
+    "archives": {
+      "x86_64-unknown-linux-gnu": {
+        "sha256": "1df2398df016ae6e9a1cba3f8ef0cc86ca0d7b48a0934b34df6f68114ebe9306"
+      },
+      "aarch64-unknown-linux-gnu": {
+        "sha256": "8ccce997a4e89446ee7be214c603d955083bbe58d06ef11df20a970f81b139ac"
+      }
+    }
+  }
+}

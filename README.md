@@ -2,7 +2,10 @@
 
 Obliq is private financial operations software for crypto-native organizations. It is designed to help finance teams capture vendor and contractor obligations, apply deterministic controls and human approvals, settle privately with Zcash, reconcile settlement to the original business object, and create controlled financial evidence—without surrendering treasury spending authority.
 
-> **Phase 6 status:** the full lifecycle now has production-capable OIDC/session, distributed abuse-control, private quarantined storage/scanning, runtime network, redacted logging and deployment boundaries. This is architecture, not configured provider infrastructure. Zcash settlement remains verified only on isolated regtest; public-network operation remains blocked.
+> **Current status:** the full lifecycle remains verified on isolated regtest.
+> The UFVK-only observer has now completed a real public-testnet TLS sync with
+> current Ironwood subtree data and is `PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`.
+> No public payment has been observed, and mainnet remains blocked.
 
 ## The problem
 
@@ -12,7 +15,7 @@ The product lifecycle is **Capture → Control → Settle → Reconcile → Prov
 
 ## Why Zcash
 
-Shielded Zcash settlement is the privacy primitive that keeps the central promise meaningful. ZIP-321 is the canonical payment-request format. Phase 4 proved an external Zallet PCZT signing path and the Phase-3 read-only observer reconciled it end to end on isolated regtest. Public-network operation remains blocked. There is no transparent fallback presented as private.
+Shielded Zcash settlement is the privacy primitive that keeps the central promise meaningful. ZIP-321 is the canonical payment-request format. Phase 4 proved an external Zallet PCZT signing path and the Phase-3 read-only observer reconciled it end to end on isolated regtest. Public testnet synchronization is now ready for an externally funded observation test; it is not yet public-network verification. There is no transparent fallback presented as private.
 
 ## Repository
 
@@ -115,7 +118,8 @@ it is not a product or production deployment.
 | Versioned policies, approvals and readiness         | IMPLEMENTED           |
 | UFVK-only shielded observation and reconciliation   | IMPLEMENTED (regtest) |
 | External Zallet PCZT signing/broadcast              | IMPLEMENTED (regtest) |
-| Public-network observer/execution operations        | BLOCKED               |
+| Public-network observer synchronization             | READY FOR FUNDED TEST |
+| Public-network settlement/execution                 | BLOCKED               |
 | Controlled evidence, JSON and external verification | IMPLEMENTED           |
 | Native PDF evidence generation                      | PLANNED               |
 
@@ -123,6 +127,6 @@ The canonical vocabulary is `IMPLEMENTED`, `SEEDED`, `PLANNED`, `BLOCKED`, and `
 
 ## Roadmap and limits
 
-Phase 6 hardens Capture → Control → Settle → Reconcile → Prove without adding a domain. Public-network qualification remains blocked and no Phase-7 polish is included. See [implementation status](docs/architecture/implementation-status.md), [deployment](docs/operations/deployment.md), [observer operations](docs/operations/zcash-observer.md), and [ADRs](docs/decisions) for material decisions.
+Phase 6 hardens Capture → Control → Settle → Reconcile → Prove without adding a domain. Issue #5 has qualified public testnet synchronization for a funded test, but public observation and settlement remain unverified and no Phase-7 polish is included. See [implementation status](docs/architecture/implementation-status.md), [deployment](docs/operations/deployment.md), [observer operations](docs/operations/zcash-observer.md), and [ADRs](docs/decisions) for material decisions.
 
 The authoritative product source is `obliq-context/Obliq_Master_Context.docx`; implementation-critical Zcash notes under `obliq-context/implementation-reference/` take precedence over the broader research archive. Context files are retained unchanged.
