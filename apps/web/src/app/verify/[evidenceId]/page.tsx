@@ -140,20 +140,38 @@ export default async function VerifyEvidencePage({
                   integrityValid={result.integrityValid}
                 />
               </div>
-              <div className="mt-5 flex flex-wrap gap-3 print:hidden">
-                <a
-                  href={`/verify/${evidenceId}/artifact.json`}
-                  className="button button-dark"
+              {result.integrityValid ? (
+                <>
+                  <div className="mt-5 flex flex-wrap gap-3 print:hidden">
+                    <a
+                      href={`/verify/${evidenceId}/artifact.json`}
+                      className="button button-dark"
+                    >
+                      Download canonical JSON
+                    </a>
+                  </div>
+                  <p className="text-muted mt-3 max-w-[68ch] text-xs leading-5 print:hidden">
+                    The JSON file is the canonical artifact: the receipt above
+                    is drawn from it and adds nothing to it. PDF generation is
+                    not implemented; your browser&apos;s print command can print
+                    this page.
+                  </p>
+                </>
+              ) : (
+                // The JSON route already refuses a package that fails its
+                // integrity check, so no download is offered for one.
+                <Notice
+                  tone="stop"
+                  title="Untrusted content. Do not use it as proof"
+                  className="mt-5"
                 >
-                  Download canonical JSON
-                </a>
-              </div>
-              <p className="text-muted mt-3 max-w-[68ch] text-xs leading-5 print:hidden">
-                The JSON file is the canonical artifact: the receipt above is
-                drawn from it and adds nothing to it. PDF generation is not
-                implemented; your browser&apos;s print command can print this
-                page.
-              </p>
+                  The receipt above failed its integrity check. Do not rely on
+                  it, forward it, print it or keep it as evidence. The JSON
+                  download is refused while the check fails, so no file is
+                  offered here. Ask the issuer for a new package through a
+                  channel you already trust.
+                </Notice>
+              )}
             </>
           )}
         </div>

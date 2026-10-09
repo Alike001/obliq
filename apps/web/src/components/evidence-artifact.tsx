@@ -44,6 +44,16 @@ export function EvidenceArtifact({
           <StateTag state={status} />
         </div>
       </header>
+      {!integrityValid && (
+        // On the receipt itself, so it travels with a print or a screenshot.
+        <div className="bg-stop-bg text-stop flex items-start gap-3 border-b px-6 py-4 md:px-8">
+          <span className="glyph glyph-stop mt-[0.3rem]" aria-hidden />
+          <p className="text-sm font-semibold">
+            Untrusted content. This receipt failed its integrity check, so
+            nothing below may be used as proof of payment or of anything else.
+          </p>
+        </div>
+      )}
       <div className="p-6 md:p-8">
         <h3 className="fact-label">
           Disclosed by the issuer ({artifact.disclosedFields.length}{" "}

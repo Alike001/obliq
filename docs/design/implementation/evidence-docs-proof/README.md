@@ -114,11 +114,54 @@ Desktop is 1440px, mobile is 390px.
 The records shown are sample data in a local database that existed only for
 these checks. No real payment, settlement or evidence was issued.
 
+## Integrity failure on the public page
+
+Review feedback asked for an explicit warning beside the receipt and the
+download action. Three things now say it, without any change to what the
+server discloses or does:
+
+- The verdict at the top of the page, as before.
+- A red band on the receipt itself: "Untrusted content. This receipt failed
+  its integrity check, so nothing below may be used as proof." It is part of
+  the receipt, so it travels with a print or a screenshot.
+- Where the download button sits, a notice headed "Untrusted content. Do not
+  use it as proof".
+
+One fact found while doing this: the JSON route
+(`/verify/{id}/artifact.json`) already answers 409 for a package that fails
+its integrity check, and has since before this change. So the JSON was never
+downloadable in that state; the page only offered a button that led to that
+refusal. The page no longer shows the button when the check fails and says
+the download is refused. The route is untouched.
+
+The receipt content is still shown under the failure, as it was before:
+hiding it would change what the page discloses. It is now marked untrusted
+in three places instead of one.
+
+These three were type-checked and linted. They were not re-opened in a
+browser, and the integrity-failure screenshots predate them.
+
+## Follow-ups for the owner
+
+- **Phase 5 / Phase 6 wording.** The documentation header pill says "Docs ·
+  Phase 5" and every article is labelled "Phase 5 documentation", while the
+  content, the security page and the proof page describe Phase 6. Which is
+  right is a statement about the product's history, so it is flagged here for
+  a separate owner decision and deliberately not rewritten in this change.
+  The two strings are in `apps/web/src/components/docs-shell.tsx` and
+  `apps/web/src/app/docs/[slug]/page.tsx`.
+
+## Limitations kept on record
+
+- **Rate-limited verification was not triggered.** The public page limits
+  verification to 60 requests a minute per connection. Its "temporarily
+  unavailable" notice was read in the code but never shown in a browser.
+- **The read-only preview deployment was not tested.** In that mode the
+  verify route answers 404 and the workspace is absent; documentation,
+  security and proof were checked on a development server only.
+- Also not tested: a screen reader, physical devices, browsers other than
+  Chromium, and print output.
+
 ## Open items
 
-- The documentation header and articles still say "Phase 5" while the content
-  describes Phase 6. That is a content statement, so it is left for the owner.
-- The public page still shows the receipt content under an integrity-failure
-  verdict, as it did before. Hiding it would change what the page discloses,
-  so it is left as is and flagged here.
 - Native PDF is still not implemented; the page says so.
