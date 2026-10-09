@@ -28,7 +28,6 @@ try {
     databasePath: required("OBSERVER_DB"),
     endpoint: required("OBSERVER_ENDPOINT"),
     network,
-    viewingAuthority: required("OBSERVER_UFVK"),
   });
   const scan = await observer.observe();
   await recordObserverStatus(connection.db, actor, scan.status);

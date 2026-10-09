@@ -9,7 +9,7 @@ change the classification to `PUBLIC_NETWORK_VERIFIED`.
 
 ## Frozen implementation set
 
-The preparation was reviewed on 2026-10-07 against:
+The preparation was reviewed on 2026-10-08 against:
 
 - Obliq observer: `zcash_client_backend 0.24.0`,
   `zcash_client_sqlite 0.22.0`, `zcash_keys 0.16.1`,
@@ -30,24 +30,53 @@ Zallet is beta software. Before executing the ceremony, pin the binaries and
 run `zallet rpc help <method>` for every RPC below. Stop if its live schema
 differs from this reviewed version.
 
+Zallet beta.3 was published before ZIP 259 finalized the NU7 branch ID. Its
+checksum proves artifact identity, not post-NU7 compatibility. It is therefore
+never accepted on version alone: Ceremony 3 must demonstrate that the running
+binary inspects a v6 `FullPrivacy` fixture bound to `77190ad9`. A beta.3 build
+that reports the former branch or cannot inspect the fixture is `BLOCKED`; wait
+for and separately pin a compatible official artifact rather than patching or
+silently substituting a wallet binary.
+
+NU7 activated on testnet at height `4,465,026` with consensus branch ID
+`77190ad9`, as specified by ZIP 259. The earlier `37a5165b` value is the NU6.3
+branch ID and must not be accepted after NU7 activation. Do not replace this
+with another static runtime assumption: the keyless observer preflight requires
+testnet chain identity and reads the active branch ID from the live data
+service, then checks its activation height and the ceremony compares PCZT
+inspection output with that fresh result.
+
+The machine-readable pins and release hashes are in
+[`public-testnet-artifacts.json`](./public-testnet-artifacts.json). Verify the
+Zallet archive SHA-256 before installation. Verify Zebra's official release
+checksum and Sigstore bundle, then require its immutable source commit. A tag or
+version string alone is not sufficient evidence.
+
 ## Minimum topology
 
-| Boundary                  | Minimum for the funded test                                                                                             | Security property                                                                                           |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| External recipient wallet | Existing Zingo PC 2.0.25 Zecceipt Merchant testnet account, whose receiver was matched locally to the observer UFVK     | Holds recipient spend authority; Obliq receives only its UFVK                                               |
-| External sender           | Separate fresh testnet Zallet v0.1.0-beta.3 wallet/account                                                              | Faucet funds and inspectable PCZT signing remain outside Obliq; the existing Zingo sender is not the signer |
-| Wallet chain service      | One fully synchronized Z3 testnet stack: Zebra plus external Zallet; Zaino only when the chosen Zallet backend needs it | Zallet RPC stays loopback-only; remote administration uses an authenticated encrypted tunnel                |
-| Observer                  | `tools/zcash-observer` with a private SQLite cache and recipient UFVK                                                   | Read-only; API contains no spend, sign, or broadcast operation                                              |
-| Observer data service     | TLS lightwalletd-compatible testnet endpoint                                                                            | Supplies compact blocks, transactions, tree state, subtree roots, and chain identity                        |
-| Application               | Obliq plus PostgreSQL                                                                                                   | Stores the obligation, intent, sanitized execution receipts, observation, and audit chain; no wallet secret |
+| Boundary                  | Minimum for the funded test                                                                                         | Security property                                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| External recipient wallet | Existing Zingo PC 2.0.25 Zecceipt Merchant testnet account, whose receiver was matched locally to the observer UFVK | Holds recipient spend authority; Obliq receives only its UFVK                                               |
+| External sender           | Separate fresh testnet Zallet v0.1.0-beta.3 wallet/account                                                          | Faucet funds and inspectable PCZT signing remain outside Obliq; the existing Zingo sender is not the signer |
+| Wallet chain service      | Zebra v7.0.0-rc.0 JSON-RPC plus Zallet v0.1.0-beta.3 **`zallet-zaino`** configured with backend `zaino`             | Reject the default co-located `zebra` backend; wallet RPC stays loopback-only behind an encrypted tunnel    |
+| Observer                  | `tools/zcash-observer` with a private SQLite cache and recipient UFVK                                               | Read-only; API contains no spend, sign, or broadcast operation                                              |
+| Observer data service     | TLS lightwalletd-compatible testnet endpoint                                                                        | Supplies compact blocks, transactions, tree state, subtree roots, and chain identity                        |
+| Application               | Obliq plus PostgreSQL                                                                                               | Stores the obligation, intent, sanitized execution receipts, observation, and audit chain; no wallet secret |
 
 The Z3 operator guide gives a minimum of 2 CPU cores, 8 GB RAM for the full
 stack, and about 30 GB SSD for testnet, with an initial sync commonly taking
-2–12 hours. Four cores, 16 GB RAM, and ample SSD headroom are safer. The
-current development machine has only about 7.7 GB free, so it is not a safe
-place to start another full testnet stack. Reuse an existing synchronized Z3
-host or provision a dedicated host; do not add a redundant node merely for the
-demo.
+2–12 hours. Four cores, 16 GB RAM, and ample SSD headroom are safer. On
+2026-10-08 the current laptop had only about 2.1 GB filesystem headroom, 7.1
+GiB total RAM, and 3.3 GiB available RAM (with swap active). It is not a safe
+place to download or synchronize Zebra state. Reuse a compatible synchronized
+private host or provision a dedicated temporary host after owner approval; do
+not run the node here or add a redundant node merely for the demo.
+
+`zallet-zaino` talks to Zebra JSON-RPC and does not require Zallet to read a
+co-located Zebra state database or connect to Zebra's indexer gRPC. Do not run
+the default `zallet`/`zebra` backend accidentally: it has those additional
+co-location and indexer requirements and is outside this reviewed topology. A
+standalone Zaino process is also unnecessary for the selected backend.
 
 Obliq and PostgreSQL can share a separate modest application host for this
 single test, but the observer cache, UFVK, and wallet hosts remain isolated.
@@ -135,7 +164,70 @@ quote for exactly 100,000 zatoshis, and an immutable intent. The quote is
 requires `FullPrivacy`, and contains the exact receiver, amount, opaque memo,
 network, expiry, and intent hash. It does not sign or broadcast.
 
-## Ceremony 3: independent sender and faucet
+## Ceremony 3: bounded unfunded compatibility preflight
+
+Complete this gate on the isolated signer host before creating or funding a
+wallet. It does not require a UFVK, seed, account, proving parameters, signing,
+or broadcast.
+
+First record the live public-testnet identity and active branch with the
+keyless observer command:
+
+```sh
+set -eu
+umask 077
+CEREMONY_DIR=/private/obliq-testnet-ceremony
+OBSERVER_BIN=./tools/zcash-observer/target/release/obliq-zcash-observer
+mkdir -p -m 0700 "$CEREMONY_DIR"
+test "$(stat -c '%a' "$CEREMONY_DIR")" = 700
+OBSERVER_NETWORK=testnet \
+OBSERVER_ENDPOINT=https://testnet.zec.rocks:443 \
+"$OBSERVER_BIN" preflight > "$CEREMONY_DIR/observer-network-preflight.json"
+chmod 0600 "$CEREMONY_DIR/observer-network-preflight.json"
+```
+
+Require sanitized output with `network="testnet"`, `serviceChain="test"`,
+`nu7ActivationHeight=4465026`, `nu7Active=true`,
+`activeConsensusBranchId="77190ad9"`, `authority="NONE_REQUIRED"`, and
+`spendingAuthority=false`. The tip must be at or beyond NU7 activation. Stop
+on any mismatch or unavailable service.
+
+Install only the pinned artifacts in
+`public-testnet-artifacts.json`. Verify Zallet's archive SHA-256 locally and
+Zebra's official release checksum/Sigstore bundle plus immutable source commit.
+Start Zebra with JSON-RPC reachable only from the signer host. Start the
+**`zallet-zaino`** binary with backend `zaino`, testnet selected, and plaintext
+wallet RPC bound to loopback. Stop if process identity or configuration says
+the default `zebra` backend, if RPC is remotely reachable, or if either process
+reports a different network.
+
+Use private file-based loopback RPC requests to:
+
+1. call `help` for `pczt_create` and `pczt_inspect` and compare their schemas
+   with the pinned Zallet version;
+2. call `pczt_create` against a confirmed empty testnet account and require the
+   documented insufficient-funds result only—this proves request parsing and
+   transaction construction are reached without funding;
+3. call `pczt_inspect` on a locally retained, non-sensitive fixture created by
+   the same pinned build and require transaction version 6, `FullPrivacy`, and
+   consensus branch `77190ad9`; and
+4. record that `pczt_prove`, `pczt_sign`, extraction, broadcast, and any wallet
+   mutation were not attempted.
+
+Store only sanitized booleans, versions, commits, checksums, RPC method names,
+and the observer preflight fields in a new regular `0600` JSON file. Do not
+retain account identifiers, receivers, credentials, request bodies, PCZTs, or
+error payloads in the sanitized evidence. Validate it with:
+
+```sh
+OBLIQ_TESTNET_PREFLIGHT_FILE="$CEREMONY_DIR/signer-preflight.json" \
+npm run zcash:testnet:preflight
+```
+
+A `PASS` proves bounded compatibility only. Its classification intentionally
+remains `PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`; it is not payment evidence.
+
+## Ceremony 4: independent sender and faucet
 
 1. Create a Zallet v0.1.0-beta.3 datadir, encryption identity, mnemonic,
    confirmed backup, and account on the isolated signer host. This is the
@@ -172,7 +264,7 @@ reviewed shielded transaction. A 100,000-zatoshi received note can ordinarily
 return about 90,000 zatoshis after a 10,000-zatoshi baseline fee. Recovery is
 not guaranteed if wallet backups, the testnet, or fee rules change.
 
-## Ceremony 4: proposal inspection—manual boundary
+## Ceremony 5: proposal inspection—manual boundary
 
 Copy the handoff to the sender host over an authenticated encrypted channel.
 Before any authorization:
@@ -186,7 +278,8 @@ Before any authorization:
    it only to the loopback Zallet RPC; do not place the receiver, memo, PCZT, or
    RPC credential in shell arguments, history, CI, or logs.
 3. Run `pczt_inspect` before and after proving and signing. Require:
-   `tx_version=6`, `consensus_branch_id=37a5165b`,
+   `tx_version=6`, a `consensus_branch_id` equal to the fresh keyless observer
+   preflight (currently `77190ad9` for post-activation NU7 testnet),
    `privacy_policy=FullPrivacy`, `wallet_created=true`, no transparent inputs
    or outputs, no Sapling spends or outputs, exactly one intended 100,000-zat
    recipient output in the Ironwood bundle, and an explicitly reviewed
@@ -217,10 +310,12 @@ CEREMONY_DIR=/private/obliq-testnet-ceremony
 HANDOFF="$CEREMONY_DIR/obliq-testnet-handoff.json"
 SENDER_ACCOUNT_FILE="$CEREMONY_DIR/sender-account.uuid"
 ZALLET_CURL_CONFIG="$CEREMONY_DIR/zallet-rpc.curl-config"
+NETWORK_PREFLIGHT="$CEREMONY_DIR/observer-network-preflight.json"
 
 test "$(stat -c '%a' "$HANDOFF")" = 600
 test "$(stat -c '%a' "$SENDER_ACCOUNT_FILE")" = 600
 test "$(stat -c '%a' "$ZALLET_CURL_CONFIG")" = 600
+test "$(stat -c '%a' "$NETWORK_PREFLIGHT")" = 600
 test "$(jq -r .network "$HANDOFF")" = testnet
 test "$(jq -r .amountZat "$HANDOFF")" = 100000
 test "$(jq -r .privacyPolicy "$HANDOFF")" = FullPrivacy
@@ -259,10 +354,11 @@ curl --fail --silent --show-error \
   --data-binary @"$CEREMONY_DIR/pczt-inspect.request.json" \
   > "$CEREMONY_DIR/pczt-inspect.response.json"
 
-jq -e --slurpfile handoff "$HANDOFF" '
+jq -e --slurpfile handoff "$HANDOFF" \
+  --slurpfile network "$NETWORK_PREFLIGHT" '
   .error == null and
   .result.tx_version == 6 and
-  .result.consensus_branch_id == "37a5165b" and
+  .result.consensus_branch_id == $network[0].activeConsensusBranchId and
   .result.privacy_policy == "FullPrivacy" and
   .result.wallet_created == true and
   .result.fee_zat == 10000 and
@@ -303,7 +399,6 @@ OBLIQ_TESTNET_MODE=FUNDED_PAYMENT \
 OBSERVER_BINARY=./tools/zcash-observer/target/release/obliq-zcash-observer \
 OBSERVER_DB=/private/observer.sqlite \
 OBSERVER_ENDPOINT=https://testnet.zec.rocks:443 \
-OBSERVER_UFVK="$(secret-manager read obliq-testnet-ufvk)" \
 npm run zcash:testnet:verify
 ```
 
@@ -322,8 +417,11 @@ also rejects progression from a different expected amount, receiver
 fingerprint, memo hash, confirmation policy, transaction reference, or output
 index.
 
-Use an approved secret-manager injection mechanism; the example is schematic.
-The harness validates chain identity, scan heights, UFVK-only authority, exact
+The observer database must already have been initialized once through the
+observer's hidden prompt or its operator-controlled standard-input mode. The
+verification harness reads that owner-only state; it never accepts the UFVK in
+an environment variable or command argument. The harness validates chain
+identity, scan heights, UFVK-only authority, exact
 amount, receiver fingerprint, opaque memo hash, and the three-confirmation
 policy. It ingests the same output twice and requires one database row with the
 second ingestion unchanged. It appends confirmation snapshots and flags a
@@ -361,4 +459,5 @@ current settlement conclusion without declaring the obligation unpaid.
 - [Zallet RPC methods](https://zcash.github.io/zallet/rpc/index.html)
 - [Zallet installation and backend choice](https://zcash.github.io/zallet/guide/installation/index.html)
 - [ZIP 317 conventional fees](https://zips.z.cash/zip-0317)
+- [ZIP 259 NU7 network upgrade](https://zips.z.cash/zip-0259)
 - [Zcash testnet guide](https://zcash.readthedocs.io/en/latest/rtd_pages/testnet_guide.html)

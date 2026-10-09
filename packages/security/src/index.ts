@@ -50,6 +50,10 @@ function rejectPreviewSecret(env: NodeJS.ProcessEnv, name: string) {
 export function parseRuntimeSecurityConfig(
   env: NodeJS.ProcessEnv,
 ): RuntimeSecurityConfig {
+  if (env.OBSERVER_UFVK?.trim())
+    throw new Error(
+      "OBSERVER_UFVK is forbidden; initialize the isolated observer through its private input",
+    );
   const deploymentMode =
     env.OBLIQ_DEPLOYMENT_MODE ??
     (env.NODE_ENV === "production" ? "production" : "development");
@@ -121,7 +125,6 @@ export function parseRuntimeSecurityConfig(
       "OBSERVER_BINARY",
       "OBSERVER_DB",
       "OBSERVER_ENDPOINT",
-      "OBSERVER_UFVK",
       "OIDC_CLIENT_ID",
       "OIDC_ISSUER",
       "OIDC_CLIENT_SECRET",

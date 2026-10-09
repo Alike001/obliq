@@ -9,17 +9,15 @@ describe("process observer adapter", () => {
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "regtest",
-        viewingAuthority: "uviewregtest1sensitive",
       },
       (_file, _args, env) => {
         expect(Object.keys(env).sort()).toEqual([
           "OBSERVER_DB",
           "OBSERVER_ENDPOINT",
           "OBSERVER_NETWORK",
-          "OBSERVER_UFVK",
         ]);
         expect(env.OBSERVER_NETWORK).toBe("regtest");
-        expect(env.OBSERVER_UFVK).toBe("uviewregtest1sensitive");
+        expect(env).not.toHaveProperty("OBSERVER_UFVK");
         return Promise.resolve({
           stdout: JSON.stringify({
             network: "regtest",
@@ -60,7 +58,6 @@ describe("process observer adapter", () => {
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "regtest",
-        viewingAuthority: "uviewregtest1sensitive",
       },
       () =>
         Promise.resolve({
@@ -88,7 +85,6 @@ describe("process observer adapter", () => {
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "regtest",
-        viewingAuthority: "uviewregtest1sensitive",
       },
       () =>
         Promise.reject(new Error("transport failed uviewregtest1sensitive")),
@@ -112,7 +108,6 @@ describe("process observer adapter", () => {
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "mainnet",
-        viewingAuthority: "uview1sensitive",
       },
       (_file, _args, env) => {
         expect(env.OBSERVER_NETWORK).toBe("mainnet");
@@ -142,7 +137,6 @@ describe("process observer adapter", () => {
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "testnet",
-        viewingAuthority: "uviewtest1sensitive",
       },
       () =>
         Promise.resolve({

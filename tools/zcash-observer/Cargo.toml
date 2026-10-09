@@ -20,6 +20,7 @@ zcash_client_sqlite = { version = "=0.22.0", features = ["orchard"] }
 zcash_keys = { version = "=0.16.1", features = ["orchard", "sapling"] }
 zcash_primitives = "=0.30.1"
 zcash_protocol = { version = "=0.10.6", features = ["local-consensus"] }
+zeroize = "1.8.2"
 
 [dev-dependencies]
 zip32 = "0.2.1"

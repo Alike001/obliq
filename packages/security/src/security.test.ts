@@ -98,7 +98,7 @@ describe("runtime security configuration", () => {
     ).toThrow("must not configure DATABASE_URL");
     expect(() =>
       parseRuntimeSecurityConfig({ ...preview, OBSERVER_UFVK: "secret" }),
-    ).toThrow("must not configure OBSERVER_UFVK");
+    ).toThrow("OBSERVER_UFVK is forbidden");
     expect(() =>
       parseRuntimeSecurityConfig({
         ...preview,

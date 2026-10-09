@@ -45,7 +45,6 @@ const observer = new ProcessZcashObserver({
   databasePath: required("OBSERVER_DB"),
   endpoint: required("OBSERVER_ENDPOINT"),
   network: "testnet",
-  viewingAuthority: required("OBSERVER_UFVK"),
   observerSource:
     process.env.OBSERVER_SOURCE ?? "obliq-zcash-observer/public-testnet",
 });

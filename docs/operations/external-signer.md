@@ -10,7 +10,8 @@ The operator boundary must:
 1. accept a request only over an authenticated encrypted private channel;
 2. verify schema, the exact qualified regtest/testnet network, quote expiry and
    intent fingerprint;
-3. construct the PCZT in an isolated Zallet;
+3. construct the PCZT in an isolated `zallet-zaino` process configured with
+   backend `zaino` and a private Zebra JSON-RPC endpoint;
 4. compare Zallet inspection output with the Obliq human review screen;
 5. require an explicit human authorization on the signer side;
 6. prove/sign/extract/broadcast outside the application;
@@ -30,3 +31,10 @@ metadata. Zallet inspection metadata is still creator-recorded rather than
 cryptographically verified until extraction. In v0.1.0-beta.3, inspection does
 not reveal memo plaintext; memo correctness is established by handoff custody
 and, after broadcast, independent UFVK decryption.
+
+The pinned v0.1.0-beta.3 artifact predates the finalized NU7 testnet branch ID.
+It is therefore an artifact candidate, not sufficient compatibility evidence.
+Before funding, the bounded unfunded preflight in
+`public-testnet-verification.md` must demonstrate a version-6 PCZT bound to the
+live testnet NU7 branch `77190ad9`. The default co-located `zebra` backend and
+any PCZT carrying the earlier NU6.3 branch are rejected.

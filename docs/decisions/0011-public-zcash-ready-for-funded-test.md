@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-10-07
+- Corrected: 2026-10-08
 - Classification: `PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`
 - Supersedes: ADR 0010's `PUBLIC_NETWORK_BLOCKED` classification
 
@@ -131,6 +132,34 @@ and exclusive creation. Each confirmation run creates a new immutable report
 and names its prior report explicitly, preserving rather than overwriting the
 progression evidence.
 
+## NU7 and signer-backend correction
+
+The original ceremony text incorrectly carried the NU6.3 consensus branch ID
+`37a5165b` into a post-NU7 PCZT check. ZIP 259 specifies testnet NU7 activation
+at height `4,465,026` with branch ID `77190ad9`. The corrected gate does not
+trust a ceremony constant alone: a keyless observer preflight requires testnet
+chain identity, reads the data service's active branch at the live tip, and
+PCZT inspection must match that fresh result and ZIP 259.
+
+The selected wallet executable is explicitly Zallet v0.1.0-beta.3
+`zallet-zaino` with backend `zaino`, backed by Zebra v7.0.0-rc.0 JSON-RPC. The
+default co-located `zebra` backend is rejected because it additionally depends
+on Zebra state access, indexer mode, and indexer gRPC and is not the reviewed
+topology. Release archives/source commits are pinned in
+`docs/operations/public-testnet-artifacts.json`.
+
+The beta.3 release predates ZIP 259's finalized branch ID, so the artifact pin
+does not assert NU7 compatibility. The bounded preflight requires inspection
+of a v6 `FullPrivacy` fixture bound to `77190ad9` and fails closed otherwise.
+No funded ceremony may start merely because the version and checksum match.
+
+The observer no longer accepts viewing authority through `OBSERVER_UFVK`.
+Initialization uses a hidden terminal prompt or operator-controlled standard
+input, stores authority only in its private cache, and zeroizes the transient
+encoded value. Subsequent synchronization opens that imported view-only state.
+This correction does not add funded evidence or change the public-network
+classification.
+
 ## Authoritative sources
 
 - [Zaino source and changelog](https://github.com/zingolabs/zaino)
@@ -140,3 +169,4 @@ progression evidence.
 - [lightwalletd protocol and operations](https://github.com/zcash/lightwalletd)
 - [Z3 operator stack](https://github.com/ZcashFoundation/z3)
 - [ZIP 317 fee calculation](https://zips.z.cash/zip-0317)
+- [ZIP 259 NU7 network upgrade](https://zips.z.cash/zip-0259)

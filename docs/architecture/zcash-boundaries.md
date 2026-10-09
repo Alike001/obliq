@@ -12,7 +12,7 @@ The implemented regtest boundary is:
 readiness checks → version-bound intent → external signer → signed transaction → broadcast
 ```
 
-The backend never holds unrestricted spending authority. Business approval is not cryptographic authorization. A separate human-operated Zallet v0.1.0-beta.3 creates, inspects, proves, signs and extracts a PCZT under `FullPrivacy`; only sanitized receipt metadata returns to Obliq. The privileged plaintext wallet RPC is never connected to the application. FROST is not implemented.
+The backend never holds unrestricted spending authority. Business approval is not cryptographic authorization. A separate human-operated Zallet v0.1.0-beta.3 `zallet-zaino` process, explicitly configured with backend `zaino`, creates, inspects, proves, signs and extracts a PCZT under `FullPrivacy`; only sanitized receipt metadata returns to Obliq. The selected backend uses Zebra JSON-RPC and does not share Zebra state or indexer gRPC. The privileged plaintext wallet RPC is loopback-only and never connected to the application. FROST is not implemented.
 
 ## Viewing and reconciliation
 
@@ -45,3 +45,11 @@ Zebra and Z3 sources. Zallet `v0.1.0-beta.3` exports UFVK/UIVK values, while
 `z_importviewingkey` remains Sapling-only. The observer therefore continues to
 use `zcash_client_backend 0.24.0` and `zcash_client_sqlite 0.22.0`. See ADRs
 0006 and 0011 for exact commits, evidence and rejected architectures.
+
+The public signer preflight requires the data service's testnet identity and
+reads its active consensus branch at the live tip. NU7 testnet activation is
+height `4,465,026` and its branch ID is `77190ad9`; the former NU6.3 value
+`37a5165b` is rejected. Viewing authority is imported once through a hidden
+terminal prompt or operator-controlled standard input into the isolated cache.
+The application rejects `OBSERVER_UFVK` and does not transmit a UFVK in an
+environment variable, argument, RPC request, log, or business database.

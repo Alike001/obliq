@@ -27,6 +27,7 @@
     "db:seed": "tsx packages/database/src/seed.ts",
     "zcash:observe": "tsx scripts/run-zcash-observer.ts",
     "zcash:testnet:prepare": "tsx scripts/prepare-public-testnet-tracer.ts",
+    "zcash:testnet:preflight": "tsx scripts/preflight-public-testnet-signer.ts",
     "zcash:testnet:verify": "tsx scripts/verify-public-testnet-tracer.ts",
     "test:integration": "vitest run packages/database/src/repositories/*integration.test.ts",
     "security:secrets": "node scripts/check-secrets.mjs",

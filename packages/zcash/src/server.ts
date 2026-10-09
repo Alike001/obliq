@@ -17,7 +17,6 @@ export interface ProcessObserverConfig {
   databasePath: string;
   endpoint: string;
   network: ZcashNetwork;
-  viewingAuthority: string;
   observerSource?: string;
 }
 
@@ -48,7 +47,6 @@ export class ProcessZcashObserver implements ZcashObserver {
         OBSERVER_DB: this.config.databasePath,
         OBSERVER_ENDPOINT: this.config.endpoint,
         OBSERVER_NETWORK: this.config.network,
-        OBSERVER_UFVK: this.config.viewingAuthority,
       });
       const parsed = parseObserverOutput(stdout);
       if (parsed.network !== this.config.network)

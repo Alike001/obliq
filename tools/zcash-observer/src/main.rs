@@ -9,7 +9,7 @@ use std::{
     convert::Infallible,
     env,
     error::Error,
-    fs,
+    fs, io,
     path::PathBuf,
     sync::{Arc, Mutex},
 };
@@ -37,9 +37,15 @@ use zcash_protocol::{
     consensus::{BlockHeight, BranchId, Network, NetworkType, NetworkUpgrade, Parameters},
     local_consensus::LocalNetwork,
 };
+use zeroize::Zeroize;
 
 #[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
+use std::{
+    fs::{File, OpenOptions},
+    io::{BufRead, BufReader, Write},
+    os::unix::fs::PermissionsExt,
+    process::{Command, Stdio},
+};
 
 #[derive(Clone, Default)]
 struct MemoryBlockCache(Arc<Mutex<BTreeMap<u32, CompactBlock>>>);
@@ -197,9 +203,78 @@ fn endpoint() -> String {
     env::var("OBSERVER_ENDPOINT").unwrap_or_else(|_| "http://127.0.0.1:28137".to_string())
 }
 
-fn viewing_key(params: &ObserverParameters) -> Result<UnifiedFullViewingKey, Box<dyn Error>> {
-    let encoded = env::var("OBSERVER_UFVK").map_err(|_| "OBSERVER_UFVK is required")?;
-    UnifiedFullViewingKey::decode(params, &encoded).map_err(Into::into)
+fn nu7_activation_height(network: &str) -> Option<u32> {
+    match network {
+        "testnet" => Some(4_465_026),
+        _ => None,
+    }
+}
+
+fn normalized_consensus_branch_id(value: &str) -> Result<String, Box<dyn Error>> {
+    let normalized = value.trim_start_matches("0x").to_ascii_lowercase();
+    if normalized.len() != 8 || !normalized.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("data service returned a malformed consensus branch ID".into());
+    }
+    Ok(normalized)
+}
+
+fn read_viewing_key(
+    params: &ObserverParameters,
+    read_from_stdin: bool,
+) -> Result<UnifiedFullViewingKey, Box<dyn Error>> {
+    let mut encoded = if read_from_stdin {
+        let mut value = String::new();
+        io::stdin().read_line(&mut value)?;
+        value
+    } else {
+        read_hidden_terminal_line("Observer UFVK (hidden): ")?
+    };
+    let decoded = UnifiedFullViewingKey::decode(params, encoded.trim());
+    encoded.zeroize();
+    decoded.map_err(Into::into)
+}
+
+#[cfg(unix)]
+fn set_terminal_echo(tty: &File, enabled: bool) -> io::Result<()> {
+    let status = Command::new("stty")
+        .arg(if enabled { "echo" } else { "-echo" })
+        .stdin(Stdio::from(tty.try_clone()?))
+        .status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(io::Error::other("could not change terminal echo state"))
+    }
+}
+
+#[cfg(unix)]
+fn read_hidden_terminal_line(prompt: &str) -> io::Result<String> {
+    struct EchoGuard(File);
+    impl Drop for EchoGuard {
+        fn drop(&mut self) {
+            let _ = set_terminal_echo(&self.0, true);
+        }
+    }
+
+    let mut tty = OpenOptions::new().read(true).write(true).open("/dev/tty")?;
+    let guard_file = tty.try_clone()?;
+    set_terminal_echo(&tty, false)?;
+    let guard = EchoGuard(guard_file);
+    tty.write_all(prompt.as_bytes())?;
+    tty.flush()?;
+    let mut value = String::new();
+    BufReader::new(tty.try_clone()?).read_line(&mut value)?;
+    tty.write_all(b"\n")?;
+    drop(guard);
+    Ok(value)
+}
+
+#[cfg(not(unix))]
+fn read_hidden_terminal_line(_prompt: &str) -> io::Result<String> {
+    Err(io::Error::new(
+        io::ErrorKind::Unsupported,
+        "hidden UFVK input requires a Unix terminal; use operator-controlled stdin",
+    ))
 }
 
 fn canonical_txid(database_hex: &str) -> String {
@@ -339,15 +414,23 @@ fn verify_recipient(
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    let command = env::args()
-        .nth(1)
-        .ok_or("expected init, sync, or verify-recipient")?;
+    let mut args = env::args().skip(1);
+    let command = args
+        .next()
+        .ok_or("expected init, sync, preflight, or verify-recipient")?;
+    let ufvk_stdin = match args.next().as_deref() {
+        None => false,
+        Some("--ufvk-stdin") if command == "init" => true,
+        Some(_) => return Err("--ufvk-stdin is accepted only by init".into()),
+    };
+    if args.next().is_some() {
+        return Err("unexpected observer command argument".into());
+    }
     let configured = configured_network()?;
     if command == "verify-recipient" {
         return verify_recipient(&configured, configured.params.clone());
     }
     let params = configured.params;
-    let ufvk = viewing_key(&params)?;
     let wallet_path = path();
     let mut client = CompactTxStreamerClient::connect(endpoint()).await?;
     let service_info = client
@@ -361,6 +444,34 @@ async fn main() -> Result<(), Box<dyn Error>> {
         )
         .into());
     }
+    if command == "preflight" {
+        let tip = client
+            .get_latest_block(Request::new(ChainSpec {}))
+            .await?
+            .into_inner();
+        let tip_height = BlockHeight::from_u32(u32::try_from(tip.height)?);
+        let branch_id = normalized_consensus_branch_id(&service_info.consensus_branch_id)?;
+        let nu7_activation_height = nu7_activation_height(configured.label);
+        println!(
+            "{}",
+            json!({
+                "network": configured.label,
+                "serviceChain": service_info.chain_name,
+                "chainTipHeight": u32::from(tip_height),
+                "activeConsensusBranchId": branch_id,
+                "nu7ActivationHeight": nu7_activation_height,
+                "nu7Active": nu7_activation_height
+                    .map(|height| u32::from(tip_height) >= height)
+                    .unwrap_or(false),
+                "authority": "NONE_REQUIRED",
+                "spendingAuthority": false,
+            })
+        );
+        return Ok(());
+    }
+    if command != "init" && command != "sync" {
+        return Err("expected init, sync, preflight, or verify-recipient".into());
+    }
     let mut wallet = WalletDb::for_path(&wallet_path, params.clone(), SystemClock, OsRng)?;
     init_wallet_db(&mut wallet, None)?;
     #[cfg(unix)]
@@ -368,6 +479,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     if command == "init" {
         if wallet.get_account_ids()?.is_empty() {
+            let ufvk = read_viewing_key(&params, ufvk_stdin)?;
             let tip = client
                 .get_latest_block(Request::new(ChainSpec {}))
                 .await?
@@ -612,6 +724,22 @@ mod tests {
     #[test]
     fn rejects_unknown_networks() {
         assert!(configured_network_for("staging").is_err());
+    }
+
+    #[test]
+    fn normalizes_a_service_reported_consensus_branch_id() {
+        assert_eq!(
+            normalized_consensus_branch_id("0x77190AD9").expect("valid branch ID"),
+            "77190ad9"
+        );
+        assert!(normalized_consensus_branch_id("not-a-branch").is_err());
+    }
+
+    #[test]
+    fn records_only_the_authoritative_public_testnet_nu7_activation() {
+        assert_eq!(nu7_activation_height("testnet"), Some(4_465_026));
+        assert_eq!(nu7_activation_height("mainnet"), None);
+        assert_eq!(nu7_activation_height("regtest"), None);
     }
 
     #[test]

@@ -22,13 +22,19 @@ sidecar, and data-service chain identity. Runtime policy permits testnet only
 with `PUBLIC_NETWORK_READY_FOR_FUNDED_TEST` or stronger status. Mainnet remains
 blocked until `PUBLIC_NETWORK_VERIFIED` is backed by real evidence.
 
-## Secret injection
+## Private initialization
 
-Supply `OBSERVER_UFVK` to the isolated observer process from a production secret
-manager. Do not put it in `.env`, process arguments, application logs, proof
-output, screenshots, browser state, PostgreSQL, or CI variables available to
-untrusted jobs. Restrict and encrypt the SQLite scan cache and backups because
-decrypted transaction metadata can compromise commercial privacy.
+Import the UFVK once into a new isolated observer database using the observer's
+hidden terminal prompt. For a non-interactive operator-controlled secret
+manager, pipe it on standard input with `init --ufvk-stdin`; never put it in an
+environment variable, process argument, `.env`, application log, proof output,
+screenshot, browser state, PostgreSQL, or CI variable. The `sync` command reads
+the imported account from the private cache and accepts no viewing key.
+
+The application rejects `OBSERVER_UFVK` in every runtime mode. Restrict the
+SQLite cache to its dedicated observer identity and encrypt its volume and
+backups because both the imported viewing authority and decrypted transaction
+metadata can compromise commercial privacy.
 
 Non-secret settings:
 
