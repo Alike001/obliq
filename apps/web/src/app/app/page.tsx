@@ -17,6 +17,10 @@ import { firstRunSteps } from "@/lib/first-run";
 import { getTenantContext } from "@/lib/session";
 export const dynamic = "force-dynamic";
 
+// `listObligations` returns at most this many, earliest due date first. The
+// queue below is built from that page of records, so it says so.
+const LOADED_LIMIT = 100;
+
 export default async function AppOverviewPage() {
   const tenant = await getTenantContext();
   const db = getDatabase();
@@ -94,17 +98,31 @@ export default async function AppOverviewPage() {
             <div className="hairline flex flex-wrap items-baseline justify-between gap-2 border-b p-5">
               <div>
                 <h2 id="attention-h" className="font-semibold">
-                  Needs attention
+                  Needs attention, from loaded records
                 </h2>
-                <p className="text-muted mt-1 text-xs">
-                  Waiting on a person, most urgent first. Opening a record
-                  changes nothing.
+                <p className="text-muted mt-1 max-w-[68ch] text-xs leading-5">
+                  Built from the {recent.length}{" "}
+                  {recent.length === 1 ? "obligation" : "obligations"} this page
+                  loaded (up to {LOADED_LIMIT}, earliest due date first). It is
+                  not a list of every outstanding obligation. The counts above
+                  cover the whole organization.
                 </p>
               </div>
               <p className="text-muted text-xs">
-                {queue.length} {queue.length === 1 ? "record" : "records"}
+                {queue.length} of {recent.length} loaded
               </p>
             </div>
+            {recent.length >= LOADED_LIMIT && (
+              <p
+                className="hairline text-hold bg-hold-bg flex items-start gap-2 border-b px-5 py-3 text-xs font-medium"
+                role="note"
+              >
+                <span className="glyph glyph-attn mt-[0.15rem]" aria-hidden />
+                More obligations exist than were loaded, so records that need
+                attention may be missing here. Open each count above to see its
+                full list.
+              </p>
+            )}
             <ul>
               {queue.slice(0, 6).map((item) => (
                 <li
@@ -134,8 +152,8 @@ export default async function AppOverviewPage() {
             </ul>
             {queue.length > 6 && (
               <p className="hairline text-muted border-t px-5 py-3 text-xs">
-                {queue.length - 6} more. Use the counts above to open each
-                queue.
+                {queue.length - 6} more among the loaded records. Use the counts
+                above to open each full list.
               </p>
             )}
           </section>
