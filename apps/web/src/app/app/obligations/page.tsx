@@ -1,8 +1,13 @@
-import { formatMinorUnits } from "@obliq/domain";
+import {
+  formatMinorUnits,
+  obligationStates,
+  type ObligationState,
+} from "@obliq/domain";
 import { listObligations } from "@obliq/database";
 import { FilePlus2, Upload } from "lucide-react";
 import Link from "next/link";
 import { StateTag } from "@/components/state-tag";
+import { stateLabel } from "@/components/state-tone";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 export const dynamic = "force-dynamic";
@@ -14,10 +19,15 @@ export default async function ObligationsPage({
 }) {
   const query = await searchParams;
   const tenant = await getTenantContext();
+  // Only a state the product knows is passed on; anything else is ignored.
+  const state: ObligationState | undefined = obligationStates.find(
+    (known) => known === query.state,
+  );
   const items = await listObligations(getDatabase(), tenant.organizationId, {
     ...(query.q ? { search: query.q } : {}),
-    ...(query.state ? { state: query.state } : {}),
+    ...(state ? { state } : {}),
   });
+  const filtered = Boolean(query.q || state);
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -46,6 +56,7 @@ export default async function ObligationsPage({
           </div>
         </div>
         <form className="mt-7 flex gap-3" role="search">
+          {state && <input type="hidden" name="state" value={state} />}
           <input
             name="q"
             defaultValue={query.q}
@@ -55,25 +66,47 @@ export default async function ObligationsPage({
           />
           <button className="button button-light">Search</button>
         </form>
+        {state && (
+          <p className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+            <span className="text-muted">Showing only</span>
+            <StateTag state={state} />
+            <Link
+              className="text-link min-h-0!"
+              href={
+                query.q
+                  ? `/app/obligations?q=${encodeURIComponent(query.q)}`
+                  : "/app/obligations"
+              }
+            >
+              Show all states
+            </Link>
+          </p>
+        )}
         {items.length === 0 ? (
           <section className="card empty mt-5">
             <span className="empty-icon">
               <FilePlus2 size={20} aria-hidden />
             </span>
             <h2 className="font-semibold">
-              {query.q ? `Nothing matches “${query.q}”` : "No obligations yet"}
+              {query.q
+                ? `Nothing matches “${query.q}”`
+                : state
+                  ? `No obligations are ${stateLabel(state).toLowerCase()}`
+                  : "No obligations yet"}
             </h2>
             <p className="text-muted max-w-sm text-sm">
               {query.q
                 ? "Try a vendor name, a reference number or part of the purpose."
-                : "Create one manually or begin with an invoice document."}
+                : state
+                  ? "Nothing is in this state right now. Other obligations are not shown."
+                  : "Create one manually or begin with an invoice document."}
             </p>
-            {query.q ? (
+            {filtered ? (
               <Link
                 className="button button-light mt-3"
                 href="/app/obligations"
               >
-                Clear search
+                {query.q ? "Clear search" : "Show all states"}
               </Link>
             ) : (
               <Link

@@ -2,13 +2,19 @@ import { formatMinorUnits } from "@obliq/domain";
 import { formatZecAmount } from "@obliq/zcash";
 import { listSettlements } from "@obliq/database";
 import Link from "next/link";
+import { Notice } from "@/components/notice";
 import { StateTag } from "@/components/state-tag";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-export default async function SettlementsPage() {
+export default async function SettlementsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ prepared?: string }>;
+}) {
+  const notice = await searchParams;
   const tenant = await getTenantContext();
   const rows = await listSettlements(getDatabase(), tenant.organizationId);
   return (
@@ -23,15 +29,29 @@ export default async function SettlementsPage() {
           broadcast, and read-only reconciliation are separate stages. Obliq
           does not hold the signer credential.
         </p>
+        {notice.prepared && rows.length > 0 && (
+          <Notice
+            tone="hold"
+            title="Settlement intent prepared, nothing paid"
+            live
+            className="mt-6"
+          >
+            Open it below to begin the signing review. The quote expires 15
+            minutes after it was prepared.
+          </Notice>
+        )}
         {!rows.length ? (
-          <section className="card mt-8 p-8">
+          <section className="card empty mt-8">
             <h2 className="font-semibold">No settlement intents</h2>
-            <p className="text-muted mt-2 text-sm">
-              A version-bound intent can be prepared from an obligation only
-              after it reaches READY_TO_SETTLE.
+            <p className="text-muted max-w-sm text-sm">
+              An intent can be prepared from an obligation only after it is
+              approved and ready to settle.
             </p>
-            <Link href="/app/obligations" className="button button-dark mt-5">
-              Review obligations
+            <Link
+              href="/app/obligations?state=READY_TO_SETTLE"
+              className="button button-dark mt-3"
+            >
+              See obligations ready to settle
             </Link>
           </section>
         ) : (

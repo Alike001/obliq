@@ -2,6 +2,8 @@ import { listPolicies, listPolicyVersions } from "@obliq/database";
 import type { PolicyConfig } from "@obliq/policy";
 import { StatusPill } from "@/components/status-pill";
 import { Field, Input } from "@/components/finance-form";
+import { Notice } from "@/components/notice";
+import { SubmitButton } from "@/components/submit-button";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import {
@@ -10,9 +12,15 @@ import {
 } from "../actions";
 export const dynamic = "force-dynamic";
 
-export default async function PoliciesPage() {
+export default async function PoliciesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ created?: string; version?: string }>;
+}) {
+  const notice = await searchParams;
   const tenant = await getTenantContext();
   const db = getDatabase();
+  // Chooses what to show. The server action checks the role again.
   const canAdmin = ["OWNER", "CFO", "POLICY_ADMIN"].includes(tenant.role);
   const entries = await listPolicies(db, tenant.organizationId);
   const versions = entries[0]
@@ -21,7 +29,7 @@ export default async function PoliciesPage() {
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-5xl">
-        <div className="flex items-end justify-between gap-4">
+        <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Deterministic controls</p>
             <h1 className="mt-3 text-3xl font-medium tracking-tight">
@@ -33,22 +41,50 @@ export default async function PoliciesPage() {
           </div>
           <StatusPill status="IMPLEMENTED" />
         </div>
+        {notice.created && entries.length > 0 && (
+          <Notice
+            tone="done"
+            title="Default policy created"
+            live
+            className="mt-6"
+          >
+            Controls can now be evaluated on obligations. Nothing already
+            recorded was changed.
+          </Notice>
+        )}
+        {notice.version === "created" && (
+          <Notice
+            tone="hold"
+            title="New policy version published"
+            live
+            className="mt-6"
+          >
+            Earlier decisions keep the version they were made under. Readiness
+            evaluated under the old version is now stale and must be evaluated
+            again.
+          </Notice>
+        )}
         {!entries.length && canAdmin ? (
-          <form action={createDefaultPolicyAction} className="card mt-8 p-8">
+          <form action={createDefaultPolicyAction} className="card empty mt-8">
             <h2 className="font-semibold">No active policy</h2>
-            <p className="text-muted mt-2 text-sm">
-              Install the focused accounts-payable defaults to begin control
-              evaluation.
+            <p className="text-muted max-w-sm text-sm">
+              Without a policy, controls cannot be evaluated on obligations.
+              Install the accounts-payable defaults to begin.
             </p>
-            <button className="button button-dark mt-5">
+            <SubmitButton
+              className="button button-dark mt-3"
+              pendingLabel="Creating…"
+            >
               Create default policy
-            </button>
+            </SubmitButton>
           </form>
         ) : !entries.length ? (
-          <section className="card mt-8 p-8">
+          <section className="card empty mt-8">
             <h2 className="font-semibold">No active policy</h2>
-            <p className="text-muted mt-2 text-sm">
-              An Owner, CFO or Policy Administrator must configure controls.
+            <p className="text-muted max-w-sm text-sm">
+              Without a policy, controls cannot be evaluated on obligations. An
+              Owner, CFO or Policy Administrator must configure them; your role
+              cannot.
             </p>
           </section>
         ) : (
@@ -56,7 +92,7 @@ export default async function PoliciesPage() {
             const config = version?.configJson as PolicyConfig | undefined;
             return (
               <section key={policy.id} className="card mt-8 overflow-hidden">
-                <div className="hairline flex items-center justify-between border-b p-6">
+                <div className="hairline flex flex-wrap items-center justify-between gap-3 border-b p-6">
                   <div>
                     <h2 className="font-semibold">{policy.name}</h2>
                     <p className="text-muted mt-1 text-xs">
@@ -95,6 +131,7 @@ export default async function PoliciesPage() {
                           name="currency"
                           defaultValue={config?.currency ?? "USD"}
                           pattern="[A-Z]{3}"
+                          maxLength={3}
                           required
                         />
                       </Field>
@@ -118,13 +155,14 @@ export default async function PoliciesPage() {
                           required
                         />
                       </Field>
-                      <button className="button button-dark">
+                      <SubmitButton pendingLabel="Publishing…">
                         Create version
-                      </button>
+                      </SubmitButton>
                     </form>
                   ) : (
                     <p className="text-muted mt-4 text-sm">
-                      Read only in your current capacity.
+                      Read only for your role. An Owner, CFO or Policy
+                      Administrator can publish a version.
                     </p>
                   )}
                 </div>
@@ -135,16 +173,24 @@ export default async function PoliciesPage() {
         {versions.length > 0 && (
           <section className="mt-8">
             <h2 className="font-semibold">Version history</h2>
-            <div className="card mt-3 divide-y">
+            <ol className="card mt-3 divide-y">
               {versions.map((v) => (
-                <div className="flex justify-between p-4 text-sm" key={v.id}>
-                  <span>Version {v.version}</span>
+                <li
+                  className="flex flex-wrap justify-between gap-x-4 gap-y-1 p-4 text-sm"
+                  key={v.id}
+                >
+                  <span className="font-semibold">
+                    Version {v.version}
+                    {v.version === entries[0]?.policy.activeVersion && (
+                      <span className="text-muted font-normal"> · active</span>
+                    )}
+                  </span>
                   <span className="text-muted">
                     {v.createdAt.toLocaleString()} · immutable
                   </span>
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
           </section>
         )}
       </div>

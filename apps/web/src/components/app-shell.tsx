@@ -8,6 +8,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const runtime = getRuntimeSecurityConfig();
   return (
     <div className="bg-canvas min-h-screen lg:grid lg:grid-cols-[248px_minmax(0,1fr)]">
+      <a href="#workspace-main" className="button button-dark skip-link">
+        Skip to content
+      </a>
       <aside className="side-nav on-ink sticky top-0 hidden h-screen overflow-y-auto p-5 lg:flex lg:flex-col">
         <Brand inverse />
         <div className="border-carbon-2 mt-7 rounded-[9px] border bg-[rgb(255_255_255/0.05)] p-3">
@@ -59,7 +62,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <TabNav />
-        <div className="app-main">{children}</div>
+        <div id="workspace-main" tabIndex={-1} className="app-main">
+          {children}
+        </div>
       </div>
     </div>
   );

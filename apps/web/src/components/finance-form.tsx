@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react";
+import { cn } from "@/lib/cn";
 
 export function Field({
   label,
@@ -21,11 +22,14 @@ export function Field({
     </label>
   );
 }
-export function Input(props: ComponentProps<"input">) {
+export function Input({ className, ...props }: ComponentProps<"input">) {
   return (
     <input
       {...props}
-      className="hairline bg-panel mt-2 min-h-11 w-full rounded-lg border px-3 text-sm disabled:opacity-60"
+      className={cn(
+        "hairline bg-panel mt-2 min-h-11 w-full rounded-lg border px-3 text-sm disabled:opacity-60",
+        className,
+      )}
     />
   );
 }

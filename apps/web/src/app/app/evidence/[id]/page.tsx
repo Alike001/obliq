@@ -1,8 +1,12 @@
 import { verifyEvidenceArtifact } from "@obliq/evidence";
 import { getEvidencePackage } from "@obliq/database";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EvidenceArtifact } from "@/components/evidence-artifact";
+import { Notice } from "@/components/notice";
+import { Field, Textarea } from "@/components/finance-form";
+import { BackLink } from "@/components/record";
+import { stateLabel } from "@/components/state-tone";
+import { SubmitButton } from "@/components/submit-button";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import { previewEvidenceAction, revokeEvidenceAction } from "../../actions";
@@ -11,10 +15,13 @@ export const dynamic = "force-dynamic";
 
 export default async function EvidenceDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ issued?: string; revoked?: string }>;
 }) {
   const { id } = await params;
+  const notice = await searchParams;
   const actor = await getTenantContext();
   const evidence = await getEvidencePackage(getDatabase(), actor, id);
   if (!evidence) notFound();
@@ -25,15 +32,13 @@ export default async function EvidenceDetailPage({
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-4xl">
-        <Link href="/app/evidence" className="text-muted text-sm">
-          ← Evidence
-        </Link>
-        <div className="mt-5 flex flex-wrap items-end justify-between gap-4">
+        <BackLink href="/app/evidence" label="Evidence" />
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="eyebrow">Issued package</p>
             <h1 className="mt-3 text-3xl font-medium">Controlled evidence</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <a
               className="button button-light"
               href={`/verify/${evidence.publicId}`}
@@ -41,6 +46,7 @@ export default async function EvidenceDetailPage({
               rel="noreferrer"
             >
               Open recipient view
+              <span className="sr-only"> (opens in a new tab)</span>
             </a>
             <a
               className="button button-dark"
@@ -50,6 +56,29 @@ export default async function EvidenceDetailPage({
             </a>
           </div>
         </div>
+        {notice.issued && evidence.status === "ACTIVE" && (
+          <Notice tone="done" title="Evidence issued" live className="mt-6">
+            Its content and hash are now frozen. Share the link below only with
+            the intended recipient.
+          </Notice>
+        )}
+        {notice.revoked && evidence.status === "REVOKED" && (
+          <Notice tone="stop" title="Package revoked" live className="mt-6">
+            The recipient link now shows it as revoked. The package was not
+            deleted and its content is unchanged.
+          </Notice>
+        )}
+        {!valid && (
+          <Notice
+            tone="stop"
+            title="Integrity check failed"
+            live
+            className="mt-6"
+          >
+            The stored content no longer matches its hash. Do not share this
+            package or rely on it.
+          </Notice>
+        )}
         <div className="mt-7">
           <EvidenceArtifact
             artifact={evidence.artifactJson}
@@ -59,20 +88,16 @@ export default async function EvidenceDetailPage({
           />
         </div>
         {evidence.status !== "ACTIVE" && (
-          <section className="card mt-5 border-amber-300 p-5">
-            <h2 className="font-semibold">Package status</h2>
-            <p className="mt-2 text-sm">{evidence.status}</p>
-            {evidence.statusChangedAt && (
-              <p className="text-muted mt-1 text-xs">
-                Changed {evidence.statusChangedAt.toLocaleString()}
-              </p>
-            )}
-            {evidence.statusReason && (
-              <p className="text-muted mt-3 text-xs leading-5">
-                Internal reason: {evidence.statusReason}
-              </p>
-            )}
-          </section>
+          <Notice
+            tone={evidence.status === "REVOKED" ? "stop" : "info"}
+            title={`This package is ${stateLabel(evidence.status).toLowerCase()}`}
+            className="mt-5"
+          >
+            {evidence.statusChangedAt &&
+              `Changed ${evidence.statusChangedAt.toLocaleString()}. `}
+            {evidence.statusReason &&
+              `Internal reason, not shown to the recipient: ${evidence.statusReason}`}
+          </Notice>
         )}
         <section className="card mt-5 p-5">
           <h2 className="font-semibold">Share safely</h2>
@@ -81,7 +106,7 @@ export default async function EvidenceDetailPage({
             in this immutable package. Treat the link as confidential recipient
             material.
           </p>
-          <code className="mt-4 block rounded-lg bg-stone-950 p-3 text-xs break-all text-white">
+          <code className="code-block mt-4 text-xs!" tabIndex={0}>
             /verify/{evidence.publicId}
           </code>
         </section>
@@ -109,27 +134,36 @@ export default async function EvidenceDetailPage({
                   name="supersedesPackageId"
                   value={evidence.id}
                 />
-                <button className="button button-light">
+                <SubmitButton
+                  className="button button-light"
+                  pendingLabel="Building preview…"
+                >
                   Preview successor
-                </button>
+                </SubmitButton>
               </form>
             </section>
-            <section className="card border-red-200 p-5">
+            <section className="card p-5">
               <h2 className="font-semibold">Revoke package</h2>
+              <p className="text-muted mt-2 text-xs leading-5">
+                The recipient link will show it as revoked. This cannot be
+                undone; issue a new package if it was revoked by mistake.
+              </p>
               <form
                 action={revokeEvidenceAction.bind(null, evidence.id)}
                 className="mt-4"
               >
-                <label className="text-xs">
-                  Reason
-                  <textarea
-                    name="reason"
-                    required
-                    minLength={5}
-                    className="mt-2 min-h-24 w-full rounded-lg border p-3"
-                  />
-                </label>
-                <button className="button mt-3">Revoke without deleting</button>
+                <Field
+                  label="Reason"
+                  hint="Kept internally. At least 5 characters."
+                >
+                  <Textarea name="reason" required minLength={5} />
+                </Field>
+                <SubmitButton
+                  className="button button-light mt-3"
+                  pendingLabel="Revoking…"
+                >
+                  Revoke without deleting
+                </SubmitButton>
               </form>
             </section>
           </div>

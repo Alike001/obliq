@@ -1,15 +1,19 @@
 import { createVendorAction } from "../../actions";
 import { Field, Input } from "@/components/finance-form";
+import { BackLink } from "@/components/record";
+import { SubmitButton } from "@/components/submit-button";
 
 export default function NewVendorPage() {
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-3xl">
-        <p className="eyebrow">Counterparty record</p>
+        <BackLink href="/app/vendors" label="Vendors" />
+        <p className="eyebrow mt-3">Counterparty record</p>
         <h1 className="mt-3 text-3xl font-medium tracking-tight">New vendor</h1>
         <p className="text-muted mt-2 text-sm">
           Keep this operational: identity, category and an optional finance
-          contact.
+          contact. A payment destination is added afterwards, on the vendor
+          record.
         </p>
         <form
           action={createVendorAction}
@@ -21,19 +25,22 @@ export default function NewVendorPage() {
           <Field label="Legal name">
             <Input name="legalName" required maxLength={160} />
           </Field>
-          <Field label="Category">
+          <Field label="Category (optional)">
             <Input name="category" maxLength={80} />
           </Field>
-          <Field label="Contact name">
-            <Input name="contactName" maxLength={100} />
+          <Field label="Contact name (optional)">
+            <Input name="contactName" maxLength={100} autoComplete="off" />
           </Field>
-          <Field label="Contact email">
-            <Input name="contactEmail" type="email" />
+          <Field label="Contact email (optional)">
+            <Input name="contactEmail" type="email" autoComplete="off" />
           </Field>
           <div className="flex items-end">
-            <button className="button button-dark w-full" type="submit">
+            <SubmitButton
+              className="button button-dark w-full"
+              pendingLabel="Creating…"
+            >
               Create vendor
-            </button>
+            </SubmitButton>
           </div>
         </form>
       </div>
