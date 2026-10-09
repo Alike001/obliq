@@ -145,6 +145,7 @@ export const settlements = pgTable(
     signerRequestId: text("signer_request_id"),
     signerType: text("signer_type"),
     signerVersion: text("signer_version"),
+    networkFeeZat: bigint("network_fee_zat", { mode: "bigint" }),
     signedTxHash: text("signed_tx_hash"),
     txRefPrivate: text("tx_ref_private"),
     broadcastRequestId: text("broadcast_request_id"),

@@ -1,0 +1,1 @@
+ALTER TABLE "settlements" ADD COLUMN "network_fee_zat" bigint;
