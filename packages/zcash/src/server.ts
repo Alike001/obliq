@@ -17,7 +17,6 @@ export interface ProcessObserverConfig {
   databasePath: string;
   endpoint: string;
   network: ZcashNetwork;
-  viewingAuthority: string;
   observerSource?: string;
 }
 
@@ -43,20 +42,11 @@ export class ProcessZcashObserver implements ZcashObserver {
   }
 
   async observe(): Promise<ObserverScanResult> {
-    if (this.config.network !== "regtest")
-      return {
-        status: {
-          availability: "MISCONFIGURED",
-          network: this.config.network,
-          reasonCode: "PUBLIC_NETWORK_UNAVAILABLE",
-        },
-        observations: [],
-      };
     try {
       const { stdout } = await this.runner(this.config.binary, ["sync"], {
         OBSERVER_DB: this.config.databasePath,
         OBSERVER_ENDPOINT: this.config.endpoint,
-        OBSERVER_UFVK: this.config.viewingAuthority,
+        OBSERVER_NETWORK: this.config.network,
       });
       const parsed = parseObserverOutput(stdout);
       if (parsed.network !== this.config.network)
@@ -64,6 +54,8 @@ export class ProcessZcashObserver implements ZcashObserver {
       const status: ObserverStatus = {
         availability: parsed.synced ? "AVAILABLE" : "SYNCING",
         network: this.config.network,
+        authority: parsed.authority,
+        spendingAuthority: parsed.spendingAuthority,
         chainTipHeight: parsed.chainTipHeight,
         fullyScannedHeight: parsed.fullyScannedHeight,
       };
@@ -92,6 +84,8 @@ export class ProcessZcashObserver implements ZcashObserver {
         status: {
           availability: "UNAVAILABLE",
           network: this.config.network,
+          authority: "UFVK_VIEW_ONLY",
+          spendingAuthority: false,
           reasonCode: classifyFailure(message),
         },
         observations: [],
@@ -102,6 +96,7 @@ export class ProcessZcashObserver implements ZcashObserver {
 
 interface RawObserverOutput {
   network: ZcashNetwork;
+  authority: "UFVK_VIEW_ONLY";
   spendingAuthority: false;
   chainTipHeight: number;
   fullyScannedHeight: number;
@@ -124,10 +119,14 @@ function parseObserverOutput(value: string): RawObserverOutput {
     throw new Error("Malformed observer output");
   const candidate = parsed as Partial<RawObserverOutput>;
   if (
+    candidate.authority !== "UFVK_VIEW_ONLY" ||
     candidate.spendingAuthority !== false ||
-    candidate.network !== "regtest" ||
+    !["regtest", "testnet", "mainnet"].includes(candidate.network ?? "") ||
+    typeof candidate.chainTipHeight !== "number" ||
     !Number.isSafeInteger(candidate.chainTipHeight) ||
+    typeof candidate.fullyScannedHeight !== "number" ||
     !Number.isSafeInteger(candidate.fullyScannedHeight) ||
+    candidate.fullyScannedHeight > candidate.chainTipHeight ||
     typeof candidate.synced !== "boolean" ||
     !Array.isArray(candidate.observations)
   )
@@ -152,6 +151,8 @@ function parseObserverOutput(value: string): RawObserverOutput {
 }
 
 function classifyFailure(message: string): string {
+  if (/network.*(?:mismatch|does not match)/iu.test(message))
+    return "NETWORK_MISMATCH";
   if (/viewing|ufvk/iu.test(message)) return "VIEWING_AUTHORITY_UNAVAILABLE";
   if (/connect|transport|node|rpc/iu.test(message)) return "NODE_UNAVAILABLE";
   if (/malformed|json|parse/iu.test(message))

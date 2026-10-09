@@ -51,6 +51,7 @@ describe("database invariants", () => {
     const columns = getTableColumns(settlements);
     expect(columns.obligationId.notNull).toBe(true);
     expect(columns.intentId.notNull).toBe(true);
+    expect(columns.networkFeeZat.dataType).toBe("bigint");
   });
 
   it("money columns use bigint representation", () => {

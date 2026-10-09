@@ -440,7 +440,15 @@ export async function recordSigningReceiptAction(
     signerRequestId,
     outcome: "AUTHORIZED",
     signerType: "ZALLET_PCZT",
-    signerVersion: field(formData, "signerVersion"),
+    signerVersion: boundedToken(
+      field(formData, "signerVersion"),
+      "signer version",
+      64,
+    ),
+    networkFeeZat: positiveInteger(
+      field(formData, "networkFeeZat"),
+      "network fee",
+    ),
     txid: field(formData, "txid").toLowerCase(),
     signedTxHash: field(formData, "signedTxHash").toLowerCase(),
   });

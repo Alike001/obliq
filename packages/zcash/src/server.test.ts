@@ -9,18 +9,19 @@ describe("process observer adapter", () => {
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "regtest",
-        viewingAuthority: "uviewregtest1sensitive",
       },
       (_file, _args, env) => {
         expect(Object.keys(env).sort()).toEqual([
           "OBSERVER_DB",
           "OBSERVER_ENDPOINT",
-          "OBSERVER_UFVK",
+          "OBSERVER_NETWORK",
         ]);
-        expect(env.OBSERVER_UFVK).toBe("uviewregtest1sensitive");
+        expect(env.OBSERVER_NETWORK).toBe("regtest");
+        expect(env).not.toHaveProperty("OBSERVER_UFVK");
         return Promise.resolve({
           stdout: JSON.stringify({
             network: "regtest",
+            authority: "UFVK_VIEW_ONLY",
             spendingAuthority: false,
             chainTipHeight: 117,
             fullyScannedHeight: 117,
@@ -57,12 +58,12 @@ describe("process observer adapter", () => {
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "regtest",
-        viewingAuthority: "uviewregtest1sensitive",
       },
       () =>
         Promise.resolve({
           stdout: JSON.stringify({
             network: "mainnet",
+            authority: "UFVK_VIEW_ONLY",
             spendingAuthority: false,
             chainTipHeight: 1,
             fullyScannedHeight: 1,
@@ -73,7 +74,7 @@ describe("process observer adapter", () => {
     );
     expect((await observer.observe()).status).toMatchObject({
       availability: "UNAVAILABLE",
-      reasonCode: "MALFORMED_OBSERVER_OUTPUT",
+      reasonCode: "NETWORK_MISMATCH",
     });
   });
 
@@ -84,7 +85,6 @@ describe("process observer adapter", () => {
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "regtest",
-        viewingAuthority: "uviewregtest1sensitive",
       },
       () =>
         Promise.reject(new Error("transport failed uviewregtest1sensitive")),
@@ -93,30 +93,67 @@ describe("process observer adapter", () => {
       status: {
         availability: "UNAVAILABLE",
         network: "regtest",
+        authority: "UFVK_VIEW_ONLY",
+        spendingAuthority: false,
         reasonCode: "NODE_UNAVAILABLE",
       },
       observations: [],
     });
   });
 
-  it("refuses unproved public-network operation", async () => {
+  it("accepts public output only when the sidecar reports the configured network", async () => {
     const observer = new ProcessZcashObserver(
       {
         binary: "/safe/observer",
         databasePath: "/safe/wallet.sqlite",
         endpoint: "https://node.invalid",
         network: "mainnet",
-        viewingAuthority: "uview1sensitive",
       },
-      () => Promise.reject(new Error("must not launch")),
+      (_file, _args, env) => {
+        expect(env.OBSERVER_NETWORK).toBe("mainnet");
+        return Promise.resolve({
+          stdout: JSON.stringify({
+            network: "mainnet",
+            authority: "UFVK_VIEW_ONLY",
+            spendingAuthority: false,
+            chainTipHeight: 3_508_826,
+            fullyScannedHeight: 3_508_826,
+            synced: true,
+            observations: [],
+          }),
+        });
+      },
     );
-    expect(await observer.observe()).toEqual({
-      status: {
-        availability: "MISCONFIGURED",
-        network: "mainnet",
-        reasonCode: "PUBLIC_NETWORK_UNAVAILABLE",
+    expect((await observer.observe()).status).toMatchObject({
+      availability: "AVAILABLE",
+      network: "mainnet",
+    });
+  });
+
+  it("rejects output that does not prove a view-only authority and sane heights", async () => {
+    const observer = new ProcessZcashObserver(
+      {
+        binary: "/safe/observer",
+        databasePath: "/safe/wallet.sqlite",
+        endpoint: "https://node.invalid",
+        network: "testnet",
       },
-      observations: [],
+      () =>
+        Promise.resolve({
+          stdout: JSON.stringify({
+            network: "testnet",
+            authority: "SPEND_CAPABLE",
+            spendingAuthority: false,
+            chainTipHeight: 100,
+            fullyScannedHeight: 101,
+            synced: true,
+            observations: [],
+          }),
+        }),
+    );
+    expect((await observer.observe()).status).toMatchObject({
+      availability: "UNAVAILABLE",
+      reasonCode: "MALFORMED_OBSERVER_OUTPUT",
     });
   });
 });

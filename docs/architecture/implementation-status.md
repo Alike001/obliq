@@ -36,12 +36,14 @@ remain explicitly development-only.
 Extraction remains **SEEDED** through a labelled fixture provider. Manual
 destination verification is operational evidence, not cryptographic ownership
 proof. RLS, native PDF, live pricing, automated object retention, production
-observer HA and independent audit anchoring remain **PLANNED**. The old
-Zaino/Ironwood subtree-root defect is fixed upstream, but public-network
-operation remains **BLOCKED** because Obliq is regtest-only and has not proven
-authenticated public synchronization, reorg handling or a funded shielded
-transaction. Embedded wallet custody and ledger settlement entries remain
-**UNAVAILABLE** or **PLANNED**.
+observer HA and independent audit anchoring remain **PLANNED**. Public testnet
+TLS synchronization, network identity validation, current
+Sapling/Orchard/Ironwood subtree import and the librustzcash continuity/reorg
+recovery path are **IMPLEMENTED**. Public network status is
+`PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`: no funded public shielded output has
+yet been observed, so `/proof` correctly remains regtest-verified and mainnet
+execution remains **BLOCKED**. Embedded wallet custody and ledger settlement
+entries remain **UNAVAILABLE** or **PLANNED**.
 
 Canonical application evidence, explicit server-enforced field disclosure,
 mandatory preview, immutable issuance, SHA-256 verification, high-entropy

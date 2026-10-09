@@ -5,7 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./qualification": "./src/qualification.ts",
+    "./qualification-files": "./src/qualification-files.ts",
+    "./signer-preflight": "./src/signer-preflight.ts"
   },
   "dependencies": {
     "server-only": "0.0.1"
