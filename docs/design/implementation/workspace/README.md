@@ -11,7 +11,7 @@ colour, typeface or component style is introduced. The earlier notes are in
 | Area                   | Change                                                                                                                                                   |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Shell                  | "Skip to content" link; the content region can take focus                                                                                                |
-| Overview               | The four state counts link to their list; a "Needs attention" queue lists what is waiting on a person, most urgent first                                 |
+| Overview               | The four state counts link to their list; a queue built from the loaded records, and labelled so, lists what is waiting on a person, most urgent first   |
 | Obligations list       | Accepts a state filter, shows which one is active, and has an empty state for it                                                                         |
 | Obligation record      | Amount, vendor, due date and next step at the top; state tags for findings, requirements, readiness and observations; labelled approval and intent forms |
 | Vendor record          | Destination history with state tags and the current destination marked; labelled verification form; obligation history with amount and state             |
@@ -145,15 +145,36 @@ Desktop is 1440px, mobile is 390px.
 | Evidence, nothing eligible       | [evidence-desktop.png](./evidence-desktop.png)                                 | [evidence-mobile.png](./evidence-mobile.png)                                 |
 | Not found                        | [not-found-desktop.png](./not-found-desktop.png)                               | [not-found-mobile.png](./not-found-mobile.png)                               |
 
+The overview screenshots were taken before the queue was relabelled "Needs
+attention, from loaded records"; the layout is the same and only that heading
+and its description differ. That relabel was type-checked and linted, not
+re-opened in a browser.
+
 The records shown are sample data in a local database that existed only for
 these checks. No real approval, payment or settlement took place.
 
+## Follow-ups
+
+These are known and deliberately left out of this change.
+
+- **Failed submits lose what was typed.** A server action that fails throws,
+  so the person lands on the error page and the form is empty when they go
+  back. Showing the error beside the field and keeping the input needs the
+  server actions to return a result instead of throwing. That changes their
+  contract, so it needs its own server-action contract review and its own
+  pull request. Until then the error page tells the person to check the
+  record before submitting again.
+- **The attention queue is a loaded-records queue.** The overview reads up to
+  100 obligations, earliest due date first, and builds the queue from those.
+  The section is labelled that way, shows "N of M loaded", and warns when the
+  limit was reached. A complete queue needs a repository query of its own,
+  which is outside this change.
+- **Screens that need the observer or a settled payment** were not opened in
+  a browser here: the evidence preview, issued-package and revoke pages, the
+  broadcast form and the expired-quote notice.
+
 ## Open items
 
-- A failed submit still goes to the error page, and what was typed is lost.
-  Showing the error beside the field needs the server actions to return a
-  result instead of throwing, which is a change to their contract and so is
-  left for its own review.
 - The list tables on obligations, vendors and approvals scroll sideways inside
   their card on a phone; the page itself does not. Stacking them is a possible
   follow-up.
