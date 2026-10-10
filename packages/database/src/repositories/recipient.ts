@@ -762,6 +762,10 @@ export async function confirmRecipientDestination(
       .from(recipientOperationReceipts)
       .where(
         and(
+          eq(
+            recipientOperationReceipts.organizationId,
+            invitation.organizationId,
+          ),
           eq(recipientOperationReceipts.invitationId, invitation.id),
           eq(recipientOperationReceipts.operationType, "CONFIRM_DESTINATION"),
           eq(
@@ -772,16 +776,32 @@ export async function confirmRecipientDestination(
       )
       .limit(1);
     if (priorReceipt) {
+      if (
+        priorReceipt.status !== "COMPLETED" ||
+        !priorReceipt.completedAt ||
+        !priorReceipt.resultDestinationId ||
+        invitation.state !== "CONSUMED" ||
+        session.state !== "CONSUMED" ||
+        invitation.expiresAt <= now ||
+        session.expiresAt <= now ||
+        invitation.consumedDestinationId !== priorReceipt.resultDestinationId ||
+        invitation.consumedRequestHash !== priorReceipt.requestHash
+      )
+        throw new RecipientWorkflowError("UNAVAILABLE");
       if (priorReceipt.requestHash !== input.requestHash)
         throw new RecipientWorkflowError("IDEMPOTENCY_CONFLICT");
-      if (!priorReceipt.resultDestinationId)
-        throw new RecipientWorkflowError("UNAVAILABLE");
       const [destination] = await tx
         .select()
         .from(vendorDestinations)
-        .where(eq(vendorDestinations.id, priorReceipt.resultDestinationId))
+        .where(
+          and(
+            eq(vendorDestinations.organizationId, invitation.organizationId),
+            eq(vendorDestinations.id, priorReceipt.resultDestinationId),
+            sql`${vendorDestinations.supersededAt} is null`,
+          ),
+        )
         .limit(1);
-      if (!destination) throw new RecipientWorkflowError("UNAVAILABLE");
+      if (!destination) throw new RecipientWorkflowError("STALE");
       return { destination, recovered: true };
     }
     if (
@@ -823,6 +843,25 @@ export async function confirmRecipientDestination(
       (current?.version ?? null) !== invitation.baseDestinationVersion
     )
       throw new RecipientWorkflowError("STALE");
+    const [signedExecution] = await tx
+      .select({ id: settlements.id })
+      .from(settlements)
+      .innerJoin(
+        settlementIntents,
+        and(
+          eq(settlementIntents.organizationId, invitation.organizationId),
+          eq(settlementIntents.id, settlements.intentId),
+        ),
+      )
+      .where(
+        and(
+          eq(settlements.organizationId, invitation.organizationId),
+          eq(settlements.state, "SIGNED"),
+          eq(settlementIntents.vendorId, invitation.vendorId),
+        ),
+      )
+      .limit(1);
+    if (signedExecution) throw new RecipientWorkflowError("STALE");
     if (current)
       await tx
         .update(vendorDestinations)

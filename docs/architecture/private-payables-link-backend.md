@@ -158,9 +158,16 @@ email address.
   challenge and revokes the old one.
 - Invitation/session state, destination insertion, invalidation, operation
   receipt and audit events commit atomically.
-- A retry with the same idempotency key and request returns the original result.
+- A retry with the same idempotency key and request returns the original result
+  only while the consumed invitation/session remain unexpired and the recorded
+  destination is still current. Revoked, expired or superseded state reveals no
+  historical destination result.
 - Reusing a key for a different request returns an idempotency conflict.
 - Two distinct concurrent confirmations can produce only one destination.
+- A destination change is rejected while a transaction for the vendor is
+  `SIGNED` but not broadcast. Unsigned preparation is invalidated; already
+  broadcast settlement and observer targets remain bound to their historical
+  destination and continue reconciliation.
 - Database or address-inspector uncertainty cannot fabricate confirmation.
 
 ## Still unavailable

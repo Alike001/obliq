@@ -297,6 +297,28 @@ export async function addVendorDestination(
     await requireWriteRole(tx, actor, destinationWriteRoles);
     const vendor = await getVendor(tx, actor.organizationId, vendorId);
     if (!vendor) return null;
+    const [signedExecution] = await tx
+      .select({ id: settlements.id })
+      .from(settlements)
+      .innerJoin(
+        settlementIntents,
+        and(
+          eq(settlementIntents.organizationId, actor.organizationId),
+          eq(settlementIntents.id, settlements.intentId),
+        ),
+      )
+      .where(
+        and(
+          eq(settlements.organizationId, actor.organizationId),
+          eq(settlements.state, "SIGNED"),
+          eq(settlementIntents.vendorId, vendorId),
+        ),
+      )
+      .limit(1);
+    if (signedExecution)
+      throw new Error(
+        "Vendor destination cannot change while a signed transaction awaits broadcast",
+      );
     const [currentDestination] = await tx
       .select({
         id: vendorDestinations.id,

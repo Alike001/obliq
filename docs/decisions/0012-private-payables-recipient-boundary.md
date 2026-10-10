@@ -33,6 +33,12 @@ authority.
   contact and message timing.
 - Existing approval and settlement-intent history is retained but invalidated
   after destination changes.
+- Idempotent receipt recovery requires matching consumed records, unexpired
+  invitation/session scope and a still-current result; it is not durable bearer
+  access to historical destinations.
+- Replacement fails closed while a `SIGNED` transaction exists for the vendor.
+  Once broadcast, historical destination and observer bindings are preserved so
+  later destination versions cannot erase reconciliation.
 - Evidence is not released to the recipient automatically; an authorized
   internal action after observer-confirmed settlement remains required.
 - Recipient UI, wallet ownership proof and public-network settlement remain
