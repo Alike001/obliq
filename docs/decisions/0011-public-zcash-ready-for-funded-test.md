@@ -148,14 +148,23 @@ on Zebra state access, indexer mode, and indexer gRPC and is not the reviewed
 topology. Release archives/source commits are pinned in
 `docs/operations/public-testnet-artifacts.json`.
 
-The beta.3 release predates ZIP 259's finalized branch ID, so the artifact pin
-does not assert NU7 compatibility. Live inspection must show a v6 `FullPrivacy`
-fixture bound to `77190ad9`. The repository's JSON command is intentionally an
-offline consistency validator for operator assertions: even a valid report
-states that live compatibility is unverified and funding is unauthorized.
-Independent live Zebra/Zallet RPC evidence plus second-human review is required
-before the funded ceremony. No ceremony may start merely because a version,
-checksum, or self-authored JSON file matches.
+The beta.3 release predates ZIP 259's finalized branch ID. A 2026-10-10 audit
+of its immutable dependency graph found that it embeds librustzcash commit
+`1f6bb2072e7fcb142b0d90ff7b267a8699a84818`; that revision has no public-testnet
+NU7 activation height and its feature-gated NU7 branch ID is still the
+provisional `ffffffff`, not `77190ad9`. The official beta.3 binary checksum and
+identity were verified locally without creating a wallet. It must therefore be
+treated as incompatible with post-NU7 public-testnet PCZT construction unless
+contradicting live evidence is obtained from the exact binary. The funded
+ceremony is blocked pending a newly pinned compatible official Zallet artifact
+or independently reviewed live evidence.
+
+The repository's JSON command remains intentionally an offline consistency
+validator for operator assertions: even a valid report states that live
+compatibility is unverified and funding is unauthorized. Independent live
+Zebra/Zallet RPC evidence plus second-human review is required before the
+funded ceremony. No ceremony may start merely because a version, checksum, or
+self-authored JSON file matches.
 
 The observer no longer accepts viewing authority through `OBSERVER_UFVK`.
 Initialization uses a hidden terminal prompt or operator-controlled standard

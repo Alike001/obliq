@@ -1,0 +1,69 @@
+{
+  "schema": "obliq.public-testnet-compatibility-audit.v1",
+  "collectedAt": "2026-10-10T10:28:25Z",
+  "repositoryRevision": "85faef03370b45efe18fe12e707f0d8394959aa8",
+  "network": "testnet",
+  "classification": {
+    "readOnlyObserver": "PASS",
+    "signerCompatibility": "BLOCKED",
+    "unfundedPcztPreparation": "NOT_TESTED",
+    "fundedSettlement": "NOT_TESTED",
+    "publicNetworkVerified": false
+  },
+  "observer": {
+    "endpoint": "https://testnet.zec.rocks:443",
+    "serviceChain": "test",
+    "serviceVendor": "ECC LightWalletD",
+    "serviceVersion": "v0.5.4",
+    "serviceCommit": "c22ca9ba67676e61cd8ee107538ffd9a77799bab",
+    "nodeBuild": "v7.0.0-rc.0",
+    "nodeSubversion": "/Zebra:7.0.0-rc.0/",
+    "lightwalletProtocolVersion": "v0.5.0",
+    "chainTipHeight": 4484951,
+    "activeConsensusBranchId": "77190ad9",
+    "nu7ActivationHeight": 4465026,
+    "nu7Active": true,
+    "authority": "UFVK_VIEW_ONLY",
+    "spendingAuthority": false,
+    "fullyScannedHeight": 4484943,
+    "synchronizedAtScan": true,
+    "observationCount": 0,
+    "recipientReceiverMatch": "MATCH"
+  },
+  "artifacts": {
+    "zebra": {
+      "version": "7.0.0-rc.0",
+      "commit": "6d1e414d6f55e4180d0e47baaa934bf97d5b4fec",
+      "releasePin": "PASS"
+    },
+    "zallet": {
+      "version": "0.1.0-beta.3",
+      "commit": "987382f67e622915228686e9f956c6a9c9a7514c",
+      "archiveSha256": "1df2398df016ae6e9a1cba3f8ef0cc86ca0d7b48a0934b34df6f68114ebe9306",
+      "archiveChecksum": "PASS",
+      "binary": "zallet-zaino",
+      "binaryVersion": "0.1.0-beta.3",
+      "walletCreated": false,
+      "rpcStarted": false,
+      "embeddedLibrustzcashCommit": "1f6bb2072e7fcb142b0d90ff7b267a8699a84818",
+      "embeddedZainoCommit": "d2d06bdd6591f3b238a3829b8f1b973ae0ec40be",
+      "nu7Compatibility": "BLOCKED_PINNED_ARTIFACT_PREDATES_FINAL_NU7"
+    },
+    "zaino": {
+      "latestReviewedRelease": "0.10.1",
+      "releaseCommit": "3244a74bb09fa6a09a4b2deeb6be53bab0890747",
+      "usedByPublicObserverEndpoint": false,
+      "standaloneServiceExecuted": false
+    }
+  },
+  "blockers": [
+    "COMPATIBLE_OFFICIAL_ZALLET_ARTIFACT_REQUIRED",
+    "INDEPENDENT_LIVE_ZALLET_RPC_EVIDENCE_REQUIRED",
+    "OWNER_APPROVAL_REQUIRED_BEFORE_DISPOSABLE_ACCOUNT_CREATION",
+    "REAL_FUNDED_SHIELDED_PAYMENT_REQUIRED"
+  ],
+  "secretsRecorded": false,
+  "fundingAttempted": false,
+  "signingAttempted": false,
+  "broadcastAttempted": false
+}
