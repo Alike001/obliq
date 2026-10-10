@@ -496,6 +496,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             json!({
                 "network": configured.label,
                 "serviceChain": service_info.chain_name,
+                "serviceVersion": service_info.version,
+                "serviceVendor": service_info.vendor,
+                "serviceCommit": service_info.git_commit,
+                "nodeBuild": service_info.zcashd_build,
+                "nodeSubversion": service_info.zcashd_subversion,
+                "lightwalletProtocolVersion": service_info.lightwallet_protocol_version,
                 "chainTipHeight": u32::from(tip_height),
                 "activeConsensusBranchId": branch_id,
                 "nu7ActivationHeight": nu7_activation_height,

@@ -31,12 +31,14 @@ run `zallet rpc help <method>` for every RPC below. Stop if its live schema
 differs from this reviewed version.
 
 Zallet beta.3 was published before ZIP 259 finalized the NU7 branch ID. Its
-checksum proves artifact identity, not post-NU7 compatibility. It is therefore
-never accepted on version alone: Ceremony 3 must demonstrate that the running
-binary inspects a v6 `FullPrivacy` fixture bound to `77190ad9`. A beta.3 build
-that reports the former branch or cannot inspect the fixture is `BLOCKED`; wait
-for and separately pin a compatible official artifact rather than patching or
-silently substituting a wallet binary.
+checksum proves artifact identity, not post-NU7 compatibility. The 2026-10-10
+audit confirmed that the pinned build embeds librustzcash commit `1f6bb207…`,
+where public testnet has no NU7 activation height and the feature-gated NU7
+branch is still the provisional `ffffffff`. The exact official archive and
+`zallet-zaino` executable were verified locally, but no wallet was created and
+no RPC was started. Treat beta.3 as `BLOCKED_PINNED_ARTIFACT_PREDATES_FINAL_NU7`.
+Wait for and separately pin a compatible official artifact; do not patch or
+silently substitute a wallet binary for a financial ceremony.
 
 NU7 activated on testnet at height `4,465,026` with consensus branch ID
 `77190ad9`, as specified by ZIP 259. The earlier `37a5165b` value is the NU6.3
@@ -166,9 +168,12 @@ network, expiry, and intent hash. It does not sign or broadcast.
 
 ## Ceremony 3: live preflight and offline assertion validation
 
-Complete this gate on the isolated signer host before creating or funding a
-wallet. It does not require a UFVK, seed, account, proving parameters, signing,
-or broadcast.
+Complete the account-free discovery portion of this gate on the isolated signer
+host before creating or funding a wallet. Network identity, executable identity,
+configuration schema and RPC discovery do not require a UFVK, seed, account,
+proving parameters, signing or broadcast. `pczt_create`, however, requires a
+wallet account even when the expected result is insufficient funds. Creating
+that disposable zero-balance account is a separate owner-approval checkpoint.
 
 First record the live public-testnet identity and active branch with the
 keyless observer command:
@@ -201,13 +206,15 @@ wallet RPC bound to loopback. Stop if process identity or configuration says
 the default `zebra` backend, if RPC is remotely reachable, or if either process
 reports a different network.
 
-Use private file-based loopback RPC requests to:
+After a compatible artifact is pinned, use private file-based loopback RPC
+requests to:
 
 1. call `help` for `pczt_create` and `pczt_inspect` and compare their schemas
    with the pinned Zallet version;
-2. call `pczt_create` against a confirmed empty testnet account and require the
-   documented insufficient-funds result only—this proves request parsing and
-   transaction construction are reached without funding;
+2. **Stop for owner approval before account creation.** Then call `pczt_create`
+   against a confirmed empty testnet account and require the documented
+   insufficient-funds result only—this proves request parsing and transaction
+   construction are reached without funding;
 3. call `pczt_inspect` on a locally retained, non-sensitive fixture created by
    the same pinned build and require transaction version 6, `FullPrivacy`, and
    consensus branch `77190ad9`; and
@@ -239,10 +246,12 @@ used as a funded-ceremony gate; malformed or inconsistent input exits 1. A
 fabricated but schema-valid file can produce `CONSISTENT_UNTRUSTED`; it can
 never produce a live-compatibility PASS or authorize Ceremony 4. Proceeding
 requires independent review of the direct Zebra/Zallet RPC evidence described
-above. This repository does not yet contain an authenticated live-RPC
-collector, so operational readiness remains blocked until that evidence is
-collected and reviewed. The overall public network classification remains
-`PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`; neither result is payment evidence.
+above. This repository does not yet contain an authenticated live-RPC collector,
+and the pinned Zallet beta.3 dependency graph is incompatible with finalized
+NU7. Operational signer readiness is therefore blocked until a compatible
+artifact is pinned and direct evidence is collected and reviewed. The read-only
+observer classification remains `PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`; funded
+ceremony authorization is false, and neither result is payment evidence.
 
 ## Ceremony 4: independent sender and faucet
 

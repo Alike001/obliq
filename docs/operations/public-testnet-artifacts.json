@@ -18,8 +18,10 @@
     "sourceCommit": "987382f67e622915228686e9f956c6a9c9a7514c",
     "binary": "zallet-zaino",
     "backend": "zaino",
-    "nu7Compatibility": "REQUIRES_INDEPENDENT_LIVE_RPC_EVIDENCE",
-    "release": "https://github.com/zcash/wallet/releases/tag/zallet-v0.1.0-beta.3",
+    "nu7Compatibility": "BLOCKED_PINNED_ARTIFACT_PREDATES_FINAL_NU7",
+    "release": "https://github.com/zcash/zallet/releases/tag/v0.1.0-beta.3",
+    "embeddedLibrustzcashCommit": "1f6bb2072e7fcb142b0d90ff7b267a8699a84818",
+    "embeddedZainoCommit": "d2d06bdd6591f3b238a3829b8f1b973ae0ec40be",
     "archives": {
       "x86_64-unknown-linux-gnu": {
         "sha256": "1df2398df016ae6e9a1cba3f8ef0cc86ca0d7b48a0934b34df6f68114ebe9306"
