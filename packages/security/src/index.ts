@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomInt } from "node:crypto";
 
 export type DeploymentMode = "development" | "preview" | "production" | "test";
 export type AuthMode = "development" | "disabled" | "oidc";
@@ -133,6 +133,9 @@ export function parseRuntimeSecurityConfig(
       "OBLIQ_DOCUMENT_SCANNER_URL",
       "OBLIQ_DOCUMENT_SCANNER_TOKEN",
       "OBLIQ_SESSION_PEPPER",
+      "OBLIQ_RECIPIENT_TOKEN_PEPPER",
+      "OBLIQ_RECIPIENT_EMAIL_ENDPOINT",
+      "OBLIQ_RECIPIENT_EMAIL_TOKEN",
       "OBLIQ_STORAGE_BUCKET",
       "OBLIQ_STORAGE_ENDPOINT",
       "OBLIQ_STORAGE_KMS_KEY_ID",
@@ -163,6 +166,16 @@ export function parseRuntimeSecurityConfig(
       throw new Error(
         "OBLIQ_SESSION_PEPPER must contain at least 32 characters",
       );
+    if (required(env, "OBLIQ_RECIPIENT_TOKEN_PEPPER").length < 32)
+      throw new Error(
+        "OBLIQ_RECIPIENT_TOKEN_PEPPER must contain at least 32 characters",
+      );
+    httpsUrl(
+      required(env, "OBLIQ_RECIPIENT_EMAIL_ENDPOINT"),
+      "OBLIQ_RECIPIENT_EMAIL_ENDPOINT",
+    );
+    if (required(env, "OBLIQ_RECIPIENT_EMAIL_TOKEN").length < 20)
+      throw new Error("OBLIQ_RECIPIENT_EMAIL_TOKEN is too short");
     required(env, "OBLIQ_STORAGE_BUCKET");
     required(env, "OBLIQ_STORAGE_REGION");
     httpsUrl(
@@ -207,6 +220,44 @@ export function operationalFingerprint(value: string, pepper: string) {
     .update(pepper)
     .update("\0")
     .update(value)
+    .digest("hex");
+}
+
+export type RecipientSecretDomain =
+  "invitation" | "session" | "challenge" | "idempotency" | "contact";
+
+const recipientDomain: Record<RecipientSecretDomain, string> = {
+  invitation: "obliq.recipient-invitation.v1\0",
+  session: "obliq.recipient-session.v1\0",
+  challenge: "obliq.recipient-challenge.v1\0",
+  idempotency: "obliq.recipient-idempotency.v1\0",
+  contact: "obliq.recipient-contact.v1\0",
+};
+
+export function generateRecipientToken() {
+  return randomBytes(32).toString("base64url");
+}
+
+export function generateRecipientCode() {
+  const value = randomInt(0, 1_000_000);
+  return value.toString().padStart(6, "0");
+}
+
+export function hashRecipientSecret(
+  domain: RecipientSecretDomain,
+  secret: string,
+  pepper: string,
+  binding = "",
+) {
+  if (pepper.length < 32)
+    throw new Error(
+      "Recipient token pepper must contain at least 32 characters",
+    );
+  return createHmac("sha256", pepper)
+    .update(recipientDomain[domain])
+    .update(binding)
+    .update("\0")
+    .update(secret)
     .digest("hex");
 }
 

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDatabase, schema } from "../index";
 import {
@@ -587,11 +587,23 @@ suite("Phase 4 non-custodial settlement repositories", () => {
 
   it("prepares a testnet-only qualification intent without changing the regtest path", async () => {
     const testnetReceiver = `utest1${"p".repeat(90)}`;
+    await connection.db
+      .update(schema.vendorDestinations)
+      .set({ verificationStatus: "SUPERSEDED", supersededAt: new Date() })
+      .where(
+        and(
+          eq(schema.vendorDestinations.organizationId, organizationId),
+          eq(schema.vendorDestinations.vendorId, vendorId),
+          isNull(schema.vendorDestinations.supersededAt),
+        ),
+      );
     const [destination] = await connection.db
       .insert(schema.vendorDestinations)
       .values({
         organizationId,
         vendorId,
+        version: 2,
+        supersedesDestinationId: destinationId,
         network: "ZCASH",
         receiver: testnetReceiver,
         fingerprint: receiverFingerprint(testnetReceiver),
