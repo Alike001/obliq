@@ -1,7 +1,9 @@
-import { CheckCircle2, CircleSlash2, GitCommitHorizontal } from "lucide-react";
+import { GitCommitHorizontal } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { StatusPill } from "@/components/status-pill";
+import { NetworkStamp, ScopeTag, StatusPill } from "@/components/status-pill";
+import { networkClaims, networkSummary } from "@/lib/network-claims";
+import { readNetworkStatus } from "@/lib/network-status";
 import { checkDatabaseConnection, verifyAuditChain } from "@obliq/database";
 import { getDatabase } from "@/lib/db";
 import { phase3NetworkProof } from "@/content/phase3-proof";
@@ -178,22 +180,64 @@ export default async function ProofPage() {
       databaseRuntime = "UNAVAILABLE";
     }
   }
+  // The same source the landing page reads: what the server enforces.
+  const { status, network } = readNetworkStatus();
+  const claims = networkClaims(status, network);
+  const summary = networkSummary(status);
   return (
     <main>
+      <a href="#main" className="button button-dark skip-link">
+        Skip to content
+      </a>
       <SiteHeader />
-      <section className="on-ink bg-[#161616] text-white">
+      <section
+        id="main"
+        tabIndex={-1}
+        className="on-ink bg-[#161616] text-white"
+      >
         <div className="page-wrap py-20 md:py-24">
           <p className="eyebrow">Technical proof surface</p>
           <h1 className="section-title mt-5 max-w-3xl">
             Claims should be inspectable or marked unavailable.
           </h1>
-          <p className="mt-6 max-w-2xl leading-7 text-white/60">
+          <p className="mt-6 max-w-2xl leading-7 text-white/70">
             Phase 6 reports hardened runtime boundaries alongside the real
             Phase-4 regtest settlement and UFVK-only reconciliation evidence.
             Public-network operation remains blocked until Obliq itself proves
             current public synchronization and a funded shielded flow.
           </p>
         </div>
+      </section>
+      <section className="page-wrap pt-16" aria-labelledby="network-h">
+        <h2 id="network-h" className="text-2xl font-semibold tracking-tight">
+          Where settlement is proven, and where it is not
+        </h2>
+        <p className="mt-3 max-w-[68ch] leading-7">
+          <strong>{summary.lead}</strong>{" "}
+          <span className="text-muted">{summary.rest}</span>
+        </p>
+        <ul className="mt-6 grid gap-4 md:grid-cols-2">
+          {claims.map((claim) => (
+            <li key={claim.id} className="card bg-panel p-5">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="font-semibold">{claim.subject}</h3>
+                <NetworkStamp
+                  label={claim.label}
+                  tone={claim.tone}
+                  {...(claim.scope ? { scope: claim.scope } : {})}
+                />
+              </div>
+              <p className="text-muted mt-3 text-sm leading-6">
+                {claim.detail}
+              </p>
+            </li>
+          ))}
+        </ul>
+        <p className="text-muted mt-4 max-w-[68ch] text-sm leading-6">
+          A solid stamp is a live fact. A result that holds on the isolated test
+          network only always carries the hatched Regtest tag, so it is never
+          read as public-network readiness.
+        </p>
       </section>
       <section className="page-wrap py-16">
         <div className="grid gap-5 lg:grid-cols-[1.35fr_.65fr]">
@@ -235,24 +279,27 @@ export default async function ProofPage() {
             <ProofCard
               label="Runtime security modes"
               value={`${runtimeSummary.auth} · ${runtimeSummary.storage}`}
-              detail={`Rate limits: ${runtimeSummary.rateLimit}. Zcash network: ${runtimeSummary.network}. ${runtimeSummary.publicNetwork}.`}
+              detail={`Rate limits: ${runtimeSummary.rateLimit}. Zcash network: ${runtimeSummary.network}. Public network status: ${runtimeSummary.publicNetwork}.`}
               good={runtimeSummary.auth === "OIDC"}
             />
             <ProofCard
               label="End-to-end settlement"
-              value="VERIFIED · REGTEST"
+              value="VERIFIED"
+              regtest
               detail={`Intent ${phase4NetworkProof.intentHash.slice(0, 12)}…; tx ${phase4NetworkProof.txid.slice(0, 12)}…; height ${phase4NetworkProof.minedHeight}; ${phase4NetworkProof.confirmationEvidence.join(" → ")} confirmations; final state ${phase4NetworkProof.finalState}.`}
               good
             />
             <ProofCard
               label="External signer"
               value="VERIFIED · FULL PRIVACY"
+              regtest
               detail="Zallet created, inspected, proved, signed and extracted an Ironwood PCZT outside Obliq. No RPC credential, PCZT, raw transaction or key entered the app."
               good
             />
             <ProofCard
               label="Shielded tracer"
-              value="VERIFIED · REGTEST"
+              value="VERIFIED"
+              regtest
               detail={`Ironwood output at height ${phase3NetworkProof.minedHeight}; ${phase3NetworkProof.confirmationEvidence.join(" → ")} confirmations; tx ${phase3NetworkProof.txid.slice(0, 12)}…`}
               good
             />
@@ -288,6 +335,7 @@ export default async function ProofPage() {
                   ? "A server-side SELECT 1 succeeded in this runtime."
                   : "Persistence fails explicitly; there is no substitute store."
               }
+              good={databaseRuntime === "CONNECTED"}
             />
             <div className="card bg-panel p-5">
               <div className="text-muted flex items-center gap-2">
@@ -329,23 +377,33 @@ function ProofCard({
   value,
   detail,
   good = false,
+  regtest = false,
 }: {
   label: string;
   value: string;
   detail: string;
   good?: boolean;
+  /** The fact was proven on the isolated test network only. */
+  regtest?: boolean;
 }) {
   return (
     <article className="card bg-panel p-5">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-muted text-xs">{label}</p>
-        {good ? (
-          <CheckCircle2 size={17} className="text-emerald-700" />
-        ) : (
-          <CircleSlash2 size={17} className="text-stone-500" />
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h3 className="text-muted text-xs font-normal">{label}</h3>
+        <span className="stamps">
+          {/* The word carries the meaning; the glyph only repeats it. */}
+          {good && (
+            <span className="tag">
+              <span className="glyph glyph-done" aria-hidden />
+              Confirmed
+            </span>
+          )}
+          {regtest && <ScopeTag />}
+        </span>
       </div>
-      <p className="mt-4 font-mono text-xl font-semibold">{value}</p>
+      <p className="mt-4 font-mono text-xl font-semibold break-words">
+        {value}
+      </p>
       <p className="text-muted mt-3 text-xs leading-5">{detail}</p>
     </article>
   );

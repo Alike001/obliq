@@ -48,12 +48,15 @@ export default async function EvidenceDetailPage({
               Open recipient view
               <span className="sr-only"> (opens in a new tab)</span>
             </a>
-            <a
-              className="button button-dark"
-              href={`/verify/${evidence.publicId}/artifact.json`}
-            >
-              Download JSON
-            </a>
+            {/* The JSON route refuses a package that fails its check. */}
+            {valid && (
+              <a
+                className="button button-dark"
+                href={`/verify/${evidence.publicId}/artifact.json`}
+              >
+                Download JSON
+              </a>
+            )}
           </div>
         </div>
         {notice.issued && evidence.status === "ACTIVE" && (
@@ -75,8 +78,9 @@ export default async function EvidenceDetailPage({
             live
             className="mt-6"
           >
-            The stored content no longer matches its hash. Do not share this
-            package or rely on it.
+            The stored content no longer matches its hash. Treat it as
+            untrusted: do not share this package, rely on it or use it as proof.
+            The JSON download is refused while the check fails.
           </Notice>
         )}
         <div className="mt-7">

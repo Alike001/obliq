@@ -6,6 +6,7 @@ import {
 } from "@obliq/evidence";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import { StateTag } from "./state-tag";
+import { stateLabel } from "./state-tone";
 
 const provenanceLabels = {
   OBLIQ_BUSINESS_RECORD: "Obliq business record",
@@ -30,9 +31,9 @@ export function EvidenceArtifact({
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="eyebrow">Obliq financial evidence</p>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight">
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight">
               Payment evidence receipt
-            </h1>
+            </h2>
             <p className="text-muted mt-2 text-sm">
               Issued by {artifact.issuer.name} · version {artifact.version}
             </p>
@@ -43,27 +44,41 @@ export function EvidenceArtifact({
           <StateTag state={status} />
         </div>
       </header>
+      {!integrityValid && (
+        // On the receipt itself, so it travels with a print or a screenshot.
+        <div className="bg-stop-bg text-stop flex items-start gap-3 border-b px-6 py-4 md:px-8">
+          <span className="glyph glyph-stop mt-[0.3rem]" aria-hidden />
+          <p className="text-sm font-semibold">
+            Untrusted content. This receipt failed its integrity check, so
+            nothing below may be used as proof of payment or of anything else.
+          </p>
+        </div>
+      )}
       <div className="p-6 md:p-8">
-        <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+        <h3 className="fact-label">
+          Disclosed by the issuer ({artifact.disclosedFields.length}{" "}
+          {artifact.disclosedFields.length === 1 ? "field" : "fields"})
+        </h3>
+        <dl className="mt-4 grid gap-x-8 gap-y-6 sm:grid-cols-2">
           {artifact.disclosedFields.map((field) => {
             const claim = artifact.claims[field];
             if (!claim) return null;
             return (
               <div key={field} className="border-b pb-5">
-                <p className="text-muted text-xs">
+                <dt className="text-muted text-xs">
                   {evidenceFields[field].label}
-                </p>
-                <div className="mt-2 text-sm font-semibold break-words">
+                </dt>
+                <dd className="mt-2 text-[0.9375rem] font-semibold break-words">
                   <ClaimValue field={field} value={claim.value} />
-                </div>
-                <p className="text-muted mt-2 text-[11px] leading-4">
+                </dd>
+                <dd className="text-muted mt-2 text-xs leading-5">
                   Source: {provenanceLabels[claim.provenance]} ·{" "}
-                  {claim.classification}
-                </p>
+                  {stateLabel(claim.classification)}
+                </dd>
               </div>
             );
           })}
-        </div>
+        </dl>
         <div className="mt-8 grid gap-4 border-t pt-6 md:grid-cols-[1fr_auto] md:items-end">
           <div>
             <p className="text-muted text-xs">Evidence identifier</p>
@@ -73,7 +88,9 @@ export function EvidenceArtifact({
             <p className="text-muted mt-4 text-xs">SHA-256 artifact hash</p>
             <p className="mt-2 font-mono text-xs break-all">{contentHash}</p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-semibold">
+          <div
+            className={`flex items-center gap-2 text-sm font-semibold ${integrityValid ? "" : "text-stop"}`}
+          >
             {integrityValid ? (
               <CheckCircle2 className="text-clear" size={18} aria-hidden />
             ) : (
