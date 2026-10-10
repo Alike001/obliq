@@ -11,7 +11,10 @@ jobs:
     timeout-minutes: 25
     services:
       postgres:
-        image: postgres:17-alpine
+        # The official image from Amazon's public mirror. Docker Hub rate
+        # limits anonymous pulls from shared runners, which fails this job
+        # before any check runs.
+        image: public.ecr.aws/docker/library/postgres:17-alpine
         env:
           POSTGRES_DB: obliq
           POSTGRES_USER: obliq
