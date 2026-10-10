@@ -4,6 +4,8 @@ import {
   isAllowedMutationOrigin,
   parseRuntimeSecurityConfig,
   redactOperationalValue,
+  generateRecipientToken,
+  hashRecipientSecret,
 } from "./index";
 
 describe("runtime security configuration", () => {
@@ -42,6 +44,9 @@ describe("runtime security configuration", () => {
       OIDC_CLIENT_ID: "obliq",
       OIDC_CLIENT_SECRET: "client-secret",
       OBLIQ_SESSION_PEPPER: "p".repeat(32),
+      OBLIQ_RECIPIENT_TOKEN_PEPPER: "r".repeat(32),
+      OBLIQ_RECIPIENT_EMAIL_ENDPOINT: "https://mailer.example/recipient",
+      OBLIQ_RECIPIENT_EMAIL_TOKEN: "e".repeat(24),
       OBLIQ_STORAGE_BUCKET: "obliq-private",
       OBLIQ_STORAGE_REGION: "test-region-1",
       OBLIQ_DOCUMENT_SCANNER_URL: "https://scanner.example/scan",
@@ -165,6 +170,26 @@ describe("runtime security configuration", () => {
       observerNetwork: "testnet",
       publicNetworkStatus: "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST",
     });
+  });
+});
+
+describe("recipient secrets", () => {
+  it("generates high-entropy transport tokens and domain-separated digests", () => {
+    const token = generateRecipientToken();
+    const pepper = "p".repeat(32);
+    expect(token).toMatch(/^[A-Za-z0-9_-]{43}$/u);
+    expect(hashRecipientSecret("invitation", token, pepper)).not.toBe(
+      hashRecipientSecret("session", token, pepper),
+    );
+    expect(hashRecipientSecret("invitation", token, pepper)).not.toContain(
+      token,
+    );
+  });
+
+  it("rejects weak recipient peppers", () => {
+    expect(() => hashRecipientSecret("session", "secret", "short")).toThrow(
+      "at least 32",
+    );
   });
 });
 

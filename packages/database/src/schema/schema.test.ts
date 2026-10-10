@@ -20,6 +20,11 @@ import {
   vendors,
   vendorDestinations,
   settlements,
+  recipientInvitations,
+  recipientSessions,
+  recipientVerificationChallenges,
+  recipientOperationReceipts,
+  destinationAttestations,
 } from "./index";
 
 describe("database invariants", () => {
@@ -43,6 +48,11 @@ describe("database invariants", () => {
     settlementReadiness,
     settlementObservations,
     settlementObservationTargets,
+    recipientInvitations,
+    recipientSessions,
+    recipientVerificationChallenges,
+    recipientOperationReceipts,
+    destinationAttestations,
   ])("tenant-owned financial tables carry organization_id", (table) =>
     expect(getTableColumns(table)).toHaveProperty("organizationId"),
   );
@@ -77,5 +87,18 @@ describe("database invariants", () => {
     expect(getTableColumns(settlementReadiness).policyDecisionId.notNull).toBe(
       true,
     );
+  });
+
+  it("stores only hashed recipient credentials and immutable destination versions", () => {
+    const invitation = getTableColumns(recipientInvitations);
+    const session = getTableColumns(recipientSessions);
+    const challenge = getTableColumns(recipientVerificationChallenges);
+    expect(invitation).toHaveProperty("tokenHash");
+    expect(invitation).not.toHaveProperty("token");
+    expect(session).toHaveProperty("tokenHash");
+    expect(session).not.toHaveProperty("token");
+    expect(challenge).toHaveProperty("codeHash");
+    expect(challenge).not.toHaveProperty("code");
+    expect(getTableColumns(vendorDestinations).version.notNull).toBe(true);
   });
 });

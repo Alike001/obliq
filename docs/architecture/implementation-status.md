@@ -51,3 +51,15 @@ external identifiers, JSON download, revocation and supersession are
 **IMPLEMENTED**. Printable receipts use the exact canonical evidence model.
 Native PDF generation, independent attestation and zero-knowledge business
 proofs are **PLANNED** or **UNAVAILABLE** and are not claimed.
+
+The Private Payables Link backend vertical slice is **IMPLEMENTED**: authorized
+finance administrators can issue and revoke 24-hour email invitations; contact
+verification creates a 30-minute, obligation-scoped recipient session; and a
+one-time confirmation creates a new immutable destination version while
+atomically invalidating stale approvals and settlement intents. Invitation,
+challenge, session and idempotency secrets are stored only as domain-separated
+hashes. Contact verification is not Zcash address-ownership proof, so a
+recipient-confirmed destination remains `UNVERIFIED` until independently
+reviewed by a different authorized finance actor. Recipient UI and automatic
+evidence release are **UNAVAILABLE**; evidence still requires a separate
+authorized internal issuance action after observer-confirmed settlement.

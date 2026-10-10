@@ -25,6 +25,8 @@ import {
   vendors,
 } from "../schema";
 
+export * from "./recipient";
+
 export type Database = ReturnType<typeof createDatabase>["db"];
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 type Executor = Database | Transaction;
@@ -64,6 +66,15 @@ export interface TenantActor {
   organizationId: string;
   userId: string;
 }
+
+export type AuditActor =
+  | TenantActor
+  | {
+      organizationId: string;
+      actorType: "RECIPIENT_SESSION";
+      sessionId: string;
+    }
+  | { organizationId: string; actorType: "SYSTEM" };
 
 export async function checkDatabaseConnection(db: Database) {
   await db.execute(sql`select 1 as healthy`);
@@ -109,7 +120,7 @@ function canonical(value: unknown): string {
 
 export async function appendAuditEvent(
   tx: Transaction,
-  actor: TenantActor,
+  actor: AuditActor,
   input: AuditInput,
 ) {
   await tx.execute(
@@ -123,11 +134,18 @@ export async function appendAuditEvent(
     .limit(1);
   const previousHash = previous[0]?.payloadHash ?? null;
   const payloadJson = input.payload ?? {};
+  const actorType = "actorType" in actor ? actor.actorType : "USER";
+  const actorId =
+    "actorType" in actor
+      ? actor.actorType === "RECIPIENT_SESSION"
+        ? actor.sessionId
+        : null
+      : actor.userId;
   const payloadHash = createHash("sha256")
     .update(
       canonical({
-        actorId: actor.userId,
-        actorType: "USER",
+        actorId,
+        actorType,
         eventType: input.eventType,
         organizationId: actor.organizationId,
         payloadJson,
@@ -141,8 +159,8 @@ export async function appendAuditEvent(
     .insert(auditEvents)
     .values({
       organizationId: actor.organizationId,
-      actorType: "USER",
-      actorId: actor.userId,
+      actorType,
+      actorId,
       eventType: input.eventType,
       subjectType: input.subjectType,
       subjectId: input.subjectId,
@@ -279,6 +297,20 @@ export async function addVendorDestination(
     await requireWriteRole(tx, actor, destinationWriteRoles);
     const vendor = await getVendor(tx, actor.organizationId, vendorId);
     if (!vendor) return null;
+    const [currentDestination] = await tx
+      .select({
+        id: vendorDestinations.id,
+        version: vendorDestinations.version,
+      })
+      .from(vendorDestinations)
+      .where(
+        and(
+          eq(vendorDestinations.organizationId, actor.organizationId),
+          eq(vendorDestinations.vendorId, vendorId),
+          sql`${vendorDestinations.supersededAt} is null`,
+        ),
+      )
+      .limit(1);
     await tx
       .update(vendorDestinations)
       .set({ supersededAt: new Date(), verificationStatus: "SUPERSEDED" })
@@ -297,6 +329,8 @@ export async function addVendorDestination(
       .values({
         organizationId: actor.organizationId,
         vendorId,
+        version: (currentDestination?.version ?? 0) + 1,
+        supersedesDestinationId: currentDestination?.id,
         ...value,
         fingerprint,
         verificationStatus: "UNVERIFIED",

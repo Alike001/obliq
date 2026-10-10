@@ -328,6 +328,45 @@ fn recipient_verification_result(account_count: usize, matching_accounts: usize)
     }
 }
 
+fn validate_recipient_address(
+    params: &ObserverParameters,
+    encoded: &str,
+) -> Result<(bool, bool), Box<dyn Error>> {
+    if encoded.len() > 1024 {
+        return Err("recipient address exceeds size limit".into());
+    }
+    let address = Address::decode(params, encoded.trim())
+        .ok_or("recipient is not a valid address for the configured network")?;
+    let Address::Unified(unified) = address else {
+        return Err("recipient must be a Unified Address".into());
+    };
+    let orchard = unified.has_orchard();
+    let transparent = unified.transparent().is_some();
+    if !orchard || transparent {
+        return Err("recipient must contain Orchard and no transparent receiver".into());
+    }
+    Ok((orchard, transparent))
+}
+
+fn inspect_recipient_address(
+    configured: &ConfiguredNetwork,
+    params: &ObserverParameters,
+) -> Result<(), Box<dyn Error>> {
+    let mut encoded = Zeroizing::new(String::new());
+    io::stdin().read_line(&mut encoded)?;
+    let (orchard, transparent) = validate_recipient_address(params, &encoded)?;
+    println!(
+        "{}",
+        json!({
+            "network": configured.label,
+            "orchardReceiverPresent": orchard,
+            "transparentReceiverPresent": transparent,
+            "receiverFingerprint": hex::encode(Sha256::digest(encoded.trim().as_bytes())),
+        })
+    );
+    Ok(())
+}
+
 fn verify_recipient(
     configured: &ConfiguredNetwork,
     params: ObserverParameters,
@@ -414,7 +453,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut args = env::args().skip(1);
     let command = args
         .next()
-        .ok_or("expected init, sync, preflight, or verify-recipient")?;
+        .ok_or("expected init, sync, preflight, inspect-address, or verify-recipient")?;
     let ufvk_stdin = match args.next().as_deref() {
         None => false,
         Some("--ufvk-stdin") if command == "init" => true,
@@ -424,6 +463,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         return Err("unexpected observer command argument".into());
     }
     let configured = configured_network()?;
+    if command == "inspect-address" {
+        return inspect_recipient_address(&configured, &configured.params);
+    }
     if command == "verify-recipient" {
         return verify_recipient(&configured, configured.params.clone());
     }
@@ -689,6 +731,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 mod tests {
     use super::*;
     use zcash_keys::keys::UnifiedSpendingKey;
+    use zcash_transparent::address::TransparentAddress;
     use zip32::{AccountId, DiversifierIndex};
 
     fn test_ufvk(seed_tag: u8) -> UnifiedFullViewingKey {
@@ -778,6 +821,32 @@ mod tests {
             orchard_receiver_matches(&ufvk, &Address::Unified(sapling_only)),
             Err("recipient Unified Address has no Orchard receiver")
         );
+    }
+
+    #[test]
+    fn accepts_orchard_only_and_rejects_transparent_receiver_composition() {
+        let configured = configured_network_for("testnet").expect("testnet");
+        let ufvk = test_ufvk(3);
+        let orchard_only = orchard_recipient(&ufvk, 11).encode(&configured.params);
+        assert_eq!(
+            validate_recipient_address(&configured.params, &orchard_only).expect("Orchard-only"),
+            (true, false)
+        );
+
+        let (all_receivers, _) = ufvk
+            .find_address(
+                DiversifierIndex::from(12u32),
+                UnifiedAddressRequest::AllAvailableKeys,
+            )
+            .expect("all receivers");
+        let with_transparent = UnifiedAddress::from_receivers(
+            all_receivers.orchard().copied(),
+            None,
+            Some(TransparentAddress::PublicKeyHash([7; 20])),
+        )
+        .expect("Orchard and transparent receivers form a UA");
+        let encoded = Address::Unified(with_transparent).encode(&configured.params);
+        assert!(validate_recipient_address(&configured.params, &encoded).is_err());
     }
 
     #[test]

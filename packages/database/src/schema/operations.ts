@@ -9,7 +9,9 @@ import {
   timestamp,
   uniqueIndex,
   uuid,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { organizations, users } from "./identity";
 import {
   approvalDecision,
@@ -59,6 +61,10 @@ export const vendorDestinations = pgTable(
     vendorId: uuid("vendor_id")
       .notNull()
       .references(() => vendors.id),
+    version: integer("version").notNull().default(1),
+    supersedesDestinationId: uuid("supersedes_destination_id").references(
+      (): AnyPgColumn => vendorDestinations.id,
+    ),
     network: text("network").notNull(),
     receiver: text("receiver").notNull(),
     fingerprint: text("fingerprint").notNull(),
@@ -69,11 +75,23 @@ export const vendorDestinations = pgTable(
     verifiedBy: uuid("verified_by").references(() => users.id),
     verificationMethod: text("verification_method"),
     verificationNote: text("verification_note"),
+    recipientConfirmationStatus: text("recipient_confirmation_status")
+      .notNull()
+      .default("NONE"),
+    origin: text("origin").notNull().default("INTERNAL_MANUAL"),
     supersededAt: timestamp("superseded_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [
     index("destinations_org_vendor_idx").on(t.organizationId, t.vendorId),
+    uniqueIndex("destinations_org_vendor_version_unique").on(
+      t.organizationId,
+      t.vendorId,
+      t.version,
+    ),
+    uniqueIndex("destinations_org_vendor_current_unique")
+      .on(t.organizationId, t.vendorId)
+      .where(sql`${t.supersededAt} is null`),
   ],
 );
 

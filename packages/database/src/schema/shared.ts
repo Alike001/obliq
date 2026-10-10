@@ -99,6 +99,27 @@ export const evidenceStatus = pgEnum("evidence_status", [
   "SUPERSEDED",
   "REVOKED",
 ]);
+export const recipientInvitationState = pgEnum("recipient_invitation_state", [
+  "ACTIVE",
+  "CONTACT_VERIFIED",
+  "CONSUMED",
+  "EXPIRED",
+  "REVOKED",
+  "SUPERSEDED",
+]);
+export const recipientChallengeState = pgEnum("recipient_challenge_state", [
+  "ACTIVE",
+  "CONSUMED",
+  "LOCKED_OUT",
+  "EXPIRED",
+  "REVOKED",
+]);
+export const recipientSessionState = pgEnum("recipient_session_state", [
+  "ACTIVE",
+  "CONSUMED",
+  "EXPIRED",
+  "REVOKED",
+]);
 
 export const id = () => uuid("id").primaryKey().defaultRandom();
 export const organizationId = () => uuid("organization_id").notNull();

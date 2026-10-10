@@ -13,10 +13,12 @@ import {
   auditEvents,
   controlFindings,
   duplicateFindings,
+  destinationAttestations,
   memberships,
   obligationVersions,
   obligations,
   policies,
+  recipientInvitations,
   policyDecisions,
   policyVersions,
   settlementReadiness,
@@ -557,6 +559,30 @@ export async function verifyDestinationManually(
       destinationVerifiers,
       "verify destinations",
     );
+    const [recipientOrigin] = await tx
+      .select({ invitationCreator: recipientInvitations.createdBy })
+      .from(destinationAttestations)
+      .innerJoin(
+        recipientInvitations,
+        and(
+          eq(
+            recipientInvitations.organizationId,
+            destinationAttestations.organizationId,
+          ),
+          eq(recipientInvitations.id, destinationAttestations.invitationId),
+        ),
+      )
+      .where(
+        and(
+          eq(destinationAttestations.organizationId, actor.organizationId),
+          eq(destinationAttestations.destinationId, destinationId),
+        ),
+      )
+      .limit(1);
+    if (recipientOrigin?.invitationCreator === actor.userId)
+      throw new Error(
+        "Recipient-confirmed destinations require an independent reviewer",
+      );
     const [destination] = await tx
       .update(vendorDestinations)
       .set({

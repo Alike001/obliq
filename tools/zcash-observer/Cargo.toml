@@ -23,4 +23,5 @@ zcash_protocol = { version = "=0.10.6", features = ["local-consensus"] }
 zeroize = "1.8.2"
 
 [dev-dependencies]
+zcash_transparent = "=0.10.0"
 zip32 = "0.2.1"

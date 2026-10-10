@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import {
   receiverFingerprint,
@@ -18,6 +18,68 @@ export interface ProcessObserverConfig {
   endpoint: string;
   network: ZcashNetwork;
   observerSource?: string;
+}
+
+export interface ShieldedAddressInspection {
+  network: ZcashNetwork;
+  orchardReceiverPresent: true;
+  transparentReceiverPresent: false;
+  receiverFingerprint: string;
+}
+
+export class ProcessZcashAddressInspector {
+  constructor(
+    private readonly binary: string,
+    private readonly network: ZcashNetwork,
+  ) {}
+
+  inspect(receiver: string): Promise<ShieldedAddressInspection> {
+    return new Promise((resolve, reject) => {
+      const child = spawn(this.binary, ["inspect-address"], {
+        env: { OBSERVER_NETWORK: this.network },
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+      let stdout = "";
+      let stderr = "";
+      child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+        stdout += chunk;
+      });
+      child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
+        stderr += chunk;
+      });
+      child.once("error", (error) =>
+        reject(new Error("Address inspector process failed", { cause: error })),
+      );
+      child.once("close", (code) => {
+        if (code !== 0)
+          return reject(
+            new Error(
+              redactZcashSecrets(stderr || "Address inspection failed"),
+            ),
+          );
+        try {
+          const parsed = JSON.parse(
+            stdout,
+          ) as Partial<ShieldedAddressInspection>;
+          if (
+            parsed.network !== this.network ||
+            parsed.orchardReceiverPresent !== true ||
+            parsed.transparentReceiverPresent !== false ||
+            !/^[0-9a-f]{64}$/u.test(parsed.receiverFingerprint ?? "")
+          )
+            throw new Error("Malformed address inspection output");
+          resolve(parsed as ShieldedAddressInspection);
+        } catch (error) {
+          reject(
+            error instanceof Error
+              ? error
+              : new Error("Address inspection output could not be parsed"),
+          );
+        }
+      });
+      child.stdin.end(`${receiver}\n`);
+    });
+  }
 }
 
 type CommandRunner = (
