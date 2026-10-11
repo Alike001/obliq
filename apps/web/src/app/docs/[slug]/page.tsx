@@ -35,7 +35,7 @@ export default async function DocArticle({
         className="min-w-0 py-8 sm:px-7 lg:px-10 lg:py-14"
       >
         <details className="card bg-panel mb-4 p-4 lg:hidden">
-          <summary className="cursor-pointer text-sm font-semibold">
+          <summary className="-m-4 cursor-pointer p-4 text-sm font-semibold">
             Browse documentation
           </summary>
           <div className="mt-5">
@@ -44,7 +44,7 @@ export default async function DocArticle({
         </details>
         {doc.sections.length > 1 && (
           <details className="card bg-panel mb-8 p-4 xl:hidden">
-            <summary className="cursor-pointer text-sm font-semibold">
+            <summary className="-m-4 cursor-pointer p-4 text-sm font-semibold">
               On this page
             </summary>
             <nav className="doc-toc mt-3" aria-label="On this page">

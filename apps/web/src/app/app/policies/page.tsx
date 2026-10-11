@@ -10,6 +10,8 @@ import {
   createDefaultPolicyAction,
   createPolicyVersionAction,
 } from "../actions";
+
+export const metadata = { title: "Payment policy" };
 export const dynamic = "force-dynamic";
 
 export default async function PoliciesPage({

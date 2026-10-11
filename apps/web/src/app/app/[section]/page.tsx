@@ -9,6 +9,16 @@ export function generateStaticParams() {
     .map(([, href]) => ({ section: href.split("/").at(-1) }));
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ section: string }>;
+}) {
+  const { section } = await params;
+  const entry = appSections.find(([, href]) => href === `/app/${section}`);
+  return entry ? { title: entry[0] } : {};
+}
+
 export default async function FoundationSection({
   params,
 }: {

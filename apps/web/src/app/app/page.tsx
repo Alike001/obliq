@@ -15,6 +15,8 @@ import { attentionQueue } from "@/lib/attention";
 import { getDatabase } from "@/lib/db";
 import { firstRunSteps } from "@/lib/first-run";
 import { getTenantContext } from "@/lib/session";
+
+export const metadata = { title: "Overview" };
 export const dynamic = "force-dynamic";
 
 // `listObligations` returns at most this many, earliest due date first. The

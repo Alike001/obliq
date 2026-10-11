@@ -10,6 +10,8 @@ import { StateTag } from "@/components/state-tag";
 import { stateLabel } from "@/components/state-tone";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
+
+export const metadata = { title: "Obligations" };
 export const dynamic = "force-dynamic";
 
 export default async function ObligationsPage({
@@ -71,7 +73,7 @@ export default async function ObligationsPage({
             <span className="text-muted">Showing only</span>
             <StateTag state={state} />
             <Link
-              className="text-link min-h-0!"
+              className="text-link"
               href={
                 query.q
                   ? `/app/obligations?q=${encodeURIComponent(query.q)}`
@@ -120,36 +122,42 @@ export default async function ObligationsPage({
         ) : (
           <div className="card mt-5 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[850px] text-left text-sm">
+              <table className="stack-table w-full text-left text-sm sm:min-w-[850px]">
                 <thead className="bg-stone-100/70 text-xs">
                   <tr>
-                    <th className="p-4">Reference</th>
-                    <th>Vendor</th>
-                    <th>State</th>
-                    <th>Amount</th>
-                    <th>Due</th>
-                    <th>Source</th>
-                    <th>Category</th>
+                    <th scope="col" className="p-4">
+                      Reference
+                    </th>
+                    <th scope="col">Vendor</th>
+                    <th scope="col">State</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Due</th>
+                    <th scope="col">Source</th>
+                    <th scope="col">Category</th>
                   </tr>
                 </thead>
                 <tbody>
                   {items.map(({ obligation: o, vendor }) => (
                     <tr key={o.id} className="hairline border-t">
-                      <td className="p-4 font-semibold">
+                      <td className="font-semibold sm:p-4">
                         <Link href={`/app/obligations/${o.id}`}>
                           {o.reference}
                         </Link>
                       </td>
-                      <td>{vendor?.displayName ?? "—"}</td>
-                      <td>
+                      <td data-label="Vendor">{vendor?.displayName ?? "—"}</td>
+                      <td data-label="State">
                         <StateTag state={o.state} />
                       </td>
-                      <td className="font-mono">
+                      <td data-label="Amount" className="font-mono">
                         {formatMinorUnits(o.amountMinor, o.currency)}
                       </td>
-                      <td>{o.dueAt?.toLocaleDateString() ?? "—"}</td>
-                      <td>{o.sourceId ? "Recorded" : "—"}</td>
-                      <td>{o.category ?? "—"}</td>
+                      <td data-label="Due">
+                        {o.dueAt?.toLocaleDateString() ?? "—"}
+                      </td>
+                      <td data-label="Source">
+                        {o.sourceId ? "Recorded" : "—"}
+                      </td>
+                      <td data-label="Category">{o.category ?? "—"}</td>
                     </tr>
                   ))}
                 </tbody>

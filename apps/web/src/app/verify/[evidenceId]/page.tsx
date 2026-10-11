@@ -50,8 +50,11 @@ export default async function VerifyEvidencePage({
   const status = result?.evidence.status;
   return (
     <main>
+      <a href="#main" className="button button-dark skip-link">
+        Skip to content
+      </a>
       <SiteHeader />
-      <section className="page-wrap py-14 md:py-20">
+      <section id="main" tabIndex={-1} className="page-wrap py-14 md:py-20">
         <div className="mx-auto max-w-4xl">
           <p className="eyebrow">External verification</p>
           <h1 className="mt-4 text-4xl font-medium tracking-tight">

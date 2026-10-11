@@ -3,6 +3,8 @@ import { Field, Input } from "@/components/finance-form";
 import { BackLink } from "@/components/record";
 import { SubmitButton } from "@/components/submit-button";
 
+export const metadata = { title: "Add a vendor" };
+
 export default function NewVendorPage() {
   return (
     <main className="p-4 md:p-8">

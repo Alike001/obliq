@@ -10,6 +10,8 @@ import { phase3NetworkProof } from "@/content/phase3-proof";
 import { phase4NetworkProof } from "@/content/phase4-proof";
 import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
+export const metadata = { title: "What is proven" };
+
 const capabilities = [
   [
     "Production identity boundary",
@@ -72,9 +74,9 @@ const capabilities = [
     "Receiver + opaque memo + exact amount correlation with idempotent confirmation tracking",
   ],
   [
-    "Public-network settlement",
-    "BLOCKED",
-    "Upstream Zaino now includes Ironwood subtree-root support, but Obliq public sync and a funded public shielded flow remain unproved",
+    "Private payables link",
+    "IMPLEMENTED",
+    "A vendor contact who passes an email check submits a shielded address; it stays unverified until a different member reviews it. Not proof of who controls the wallet",
   ],
   [
     "Settlement intent",
@@ -184,6 +186,9 @@ export default async function ProofPage() {
   const { status, network } = readNetworkStatus();
   const claims = networkClaims(status, network);
   const summary = networkSummary(status);
+  const publicSettlement = claims.find(
+    (claim) => claim.id === "public-settlement",
+  );
   return (
     <main>
       <a href="#main" className="button button-dark skip-link">
@@ -263,6 +268,24 @@ export default async function ProofPage() {
                   <StatusPill status={status} />
                 </div>
               ))}
+              {/* Worded from the enforced network status, like the list above. */}
+              <div className="grid gap-3 p-5 sm:grid-cols-[1fr_auto] sm:items-center">
+                <div>
+                  <p className="text-sm font-medium">
+                    Public-network settlement
+                  </p>
+                  <p className="text-muted mt-1 text-xs leading-5">
+                    {publicSettlement?.detail}
+                  </p>
+                </div>
+                <StatusPill
+                  status={
+                    publicSettlement?.tone === "verified"
+                      ? "IMPLEMENTED"
+                      : "BLOCKED"
+                  }
+                />
+              </div>
             </div>
           </div>
           <div className="space-y-5">
@@ -348,7 +371,7 @@ export default async function ProofPage() {
         </div>
       </section>
       <section className="hairline bg-panel border-y">
-        <div className="page-wrap grid gap-8 py-14 md:grid-cols-3">
+        <div className="page-wrap grid gap-8 py-14 sm:grid-cols-2 lg:grid-cols-4">
           <Boundary
             title="Payment request"
             text="Canonical one-payment ZIP-321 requests bind exact zatoshis and an opaque memo reference. The current quote source is controlled regtest, not market pricing."

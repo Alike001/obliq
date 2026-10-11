@@ -3,6 +3,7 @@
 import { motion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import { appSections } from "./app-sections";
 
 /** The section a path belongs to: the overview only on an exact match. */
@@ -46,8 +47,18 @@ export function SideNav() {
 
 export function TabNav() {
   const pathname = usePathname();
+  const nav = useRef<HTMLElement>(null);
+  // The row scrolls sideways on a phone; keep the current section in view.
+  useEffect(() => {
+    const row = nav.current;
+    const current = row?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!row || !current) return;
+    row.scrollLeft =
+      current.offsetLeft - (row.clientWidth - current.offsetWidth) / 2;
+  }, [pathname]);
   return (
     <nav
+      ref={nav}
       className="hairline bg-panel flex gap-1 overflow-x-auto border-b px-3 py-2 lg:hidden"
       aria-label="Application mobile"
     >

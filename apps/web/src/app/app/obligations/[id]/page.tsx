@@ -33,6 +33,8 @@ import {
   readinessAction,
   resolveDuplicateAction,
 } from "../../actions";
+
+export const metadata = { title: "Obligation" };
 export const dynamic = "force-dynamic";
 
 export default async function ObligationDetail({

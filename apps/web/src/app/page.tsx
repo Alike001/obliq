@@ -53,6 +53,7 @@ const neverHolds = [
 const product = [
   ["Bill capture with human review", "IMPLEMENTED"],
   ["Policy engine and approval workflow", "IMPLEMENTED"],
+  ["Private payables link for vendor addresses", "IMPLEMENTED"],
   ["Controlled evidence and verification", "IMPLEMENTED"],
   ["Invoice field extraction", "SEEDED"],
   ["Native evidence PDF", "PLANNED"],
@@ -103,11 +104,10 @@ export default function LandingPage() {
                 Pay your bills without <em>publishing your business.</em>
               </h1>
               <p className="t-lede mt-6 max-w-[34rem]">
-                Obliq is accounts payable for crypto-native finance teams.
-                Capture a bill, control it with policy and approvals, settle it
-                in shielded Zcash from a signer you operate, reconcile the
-                payment back to the bill, and prove it with evidence you choose
-                to disclose.
+                Obliq is accounts payable for teams that pay in crypto. Record a
+                bill, approve it under your own policy, and pay it in shielded
+                Zcash from a signer you control. The payment is matched back to
+                the bill, with evidence you choose to share.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <Link href={primary.href} className="button button-dark">
@@ -416,7 +416,7 @@ export default function LandingPage() {
                           ) : (
                             <Link
                               href={href}
-                              className="text-carbon inline-flex min-h-8 items-center underline decoration-[#d9a43e] decoration-2"
+                              className="text-carbon inline-flex min-h-11 items-center underline decoration-[#d9a43e] decoration-2"
                             >
                               {title}
                             </Link>

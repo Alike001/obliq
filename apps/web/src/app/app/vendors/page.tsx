@@ -4,6 +4,8 @@ import Link from "next/link";
 import { StateTag } from "@/components/state-tag";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
+
+export const metadata = { title: "Vendors" };
 export const dynamic = "force-dynamic";
 
 export default async function VendorsPage() {
@@ -43,30 +45,34 @@ export default async function VendorsPage() {
         ) : (
           <div className="card mt-8 overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[600px] text-left text-sm">
+              <table className="stack-table w-full text-left text-sm sm:min-w-[600px]">
                 <thead className="bg-stone-100/70 text-xs">
                   <tr>
-                    <th className="p-4">Vendor</th>
-                    <th>Legal name</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th>Created</th>
+                    <th scope="col" className="p-4">
+                      Vendor
+                    </th>
+                    <th scope="col">Legal name</th>
+                    <th scope="col">Category</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Created</th>
                   </tr>
                 </thead>
                 <tbody>
                   {vendors.map((v) => (
                     <tr key={v.id} className="hairline border-t">
-                      <td className="p-4 font-semibold">
+                      <td className="font-semibold sm:p-4">
                         <Link href={`/app/vendors/${v.id}`}>
                           {v.displayName}
                         </Link>
                       </td>
-                      <td>{v.legalName}</td>
-                      <td>{v.category ?? "—"}</td>
-                      <td>
+                      <td data-label="Legal name">{v.legalName}</td>
+                      <td data-label="Category">{v.category ?? "—"}</td>
+                      <td data-label="Status">
                         <StateTag state={v.status} />
                       </td>
-                      <td>{v.createdAt.toLocaleDateString()}</td>
+                      <td data-label="Created">
+                        {v.createdAt.toLocaleDateString()}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

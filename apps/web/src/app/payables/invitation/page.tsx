@@ -23,7 +23,7 @@ export default function RecipientInvitationPage() {
   if (getRuntimeSecurityConfig().deploymentMode === "preview") notFound();
   return (
     <div className="recipient-page">
-      <a href="#recipient-main" className="skip-link">
+      <a href="#recipient-main" className="button button-dark skip-link">
         Skip to content
       </a>
       <header className="hairline bg-surface border-b">

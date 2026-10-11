@@ -12,6 +12,8 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { StatusPill } from "@/components/status-pill";
 
+export const metadata = { title: "Security model" };
+
 const principles = [
   [
     "Spending authority",
