@@ -72,7 +72,7 @@ captured at 2x). All 32 were retaken after the last code change in this pass.
   the page when a field takes focus.
 - Site-wide error and not-found pages.
 - A skip link on the evidence verification page, and a page title on every
-  workspace, proof and security page.
+  workspace, proof, security and verification page.
 - The landing page says what Obliq does in plainer words and lists the private
   payables link.
 - On the proof page, public-network settlement is worded from the enforced
@@ -90,9 +90,11 @@ landing page:
 - every field has a label
 - every page has one main heading
 
-Not checked in the browser: the settlement record, the evidence record and the
-evidence preview. The local data has no settled payment to open them with. They
-were read in code only.
+The settlement record (awaiting signature, signed and settled), the evidence
+page, the evidence preview, the issued evidence record and the public
+verification page were checked the same way, and at 1280px, against a separate
+throwaway database holding one settled regtest-shaped payment. That database
+was removed afterwards. No real settlement was run for this check.
 
 Known and left alone: a workspace address that matches no record shows the
 right "not found" message, but the browser tab keeps the section's title.
