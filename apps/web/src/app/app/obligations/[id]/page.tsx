@@ -4,18 +4,27 @@ import {
   getObligation,
   getObligationSettlement,
   getObserverStatus,
+  listRecipientInvitationsForObligation,
   listObligationObservations,
+  listVendorDestinations,
 } from "@obliq/database";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import { Notice } from "@/components/notice";
 import { BackLink, Fact } from "@/components/record";
+import { RecipientInvitationPanel } from "@/components/recipient-invitation-panel";
 import { StateTag } from "@/components/state-tag";
 import { stateLabel } from "@/components/state-tone";
 import { SubmitButton } from "@/components/submit-button";
 import { nextStepFor } from "@/lib/attention";
 import { getDatabase } from "@/lib/db";
+import {
+  blockerMessage,
+  canIssueInvitations,
+  invitationBlockers,
+  isRecipientSubmitted,
+} from "@/lib/recipient-invitations";
 import { getTenantContext } from "@/lib/session";
 import {
   approvalDecisionAction,
@@ -60,6 +69,20 @@ export default async function ObligationDetail({
     (item) => item.state === "APPROVED",
   ).length;
   const nextStep = nextStepFor(o.state);
+  const destination = vendor
+    ? (
+        await listVendorDestinations(
+          getDatabase(),
+          tenant.organizationId,
+          vendor.id,
+        )
+      ).find((item) => !item.supersededAt)
+    : undefined;
+  const invitations = await listRecipientInvitationsForObligation(
+    getDatabase(),
+    tenant.organizationId,
+    id,
+  );
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -391,6 +414,50 @@ export default async function ObligationDetail({
             </div>
           )}
         </section>
+        {destination &&
+          isRecipientSubmitted(destination) &&
+          destination.verificationStatus === "UNVERIFIED" &&
+          vendor && (
+            <Notice
+              tone="hold"
+              title="The vendor's destination was submitted by the recipient and is unverified"
+              className="mt-5"
+            >
+              It came through a private payables link. Email verification shows
+              access to the contact&rsquo;s mailbox, not control of the wallet.
+              It blocks settlement until someone other than the sender of the
+              link reviews it on the{" "}
+              <Link
+                href={`/app/vendors/${vendor.id}`}
+                className="font-semibold underline"
+              >
+                vendor record
+              </Link>
+              .
+            </Notice>
+          )}
+        <RecipientInvitationPanel
+          obligationId={id}
+          vendorHref={vendor ? `/app/vendors/${vendor.id}` : null}
+          contactEmail={vendor?.contactEmail ?? null}
+          blockers={invitationBlockers({
+            role: tenant.role,
+            hasVendor: Boolean(vendor),
+            hasContactEmail: Boolean(vendor?.contactEmail),
+            obligationState: o.state,
+          }).map((blocker) => blockerMessage[blocker])}
+          canRevoke={canIssueInvitations(tenant.role)}
+          invitations={invitations.map((invitation) => ({
+            id: invitation.id,
+            issuedAt: invitation.createdAt.toLocaleString(),
+            expiresAt: invitation.expiresAt.toLocaleString(),
+            issuedBy: invitation.createdBy,
+            state: invitation.effectiveState,
+            consumedAt: invitation.consumedAt?.toLocaleString() ?? null,
+            revokedAt: invitation.revokedAt?.toLocaleString() ?? null,
+            reasonCode: invitation.reasonCode,
+          }))}
+        />
         {openDuplicates.map((d) => (
           <section className="notice notice-hold mt-5" key={d.id}>
             <span className="glyph glyph-attn" aria-hidden />

@@ -12,6 +12,10 @@ import { BackLink } from "@/components/record";
 import { StateTag } from "@/components/state-tag";
 import { SubmitButton } from "@/components/submit-button";
 import { getDatabase } from "@/lib/db";
+import {
+  canReviewDestinations,
+  isRecipientSubmitted,
+} from "@/lib/recipient-invitations";
 import { getTenantContext } from "@/lib/session";
 import { addDestinationAction, verifyDestinationAction } from "../../actions";
 export const dynamic = "force-dynamic";
@@ -38,7 +42,7 @@ export default async function VendorDetail({
   if (!vendor) notFound();
   const add = addDestinationAction.bind(null, id);
   // Chooses what to show. The server action checks the role again.
-  const canVerify = ["OWNER", "CFO", "TREASURY"].includes(tenant.role);
+  const canVerify = canReviewDestinations(tenant.role);
   const current = destinations.find((d) => !d.supersededAt);
   return (
     <main className="p-4 md:p-8">
@@ -116,9 +120,23 @@ export default async function VendorDetail({
                     </div>
                     <p className="mt-3 font-mono break-all">{d.receiver}</p>
                     <p className="text-muted mt-2">
-                      Fingerprint {d.fingerprint.slice(0, 16)}… · added{" "}
+                      Version {d.version} · fingerprint{" "}
+                      {d.fingerprint.slice(0, 16)}… · added{" "}
                       {d.createdAt.toLocaleString()}
                     </p>
+                    {isRecipientSubmitted(d) && (
+                      <p className="mt-3 leading-5">
+                        <span className="scope">Recipient submitted</span>{" "}
+                        <span className="text-muted">
+                          Entered through a private payables link after an email
+                          check. That shows access to the contact&rsquo;s
+                          mailbox. It is not proof of who controls the wallet.
+                          {d.verificationStatus === "UNVERIFIED" &&
+                            !d.supersededAt &&
+                            " The member who sent the link cannot record this verification."}
+                        </span>
+                      </p>
+                    )}
                     {d.verifiedAt && (
                       <p className="mt-2 font-medium">
                         Verified manually {d.verifiedAt.toLocaleString()} ·{" "}

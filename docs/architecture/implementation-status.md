@@ -60,6 +60,17 @@ atomically invalidating stale approvals and settlement intents. Invitation,
 challenge, session and idempotency secrets are stored only as domain-separated
 hashes. Contact verification is not Zcash address-ownership proof, so a
 recipient-confirmed destination remains `UNVERIFIED` until independently
-reviewed by a different authorized finance actor. Recipient UI and automatic
-evidence release are **UNAVAILABLE**; evidence still requires a separate
-authorized internal issuance action after observer-confirmed settlement.
+reviewed by a different authorized finance actor. Automatic evidence release is
+**UNAVAILABLE**; evidence still requires a separate authorized internal issuance
+action after observer-confirmed settlement.
+
+The Private Payables Link frontend is **IMPLEMENTED** against that contract: a
+recipient page at `/payables/invitation` (email check, scoped obligation
+summary, Unified Address submission and outcome) and an invitation panel on the
+obligation record for sending and revoking links. Reading an invitation's
+current state is **IMPLEMENTED** through a tenant-scoped server repository that
+omits secret hashes and contact fingerprints. The address inspector exposes a
+sanitized invalid-input result while treating crashes and malformed output as
+infrastructure failure. Uncertain browser retries bind the exact receiver to
+its idempotency key. See `private-payables-link-frontend.md` for the remaining
+contract limitations.

@@ -7,7 +7,8 @@ import { ProcessZcashAddressInspector } from "@obliq/zcash/server";
 import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { getDatabase } from "@/lib/db";
-import { recipientError, recipientNoStoreHeaders } from "@/lib/recipient-api";
+import { recipientNoStoreHeaders } from "@/lib/recipient-api";
+import { recipientDestinationError } from "@/lib/recipient-destination-error";
 import {
   recipientSecretHash,
   recipientSessionCookieName,
@@ -75,6 +76,6 @@ export async function POST(request: Request) {
       { headers: recipientNoStoreHeaders },
     );
   } catch (error) {
-    return recipientError(error);
+    return recipientDestinationError(error);
   }
 }
