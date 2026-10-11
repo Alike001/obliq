@@ -32,6 +32,7 @@ describe("public preview request boundary", () => {
     "/verify/public-id/artifact.json",
     "/api/private-payables/challenges",
     "/api/private-payables/session",
+    "/payables/invitation",
   ])("blocks the database or authority surface %s", (pathname) => {
     expect(
       isPublicPreviewRequestAllowed({

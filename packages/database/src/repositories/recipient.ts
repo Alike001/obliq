@@ -7,7 +7,7 @@ import {
 } from "@obliq/domain";
 import { hashRecipientSecret } from "@obliq/security";
 import { timingSafeEqual } from "node:crypto";
-import { and, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import type { createDatabase } from "../index";
 import {
   approvalRequirements,
@@ -63,6 +63,33 @@ export class RecipientWorkflowError extends Error {
     super("Recipient workflow is unavailable");
     this.name = "RecipientWorkflowError";
   }
+}
+
+export async function getRecipientInvitationForObligation(
+  db: Database,
+  organizationId: string,
+  obligationId: string,
+) {
+  const [invitation] = await db
+    .select({
+      id: recipientInvitations.id,
+      obligationId: recipientInvitations.obligationId,
+      state: recipientInvitations.state,
+      network: recipientInvitations.network,
+      expiresAt: recipientInvitations.expiresAt,
+      consumedAt: recipientInvitations.consumedAt,
+      createdAt: recipientInvitations.createdAt,
+    })
+    .from(recipientInvitations)
+    .where(
+      and(
+        eq(recipientInvitations.organizationId, organizationId),
+        eq(recipientInvitations.obligationId, obligationId),
+      ),
+    )
+    .orderBy(desc(recipientInvitations.createdAt))
+    .limit(1);
+  return invitation ?? null;
 }
 
 async function lockOrganization(tx: Transaction, organizationId: string) {

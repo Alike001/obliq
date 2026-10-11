@@ -1,10 +1,10 @@
 # Private Payables Link acceptance contract
 
-Status: **IMPLEMENTED backend / frontend integration pending**
+Status: **IMPLEMENTED backend and recipient/finance integration**
 
-This is the reproducible acceptance contract for the Phase 6B backend. It does
-not claim that the recipient frontend exists, that a recipient owns a submitted
-Zcash address, or that a public-network settlement has occurred.
+This is the reproducible acceptance contract for the Phase 6B backend and Phase
+6C recipient experience. It does not claim that a recipient owns a submitted
+Zcash address or that a public-network settlement has occurred.
 
 ## Assurance and authority boundary
 
@@ -45,6 +45,28 @@ The recipient routes accept no organization ID, vendor ID, role, approval
 state, destination verification status, settlement state, or evidence-release
 instruction from the browser. Tenant and resource relationships are resolved
 from the invitation/session or the authenticated organization membership.
+
+The integrated browser route is `/payables/invitation#token={opaque-token}`.
+The fragment is removed with `history.replaceState` during initialization and
+the token remains in a component ref only. The protected summary and
+destination calls use the server-issued HttpOnly cookie with same-origin
+credentials. Render preview blocks both this page and every recipient API.
+
+### Recipient response contract
+
+| Response                             | Browser behavior                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------- |
+| `202 IF_VALID_CODE_SENT`             | neutral code-sent language; never confirms that an invitation or contact exists |
+| `200 CONTACT_VERIFIED`               | fetch scoped session; never treat as address ownership                          |
+| `200 RECIPIENT_CONFIRMED`            | show `UNVERIFIED`, `UNAVAILABLE`, and independent-review-required               |
+| `404 RECIPIENT_WORKFLOW_UNAVAILABLE` | terminal neutral state without existence detail                                 |
+| `409 RECIPIENT_WORKFLOW_UNAVAILABLE` | idempotency conflict; do not create a new request silently                      |
+| `422 DESTINATION_INVALID`            | correct the network/receiver; no destination was stored                         |
+| `503 RECIPIENT_WORKFLOW_UNAVAILABLE` | uncertain infrastructure state; retry the same receiver and idempotency key     |
+
+The address inspector reports `422` only when its isolated process explicitly
+rejects the input. A missing or malformed inspector remains `503`; the browser
+must not describe infrastructure failure as an invalid financial destination.
 
 ## Backend acceptance matrix
 
@@ -110,8 +132,9 @@ success.
 
 ## Eventual browser acceptance checklist
 
-Run this only after Prudent's frontend integration is reviewable and against an
-isolated test environment—not Render preview and not public Zcash.
+Run this against an isolated migrated test environment—not Render preview and
+not public Zcash. Real email delivery remains environment-dependent; fixture
+values are for test setup only and are never product evidence.
 
 - [ ] Fragment token disappears from the address bar/history before any
       third-party resource, telemetry, or error reporter can observe it.

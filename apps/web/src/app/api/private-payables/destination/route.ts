@@ -3,7 +3,10 @@ import {
   confirmRecipientDestination,
   getRecipientSessionSummary,
 } from "@obliq/database";
-import { ProcessZcashAddressInspector } from "@obliq/zcash/server";
+import {
+  ProcessZcashAddressInspector,
+  ZcashAddressInspectionError,
+} from "@obliq/zcash/server";
 import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { getDatabase } from "@/lib/db";
@@ -75,6 +78,14 @@ export async function POST(request: Request) {
       { headers: recipientNoStoreHeaders },
     );
   } catch (error) {
+    if (
+      error instanceof ZcashAddressInspectionError &&
+      error.code === "ADDRESS_REJECTED"
+    )
+      return Response.json(
+        { error: "DESTINATION_INVALID" },
+        { status: 422, headers: recipientNoStoreHeaders },
+      );
     return recipientError(error);
   }
 }

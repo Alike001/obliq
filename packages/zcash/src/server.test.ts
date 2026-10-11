@@ -1,5 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { ProcessZcashObserver } from "./server";
+import { ProcessZcashAddressInspector, ProcessZcashObserver } from "./server";
+import type { ZcashAddressInspectionError } from "./server";
+
+describe("shielded address inspector boundary", () => {
+  it("classifies a rejected receiver without echoing sensitive process output", async () => {
+    const inspector = new ProcessZcashAddressInspector("/bin/sh", "testnet");
+    await expect(
+      inspector.inspect("utest1sensitive-recipient"),
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<ZcashAddressInspectionError>>({
+        name: "ZcashAddressInspectionError",
+        code: "ADDRESS_REJECTED",
+        message: "Zcash address inspection failed",
+      }),
+    );
+  });
+
+  it("keeps a missing sidecar distinct from invalid recipient input", async () => {
+    const inspector = new ProcessZcashAddressInspector(
+      "/definitely/missing/obliq-observer",
+      "testnet",
+    );
+    await expect(inspector.inspect("utest1recipient")).rejects.toMatchObject({
+      name: "ZcashAddressInspectionError",
+      code: "INSPECTOR_UNAVAILABLE",
+    });
+  });
+
+  it("fails closed on malformed sidecar output", async () => {
+    const inspector = new ProcessZcashAddressInspector("/bin/echo", "testnet");
+    await expect(inspector.inspect("utest1recipient")).rejects.toMatchObject({
+      name: "ZcashAddressInspectionError",
+      code: "MALFORMED_OUTPUT",
+    });
+  });
+});
 
 describe("process observer adapter", () => {
   it("normalizes sidecar output without returning receiver or viewing authority", async () => {

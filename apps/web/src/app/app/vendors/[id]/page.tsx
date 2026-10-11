@@ -119,6 +119,12 @@ export default async function VendorDetail({
                       Fingerprint {d.fingerprint.slice(0, 16)}… · added{" "}
                       {d.createdAt.toLocaleString()}
                     </p>
+                    {d.origin === "RECIPIENT_INVITATION" && (
+                      <p className="mt-2 font-medium text-[#7a4b00]">
+                        Recipient contact confirmed · address ownership
+                        unavailable · independent review required
+                      </p>
+                    )}
                     {d.verifiedAt && (
                       <p className="mt-2 font-medium">
                         Verified manually {d.verifiedAt.toLocaleString()} ·{" "}

@@ -53,6 +53,18 @@ that Obliq verified wallet ownership.
 
 ## API contracts
 
+The Phase 6C browser integration consumes this boundary at
+`/payables/invitation`. The invitation secret arrives only in the URL fragment,
+is removed immediately, and is retained in browser memory only until email
+verification succeeds. The browser cannot read the HttpOnly recipient-session
+cookie and supplies no organization, role, approval, verification, or payment
+state.
+
+Destination input rejected by the isolated Orchard-capability inspector returns
+`422 DESTINATION_INVALID`. Inspector absence, malformed output, or another
+infrastructure failure returns `503` so the browser preserves uncertainty. An
+uncertain retry reuses the same random idempotency key and exact receiver.
+
 All responses use `Cache-Control: private, no-store`, `Referrer-Policy:
 no-referrer`, `X-Content-Type-Options: nosniff`, and anti-indexing headers.
 Mutation requests must be same-origin. Public-preview middleware returns 404

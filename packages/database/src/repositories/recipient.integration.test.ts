@@ -14,6 +14,7 @@ import {
   evaluateObligationControls,
   expireRecipientInvitations,
   getRecipientChallengeContext,
+  getRecipientInvitationForObligation,
   getRecipientVerificationContext,
   ingestShieldedObservation,
   revokeRecipientInvitation,
@@ -611,6 +612,34 @@ suite("private payables recipient boundary", () => {
       "payables-recipient@example.test",
     ])
       expect(auditJson).not.toContain(sensitiveValue);
+  });
+
+  it("returns invitation status only inside the server-derived organization", async () => {
+    const tokenHash = digest("status-boundary-invitation");
+    const { invitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId,
+        tokenHash,
+        contactPepper: "q".repeat(32),
+        network: "regtest",
+      },
+    );
+    await expect(
+      getRecipientInvitationForObligation(
+        connection.db,
+        organizationA,
+        obligationId,
+      ),
+    ).resolves.toMatchObject({ id: invitation.id, state: "ACTIVE" });
+    await expect(
+      getRecipientInvitationForObligation(
+        connection.db,
+        organizationB,
+        obligationId,
+      ),
+    ).resolves.toBeNull();
   });
 
   it("fails expired and invalid verification without creating a session", async () => {

@@ -4,12 +4,14 @@ import {
   getObligation,
   getObligationSettlement,
   getObserverStatus,
+  getRecipientInvitationForObligation,
   listObligationObservations,
 } from "@obliq/database";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { randomUUID } from "node:crypto";
 import { Notice } from "@/components/notice";
+import { RecipientInvitationManager } from "@/components/recipient-invitation-manager";
 import { BackLink, Fact } from "@/components/record";
 import { StateTag } from "@/components/state-tag";
 import { stateLabel } from "@/components/state-tone";
@@ -43,14 +45,25 @@ export default async function ObligationDetail({
   const { id } = await params;
   const notice = await searchParams;
   const tenant = await getTenantContext();
-  const [record, control, settlement, observations, observerStatus] =
-    await Promise.all([
-      getObligation(getDatabase(), tenant.organizationId, id),
-      getControlView(getDatabase(), tenant.organizationId, id),
-      getObligationSettlement(getDatabase(), tenant.organizationId, id),
-      listObligationObservations(getDatabase(), tenant.organizationId, id),
-      getObserverStatus(getDatabase(), tenant.organizationId, "regtest"),
-    ]);
+  const [
+    record,
+    control,
+    settlement,
+    observations,
+    observerStatus,
+    recipientInvitation,
+  ] = await Promise.all([
+    getObligation(getDatabase(), tenant.organizationId, id),
+    getControlView(getDatabase(), tenant.organizationId, id),
+    getObligationSettlement(getDatabase(), tenant.organizationId, id),
+    listObligationObservations(getDatabase(), tenant.organizationId, id),
+    getObserverStatus(getDatabase(), tenant.organizationId, "regtest"),
+    getRecipientInvitationForObligation(
+      getDatabase(),
+      tenant.organizationId,
+      id,
+    ),
+  ]);
   if (!record) notFound();
   const { obligation: o, vendor, source, duplicates, activity } = record;
   const openDuplicates = duplicates.filter(
@@ -233,6 +246,32 @@ export default async function ObligationDetail({
             </p>
           </section>
         </div>
+        <RecipientInvitationManager
+          obligationId={o.id}
+          invitation={
+            recipientInvitation
+              ? {
+                  id: recipientInvitation.id,
+                  state:
+                    ["ACTIVE", "CONTACT_VERIFIED"].includes(
+                      recipientInvitation.state,
+                    ) && recipientInvitation.expiresAt <= new Date()
+                      ? "EXPIRED"
+                      : recipientInvitation.state,
+                  network: recipientInvitation.network,
+                  expiresAt: recipientInvitation.expiresAt.toISOString(),
+                  consumedAt:
+                    recipientInvitation.consumedAt?.toISOString() ?? null,
+                  createdAt: recipientInvitation.createdAt.toISOString(),
+                }
+              : null
+          }
+          canAdminister={["OWNER", "CFO", "FINANCE"].includes(tenant.role)}
+          contactAvailable={Boolean(vendor?.contactEmail)}
+          terminal={["SETTLED", "REJECTED", "CANCELLED", "EXPIRED"].includes(
+            o.state,
+          )}
+        />
         <section className="card mt-5 overflow-hidden">
           <div className="hairline flex flex-wrap items-center justify-between gap-4 border-b p-5">
             <div>
