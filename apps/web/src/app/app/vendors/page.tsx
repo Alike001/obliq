@@ -21,7 +21,7 @@ export default async function VendorsPage() {
               Vendors
             </h1>
             <p className="text-muted mt-2 text-sm">
-              Organization-scoped payee records and destination history.
+              Who you pay, and the payment address on record for each.
             </p>
           </div>
           <Link className="button button-dark" href="/app/vendors/new">

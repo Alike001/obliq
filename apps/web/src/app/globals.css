@@ -1421,6 +1421,11 @@ samp {
     font-size: 0.625rem;
     font-weight: 600;
   }
+  /* On the gold pill the tag switches to carbon so it stays readable. */
+  .side-link[aria-current="page"] .side-soon {
+    border-color: rgb(22 22 22 / 0.5);
+    color: var(--color-carbon);
+  }
   .tab-link {
     display: inline-flex;
     min-height: 2.75rem;

@@ -1,13 +1,12 @@
 import { GitCommitHorizontal } from "lucide-react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { NetworkStamp, ScopeTag, StatusPill } from "@/components/status-pill";
+import { RegtestSettlement } from "@/components/regtest-settlement";
+import { NetworkStamp, StatusPill } from "@/components/status-pill";
 import { networkClaims, networkSummary } from "@/lib/network-claims";
 import { readNetworkStatus } from "@/lib/network-status";
 import { checkDatabaseConnection, verifyAuditChain } from "@obliq/database";
 import { getDatabase } from "@/lib/db";
-import { phase3NetworkProof } from "@/content/phase3-proof";
-import { phase4NetworkProof } from "@/content/phase4-proof";
 import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
 export const metadata = { title: "What is proven" };
@@ -201,15 +200,13 @@ export default async function ProofPage() {
         className="on-ink bg-[#161616] text-white"
       >
         <div className="page-wrap py-20 md:py-24">
-          <p className="eyebrow">Technical proof surface</p>
+          <p className="eyebrow">What is proven</p>
           <h1 className="section-title mt-5 max-w-3xl">
             Claims should be inspectable or marked unavailable.
           </h1>
           <p className="mt-6 max-w-2xl leading-7 text-white/70">
-            Phase 6 reports hardened runtime boundaries alongside the real
-            Phase-4 regtest settlement and UFVK-only reconciliation evidence.
-            Public-network operation remains blocked until Obliq itself proves
-            current public synchronization and a funded shielded flow.
+            This page lists what Obliq can do today and the evidence behind each
+            claim. {summary.lead} {summary.rest}
           </p>
         </div>
       </section>
@@ -244,13 +241,17 @@ export default async function ProofPage() {
           read as public-network readiness.
         </p>
       </section>
-      <section className="page-wrap py-16">
+      <RegtestSettlement />
+      <section className="page-wrap py-16" aria-labelledby="register-h">
         <div className="grid gap-5 lg:grid-cols-[1.35fr_.65fr]">
           <div className="card bg-panel overflow-hidden">
             <div className="hairline border-b p-5">
-              <h2 className="font-semibold">Capability register</h2>
+              <h2 id="register-h" className="font-semibold">
+                Capability register
+              </h2>
               <p className="text-muted mt-1 text-xs">
-                Runtime truth for this phase
+                Every capability, marked implemented, seeded, planned,
+                unavailable or blocked
               </p>
             </div>
             <div className="divide-ink/8 divide-y">
@@ -304,27 +305,6 @@ export default async function ProofPage() {
               value={`${runtimeSummary.auth} · ${runtimeSummary.storage}`}
               detail={`Rate limits: ${runtimeSummary.rateLimit}. Zcash network: ${runtimeSummary.network}. Public network status: ${runtimeSummary.publicNetwork}.`}
               good={runtimeSummary.auth === "OIDC"}
-            />
-            <ProofCard
-              label="End-to-end settlement"
-              value="VERIFIED"
-              regtest
-              detail={`Intent ${phase4NetworkProof.intentHash.slice(0, 12)}…; tx ${phase4NetworkProof.txid.slice(0, 12)}…; height ${phase4NetworkProof.minedHeight}; ${phase4NetworkProof.confirmationEvidence.join(" → ")} confirmations; final state ${phase4NetworkProof.finalState}.`}
-              good
-            />
-            <ProofCard
-              label="External signer"
-              value="VERIFIED · FULL PRIVACY"
-              regtest
-              detail="Zallet created, inspected, proved, signed and extracted an Ironwood PCZT outside Obliq. No RPC credential, PCZT, raw transaction or key entered the app."
-              good
-            />
-            <ProofCard
-              label="Shielded tracer"
-              value="VERIFIED"
-              regtest
-              detail={`Ironwood output at height ${phase3NetworkProof.minedHeight}; ${phase3NetworkProof.confirmationEvidence.join(" → ")} confirmations; tx ${phase3NetworkProof.txid.slice(0, 12)}…`}
-              good
             />
             <ProofCard
               label="Observer authority"
@@ -400,14 +380,11 @@ function ProofCard({
   value,
   detail,
   good = false,
-  regtest = false,
 }: {
   label: string;
   value: string;
   detail: string;
   good?: boolean;
-  /** The fact was proven on the isolated test network only. */
-  regtest?: boolean;
 }) {
   return (
     <article className="card bg-panel p-5">
@@ -421,7 +398,6 @@ function ProofCard({
               Confirmed
             </span>
           )}
-          {regtest && <ScopeTag />}
         </span>
       </div>
       <p className="mt-4 font-mono text-xl font-semibold break-words">

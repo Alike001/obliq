@@ -16,9 +16,18 @@ import { isReadOnlyPreview, siteLinks } from "@/lib/site-links";
 export const dynamic = "force-dynamic";
 
 const exposed = [
-  ["Who you pay", "Every vendor and contractor, linked to your treasury."],
-  ["How much", "Each amount, so anyone can total what a supplier earns."],
-  ["How often", "The rhythm of your payables, to anyone who is watching."],
+  [
+    "Who you pay",
+    "Every vendor and contractor, linked to your treasury. A competitor can map your suppliers.",
+  ],
+  [
+    "How much",
+    "Each amount, so anyone can total what a supplier earns. One vendor can see what you pay another.",
+  ],
+  [
+    "How often",
+    "The rhythm of your payables. Anyone watching can follow your cash going out.",
+  ],
 ] as const;
 
 const zcashReasons = [
@@ -104,10 +113,12 @@ export default function LandingPage() {
                 Pay your bills without <em>publishing your business.</em>
               </h1>
               <p className="t-lede mt-6 max-w-[34rem]">
-                Obliq is accounts payable for teams that pay in crypto. Record a
-                bill, approve it under your own policy, and pay it in shielded
-                Zcash from a signer you control. The payment is matched back to
-                the bill, with evidence you choose to share.
+                On a public blockchain, every payment shows who you pay, how
+                much and how often. Obliq is accounts payable for finance teams
+                that pay vendors and contractors in crypto. Record a bill,
+                approve it under your own policy, and pay it in shielded Zcash
+                from a signer you control. The payment is matched back to the
+                bill, with evidence you choose to share.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
                 <Link href={primary.href} className="button button-dark">

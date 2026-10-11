@@ -309,7 +309,7 @@ export function RecipientInvitationPanel({
           <h3 className="text-sm font-semibold">
             Invitations created for this obligation
           </h3>
-          <p className="text-ink-3 text-xs">Current persisted state</p>
+          <p className="text-ink-3 text-xs">Saved state</p>
         </div>
         {invitations.length ? (
           <ol className="mt-3">

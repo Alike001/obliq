@@ -40,7 +40,7 @@ export default async function ObligationsPage({
               Obligations
             </h1>
             <p className="text-muted mt-2 text-sm">
-              Persisted bills awaiting control evaluation.
+              Every bill your organization owes, from recorded to settled.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">

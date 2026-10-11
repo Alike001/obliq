@@ -116,12 +116,11 @@ export default function SecurityPage() {
             </h1>
             <p className="text-muted mt-7 text-lg leading-8">
               The system separates business decisions, viewing capability and
-              cryptographic spending authority. Phase 2 enforces business
-              authorization while Phase 3 isolates read-only reconciliation and
-              Phase 4 keeps spending authority external, Phase 5 adds controlled
-              disclosure, and Phase 6 hardens identity, storage, abuse and
-              deployment boundaries without changing either Zcash authority
-              boundary.
+              cryptographic spending authority. Obliq enforces business
+              approval, a separate observer reconciles payments with read-only
+              access, and signing stays on a signer you operate. Identity,
+              storage and abuse controls are hardened around those boundaries
+              without changing either one.
             </p>
           </div>
         </div>

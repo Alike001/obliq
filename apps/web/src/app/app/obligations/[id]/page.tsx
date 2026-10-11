@@ -99,8 +99,8 @@ export default async function ObligationDetail({
               <StateTag state={o.state} />
             </div>
             <p className="text-muted mt-2 text-sm">
-              Persisted financial record · version {o.version} · business
-              authorization is separate from signing.
+              Version {o.version} of this record. Approving it here does not
+              sign or send a payment.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -221,7 +221,7 @@ export default async function ObligationDetail({
             </dl>
           </section>
           <section className="card p-6">
-            <h2 className="font-semibold">Control boundary</h2>
+            <h2 className="font-semibold">Where it stands</h2>
             <div className="mt-5 space-y-4">
               <Row
                 label="Duplicate findings"
@@ -253,8 +253,8 @@ export default async function ObligationDetail({
               />
             </div>
             <p className="text-muted mt-5 text-xs leading-5">
-              Business authorization never constitutes a wallet signature. Phase
-              4 requires a separate external Zallet ceremony.
+              Approving a bill never signs a payment. Signing happens
+              separately, on your own external signer.
             </p>
           </section>
         </div>
@@ -654,7 +654,8 @@ export default async function ObligationDetail({
           <div className="hairline border-b p-5">
             <h2 className="font-semibold">Activity history</h2>
             <p className="text-muted mt-1 text-xs">
-              Organization-scoped, hash-chained audit events.
+              Every change to this record, newest first. Each entry is chained
+              to the one before it, so an edit to the history is detectable.
             </p>
           </div>
           {activity.length ? (

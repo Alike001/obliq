@@ -23,7 +23,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
         <SideNav />
         <div className="border-carbon-2 text-on-carbon-2 mt-auto border-t pt-5 text-xs leading-5">
-          Phase 6 · Hardened boundaries · {runtime.network.toUpperCase()}
+          {runtime.network === "mainnet"
+            ? "Zcash mainnet"
+            : `Zcash ${runtime.network}. A test network; its coins have no value.`}
         </div>
       </aside>
       <div className="min-w-0">
