@@ -370,3 +370,23 @@ export function readStoredAttempt(
     return null;
   }
 }
+
+/**
+ * True when this tab still holds an address whose submission never got an
+ * authoritative answer. It is read before the invitation is known, so a page
+ * that cannot load its details can still say that an earlier request is
+ * unresolved instead of claiming that nothing happened.
+ */
+export function hasUnresolvedAttempt(raw: string | null) {
+  if (!raw) return false;
+  try {
+    const value = record(JSON.parse(raw));
+    return (
+      value?.state === "PENDING" &&
+      typeof value.receiver === "string" &&
+      value.receiver.length > 0
+    );
+  } catch {
+    return false;
+  }
+}

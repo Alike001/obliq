@@ -99,7 +99,7 @@ const administrationMessages: Record<string, string> = {
   OBLIGATION_CLOSED:
     "This obligation is closed and cannot accept a new destination.",
   INVITATION_NOT_OPEN:
-    "The invitation is no longer open, so nothing was changed.",
+    "The invitation is no longer open, so this request changed nothing.",
   CONTACT_UNCHANGED: "The submitted contact is already current.",
   EMAIL_DELIVERY_UNAVAILABLE:
     "The private email service did not accept delivery. No usable invitation was left open.",
@@ -135,23 +135,45 @@ export function parseIssueReply(
 }
 
 /**
+ * What a failed send can truthfully be called. A structured refusal from the
+ * server is a fact. A server fault, or a reply this page cannot read, is not:
+ * the invitation may have been created and emailed before the failure.
+ */
+export type IssueFailure =
+  { kind: "REFUSED"; message: string } | { kind: "UNCERTAIN" };
+
+export function issueFailure(status: number, body: unknown): IssueFailure {
+  const message = invitationAdministrationMessage(body);
+  // 502 is the mail adapter refusing delivery: the server revoked the link.
+  if (status >= 500 && status !== 502) return { kind: "UNCERTAIN" };
+  if (message) return { kind: "REFUSED", message };
+  return status >= 400 && status < 500
+    ? {
+        kind: "REFUSED",
+        message:
+          "The request was refused. Refresh persisted status before retrying.",
+      }
+    : { kind: "UNCERTAIN" };
+}
+
+/**
  * - `REVOKED`: the server closed it just now.
  * - `NOT_OPEN`: nothing to revoke. It was already used, revoked, replaced or
  *   expired, or it is not one of this organization's invitations.
- * - `REFUSED`: the request was rejected and nothing changed.
+ * - `REFUSED`: the server rejected the request and said so.
+ * - `UNCERTAIN`: no authoritative answer. It may or may not be revoked.
  */
-export type RevokeResult = "REVOKED" | "NOT_OPEN" | "REFUSED";
+export type RevokeResult = "REVOKED" | "NOT_OPEN" | "REFUSED" | "UNCERTAIN";
 
 export function parseRevokeReply(status: number, body: unknown): RevokeResult {
   if (status === 404) return "NOT_OPEN";
-  if (
-    status === 200 &&
-    body &&
-    typeof body === "object" &&
-    (body as Record<string, unknown>).state === "REVOKED"
-  )
-    return "REVOKED";
-  return "REFUSED";
+  if (status === 200)
+    return body &&
+      typeof body === "object" &&
+      (body as Record<string, unknown>).state === "REVOKED"
+      ? "REVOKED"
+      : "UNCERTAIN";
+  return status >= 400 && status < 500 ? "REFUSED" : "UNCERTAIN";
 }
 
 export interface DestinationProvenance {

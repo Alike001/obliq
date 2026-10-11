@@ -12,6 +12,7 @@ import {
   invitationAdministrationMessage,
   invitationStateDetail,
   invitationStateLabel,
+  issueFailure,
   parseIssueReply,
   parseRevokeReply,
   revocationReasons,
@@ -104,7 +105,10 @@ export function RecipientInvitationPanel({
   const [revokeErrors, setRevokeErrors] = useState<Record<string, string>>({});
 
   const mayHaveOpen = invitations.some(
-    (item) => invitationCanBeRevoked(item.state) && !revoked[item.id],
+    (item) =>
+      invitationCanBeRevoked(item.state) &&
+      revoked[item.id] !== "REVOKED" &&
+      revoked[item.id] !== "NOT_OPEN",
   );
 
   async function issue() {
@@ -121,19 +125,7 @@ export function RecipientInvitationPanel({
       setSent(
         result
           ? { kind: "SENT", expiresAt: result.expiresAt.toLocaleString() }
-          : reply.status === 400
-            ? {
-                kind: "REFUSED",
-                message:
-                  invitationAdministrationMessage(reply.body) ??
-                  "The request was refused. Refresh persisted status before retrying.",
-              }
-            : invitationAdministrationMessage(reply.body)
-              ? {
-                  kind: "REFUSED",
-                  message: invitationAdministrationMessage(reply.body)!,
-                }
-              : { kind: "UNCERTAIN" },
+          : issueFailure(reply.status, reply.body),
       );
     }
     router.refresh();
@@ -150,9 +142,9 @@ export function RecipientInvitationPanel({
     setRevoking(null);
     setRevoked((current) => ({
       ...current,
-      [id]: reply ? parseRevokeReply(reply.status, reply.body) : "REFUSED",
+      [id]: reply ? parseRevokeReply(reply.status, reply.body) : "UNCERTAIN",
     }));
-    if (reply) {
+    if (reply && reply.status < 500) {
       const message = invitationAdministrationMessage(reply.body);
       if (message)
         setRevokeErrors((current) => ({ ...current, [id]: message }));
@@ -272,8 +264,9 @@ export function RecipientInvitationPanel({
               live
               className="mt-5 text-sm"
             >
-              The server did not answer. Reload this page: an invitation that
-              was created appears in the list. Do not assume it was delivered.
+              The server did not return a result. An invitation may have been
+              created and emailed. Check the list below, which shows the saved
+              state, before sending again. Do not assume it was delivered.
             </Notice>
           )}
         </div>
@@ -378,7 +371,9 @@ export function RecipientInvitationPanel({
                     </div>
                     {canRevoke &&
                       invitationCanBeRevoked(invitation.state) &&
-                      !result &&
+                      // A refused or unanswered revoke can be tried again.
+                      result !== "REVOKED" &&
+                      result !== "NOT_OPEN" &&
                       revoking !== invitation.id && (
                         <button
                           type="button"
@@ -443,7 +438,8 @@ export function RecipientInvitationPanel({
                       className="mt-4 text-sm"
                     >
                       This invitation is no longer open. It was already used,
-                      revoked, replaced or expired. Nothing changed.
+                      revoked, replaced or expired. This request changed
+                      nothing.
                     </Notice>
                   )}
                   {result === "REFUSED" && (
@@ -454,7 +450,20 @@ export function RecipientInvitationPanel({
                       className="mt-4 text-sm"
                     >
                       {revokeErrors[invitation.id] ??
-                        "The server refused or did not answer, so treat the link as still open. Refresh persisted status before retrying."}
+                        "The server refused the request, so the link is still open."}
+                    </Notice>
+                  )}
+                  {result === "UNCERTAIN" && (
+                    <Notice
+                      tone="hold"
+                      title="We do not know whether it was revoked"
+                      live
+                      className="mt-4 text-sm"
+                    >
+                      The server did not return a result. Treat the link as
+                      still open until the state above reads Revoked. Reload
+                      this page to see the saved state, then revoke again if it
+                      is still open.
                     </Notice>
                   )}
                 </li>

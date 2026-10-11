@@ -10,6 +10,7 @@ import {
   parseConfirmation,
   parseSessionSummary,
   readInvitationToken,
+  hasUnresolvedAttempt,
   readStoredAttempt,
   receiverProblem,
   receiverProblemMessage,
@@ -321,6 +322,21 @@ describe("stored retry key", () => {
 
   it("never holds the invitation token", () => {
     expect(stored).not.toContain("token");
+  });
+
+  it("knows an unresolved submission before the invitation is known", () => {
+    expect(hasUnresolvedAttempt(stored)).toBe(true);
+    for (const state of ["UNSENT", "CONFIRMED"])
+      expect(
+        hasUnresolvedAttempt(JSON.stringify({ ...JSON.parse(stored), state })),
+      ).toBe(false);
+    expect(
+      hasUnresolvedAttempt(
+        JSON.stringify({ ...JSON.parse(stored), receiver: null }),
+      ),
+    ).toBe(false);
+    expect(hasUnresolvedAttempt(null)).toBe(false);
+    expect(hasUnresolvedAttempt("{")).toBe(false);
   });
 
   it("rejects a pending retry without its exact original receiver", () => {

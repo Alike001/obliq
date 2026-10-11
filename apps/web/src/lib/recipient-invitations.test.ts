@@ -7,6 +7,7 @@ import {
   invitationStateDetail,
   invitationStateLabel,
   isRecipientSubmitted,
+  issueFailure,
   parseIssueReply,
   parseRevokeReply,
   revocationReasons,
@@ -114,8 +115,39 @@ describe("server replies", () => {
     expect(parseRevokeReply(400, { error: "INVITATION_UNAVAILABLE" })).toBe(
       "REFUSED",
     );
-    expect(parseRevokeReply(200, { state: "ACTIVE" })).toBe("REFUSED");
-    expect(parseRevokeReply(500, null)).toBe("REFUSED");
+    expect(parseRevokeReply(403, { error: "FORBIDDEN" })).toBe("REFUSED");
+  });
+
+  it("never calls a revoke refused when the outcome is unknown", () => {
+    expect(parseRevokeReply(500, null)).toBe("UNCERTAIN");
+    expect(parseRevokeReply(503, { error: "OPERATION_UNAVAILABLE" })).toBe(
+      "UNCERTAIN",
+    );
+    // A success status whose body does not say REVOKED proves nothing.
+    expect(parseRevokeReply(200, { state: "ACTIVE" })).toBe("UNCERTAIN");
+    expect(parseRevokeReply(200, null)).toBe("UNCERTAIN");
+  });
+
+  it("calls a failed send refused only on a structured refusal", () => {
+    expect(issueFailure(403, { error: "FORBIDDEN" })).toEqual({
+      kind: "REFUSED",
+      message: "Your role cannot perform this recipient operation.",
+    });
+    expect(issueFailure(400, null).kind).toBe("REFUSED");
+    // The mail adapter refused delivery and the server revoked the link.
+    expect(
+      issueFailure(502, { error: "EMAIL_DELIVERY_UNAVAILABLE" }).kind,
+    ).toBe("REFUSED");
+  });
+
+  it("treats a server fault during a send as an unknown outcome", () => {
+    expect(issueFailure(503, { error: "OPERATION_UNAVAILABLE" })).toEqual({
+      kind: "UNCERTAIN",
+    });
+    expect(issueFailure(500, null)).toEqual({ kind: "UNCERTAIN" });
+    expect(issueFailure(200, { state: "ACTIVE" })).toEqual({
+      kind: "UNCERTAIN",
+    });
   });
 
   it("offers exactly the reason codes the API accepts", () => {
