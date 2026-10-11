@@ -1,5 +1,13 @@
+import { chmod, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 import { describe, expect, it } from "vitest";
-import { ProcessZcashObserver, parseAddressInspectionOutput } from "./server";
+import {
+  ProcessZcashAddressInspector,
+  ProcessZcashObserver,
+  parseAddressInspectionOutput,
+} from "./server";
 import type { ZcashAddressInspectionError } from "./server";
 
 describe("address inspection evidence", () => {
@@ -60,6 +68,47 @@ describe("address inspection evidence", () => {
           code: "MALFORMED_OUTPUT",
         }),
       );
+  });
+
+  it("terminates a hung inspector as unavailable, never invalid", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "obliq-inspector-"));
+    const binary = join(directory, "hung-inspector");
+    const pidFile = join(directory, "pid");
+    await writeFile(
+      binary,
+      `#!/bin/sh\necho $$ > '${pidFile}'\nexec sleep 60\n`,
+      { mode: 0o700 },
+    );
+    await chmod(binary, 0o700);
+    try {
+      const inspector = new ProcessZcashAddressInspector(
+        binary,
+        "testnet",
+        100,
+      );
+      await expect(
+        inspector.inspect("utest1-not-logged"),
+      ).rejects.toMatchObject({
+        code: "INSPECTOR_UNAVAILABLE",
+        message: "Zcash address inspection failed",
+      });
+
+      const pid = Number.parseInt(await readFile(pidFile, "utf8"), 10);
+      let stopped = false;
+      for (let attempt = 0; attempt < 50; attempt += 1) {
+        try {
+          process.kill(pid, 0);
+          await delay(10);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+          stopped = true;
+          break;
+        }
+      }
+      expect(stopped).toBe(true);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   });
 });
 

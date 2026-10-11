@@ -87,6 +87,7 @@ export class ProcessZcashAddressInspector {
   constructor(
     private readonly binary: string,
     private readonly network: ZcashNetwork,
+    private readonly timeoutMs = 5_000,
   ) {}
 
   inspect(receiver: string): Promise<ShieldedAddressInspection> {
@@ -111,11 +112,24 @@ export class ProcessZcashAddressInspector {
       const fail = (code: ZcashAddressInspectionErrorCode) => {
         if (settled) return;
         settled = true;
+        clearTimeout(timeout);
         reject(new ZcashAddressInspectionError(code));
       };
+      const timeout = setTimeout(
+        () => {
+          // Address decoding is local and bounded. A process that does not
+          // answer promptly is infrastructure failure, never invalid-address
+          // evidence. SIGKILL prevents an uncooperative child from lingering.
+          child.kill("SIGKILL");
+          fail("INSPECTOR_UNAVAILABLE");
+        },
+        Math.max(1, this.timeoutMs),
+      );
+      timeout.unref();
       child.once("error", () => fail("INSPECTOR_UNAVAILABLE"));
       child.once("close", (code) => {
         if (settled) return;
+        clearTimeout(timeout);
         if (code !== 0) return fail("INSPECTOR_UNAVAILABLE");
         try {
           const parsed = parseAddressInspectionOutput(stdout, this.network);
