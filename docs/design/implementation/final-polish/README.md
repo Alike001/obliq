@@ -66,6 +66,8 @@ captured at 2x). All 32 were retaken after the last code change in this pass.
 - Lists of obligations, vendors and approvals become one labelled block per row
   on a phone.
 - A long reference, legal name or purpose wraps inside its card.
+- On wider screens the same lists keep a gutter between columns, and an
+  amount, a date or a state stays on one line.
 - The phone tab row keeps the current section in view. Tabs, documentation
   menus and back links are at least 44px tall.
 - Form fields in the workspace use 16px text on a phone, so iOS does not zoom

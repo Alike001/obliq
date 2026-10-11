@@ -1548,6 +1548,25 @@ samp {
     }
   }
 
+  /* From the tablet layout up the columns keep a gutter, and a short value
+     such as an amount, a date or a state stays on one line. */
+  @media (min-width: 640px) {
+    .app-main .stack-table :is(th, td):not(:first-child) {
+      padding: 0.75rem 1rem 0.75rem 0;
+    }
+    .app-main
+      .stack-table
+      td:is(
+        [data-label="Amount"],
+        [data-label="Due"],
+        [data-label="State"],
+        [data-label="Status"],
+        [data-label="Created"]
+      ) {
+      white-space: nowrap;
+    }
+  }
+
   .metric {
     border: 1px solid var(--color-line);
     border-radius: var(--radius);
