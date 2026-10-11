@@ -23,8 +23,9 @@ export default function SiteError({
             This page did not load.
           </h1>
           <p className="text-muted mt-3 text-sm leading-6">
-            Nothing was changed. This is a fault on our side or a dropped
-            connection, not a statement about any record or payment.
+            This is a fault on our side or a dropped connection, not a statement
+            about any record or payment. If you were submitting something, treat
+            it as not confirmed until you see the result.
           </p>
           {error.digest && (
             <p className="text-ink-3 mt-4 text-xs">
