@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Notice } from "@/components/notice";
 import {
-  type InvitationStanding,
+  type InvitationState,
   type RevokeResult,
+  invitationCanBeRevoked,
+  invitationStateDetail,
+  invitationStateLabel,
   parseIssueReply,
   parseRevokeReply,
   revocationReasons,
-  standingDetail,
-  standingLabel,
 } from "@/lib/recipient-invitations";
 
 export interface InvitationRow {
@@ -20,7 +21,10 @@ export interface InvitationRow {
   issuedAt: string;
   expiresAt: string | null;
   issuedBy: string | null;
-  standing: InvitationStanding;
+  state: InvitationState;
+  consumedAt: string | null;
+  revokedAt: string | null;
+  reasonCode: string | null;
 }
 
 type Sent =
@@ -28,15 +32,21 @@ type Sent =
   | { kind: "REFUSED" }
   | { kind: "UNCERTAIN" };
 
-const standingTag: Record<InvitationStanding, string> = {
-  PAST_EXPIRY: "tag",
-  CLOSED: "tag",
-  STATE_NOT_READABLE: "tag tag-hold",
+const stateTag: Record<InvitationState, string> = {
+  ACTIVE: "tag tag-hold",
+  CONTACT_VERIFIED: "tag tag-hold",
+  CONSUMED: "tag tag-done",
+  EXPIRED: "tag",
+  REVOKED: "tag tag-stop",
+  SUPERSEDED: "tag",
 };
-const standingGlyph: Record<InvitationStanding, string> = {
-  PAST_EXPIRY: "glyph",
-  CLOSED: "glyph",
-  STATE_NOT_READABLE: "glyph glyph-unknown",
+const stateGlyph: Record<InvitationState, string> = {
+  ACTIVE: "glyph glyph-wait",
+  CONTACT_VERIFIED: "glyph glyph-wait",
+  CONSUMED: "glyph glyph-done",
+  EXPIRED: "glyph",
+  REVOKED: "glyph glyph-stop",
+  SUPERSEDED: "glyph",
 };
 
 async function send(path: string, method: "POST" | "DELETE", body: unknown) {
@@ -91,7 +101,7 @@ export function RecipientInvitationPanel({
   const [revoked, setRevoked] = useState<Record<string, RevokeResult>>({});
 
   const mayHaveOpen = invitations.some(
-    (item) => item.standing === "STATE_NOT_READABLE" && !revoked[item.id],
+    (item) => invitationCanBeRevoked(item.state) && !revoked[item.id],
   );
 
   async function issue() {
@@ -108,7 +118,9 @@ export function RecipientInvitationPanel({
       setSent(
         result
           ? { kind: "SENT", expiresAt: result.expiresAt.toLocaleString() }
-          : { kind: "REFUSED" },
+          : reply.status === 400
+            ? { kind: "REFUSED" }
+            : { kind: "UNCERTAIN" },
       );
     }
     router.refresh();
@@ -127,6 +139,7 @@ export function RecipientInvitationPanel({
       ...current,
       [id]: reply ? parseRevokeReply(reply.status, reply.body) : "REFUSED",
     }));
+    router.refresh();
   }
 
   return (
@@ -233,7 +246,8 @@ export function RecipientInvitationPanel({
               The server refused the request and does not say why. Usual causes:
               your role cannot send invitations, the vendor has no contact
               email, the obligation is closed, too many were sent this hour, or
-              email delivery failed. No link is in use from this attempt.
+              email delivery failed. Refresh the persisted status before
+              retrying; do not infer link state from this message alone.
             </Notice>
           )}
           {sent?.kind === "UNCERTAIN" && (
@@ -287,7 +301,7 @@ export function RecipientInvitationPanel({
           <h3 className="text-sm font-semibold">
             Invitations created for this obligation
           </h3>
-          <p className="text-ink-3 text-xs">From the audit history</p>
+          <p className="text-ink-3 text-xs">Current persisted state</p>
         </div>
         {invitations.length ? (
           <ol className="mt-3">
@@ -310,12 +324,12 @@ export function RecipientInvitationPanel({
                             Revoked
                           </span>
                         ) : (
-                          <span className={standingTag[invitation.standing]}>
+                          <span className={stateTag[invitation.state]}>
                             <span
-                              className={standingGlyph[invitation.standing]}
+                              className={stateGlyph[invitation.state]}
                               aria-hidden
                             />
-                            {standingLabel[invitation.standing]}
+                            {invitationStateLabel[invitation.state]}
                           </span>
                         )}
                       </p>
@@ -325,15 +339,21 @@ export function RecipientInvitationPanel({
                           ` by ${invitation.issuedBy.slice(0, 8)}…`}
                         {invitation.expiresAt &&
                           ` · expires ${invitation.expiresAt}`}
+                        {invitation.consumedAt &&
+                          ` · submitted ${invitation.consumedAt}`}
+                        {invitation.revokedAt &&
+                          ` · closed ${invitation.revokedAt}`}
                       </p>
                       <p className="text-muted mt-1 text-xs leading-5">
                         {result === "REVOKED"
                           ? "Revoked just now. The link and any verified session stopped working."
-                          : standingDetail[invitation.standing]}
+                          : invitationStateDetail[invitation.state]}
+                        {invitation.reasonCode &&
+                          ` Reason: ${invitation.reasonCode}.`}
                       </p>
                     </div>
                     {canRevoke &&
-                      invitation.standing === "STATE_NOT_READABLE" &&
+                      invitationCanBeRevoked(invitation.state) &&
                       !result &&
                       revoking !== invitation.id && (
                         <button
@@ -422,9 +442,9 @@ export function RecipientInvitationPanel({
           <p className="text-muted px-5 pt-2 pb-5 text-sm">None yet.</p>
         )}
         <p className="text-ink-3 hairline border-t px-5 py-4 text-xs leading-5">
-          The workspace cannot yet read whether a link has been opened,
-          verified, used or revoked. A submitted address shows up as a new
-          unverified destination on the vendor record.
+          These states come from tenant-scoped invitation records, not audit
+          inference. A submitted address still appears as an unverified,
+          immutable destination version on the vendor record.
         </p>
       </div>
     </section>

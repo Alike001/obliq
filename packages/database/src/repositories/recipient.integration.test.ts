@@ -14,6 +14,7 @@ import {
   evaluateObligationControls,
   expireRecipientInvitations,
   getRecipientChallengeContext,
+  listRecipientInvitationsForObligation,
   getRecipientVerificationContext,
   ingestShieldedObservation,
   revokeRecipientInvitation,
@@ -611,6 +612,63 @@ suite("private payables recipient boundary", () => {
       "payables-recipient@example.test",
     ])
       expect(auditJson).not.toContain(sensitiveValue);
+  });
+
+  it("lists current invitation status only inside the owning organization", async () => {
+    const { invitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId,
+        tokenHash: digest("status-boundary-invitation"),
+        contactPepper: "q".repeat(32),
+        network: "regtest",
+      },
+    );
+    const owned = await listRecipientInvitationsForObligation(
+      connection.db,
+      organizationA,
+      obligationId,
+    );
+    expect(owned[0]).toMatchObject({
+      id: invitation.id,
+      state: "ACTIVE",
+      effectiveState: "ACTIVE",
+    });
+    expect(owned[0]).not.toHaveProperty("tokenHash");
+    expect(owned[0]).not.toHaveProperty("contactFingerprint");
+    await expect(
+      listRecipientInvitationsForObligation(
+        connection.db,
+        organizationB,
+        obligationId,
+      ),
+    ).resolves.toEqual([]);
+  });
+
+  it("reports an overdue open invitation as effectively expired", async () => {
+    const now = new Date("2026-02-02T00:00:00Z");
+    const { invitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId,
+        tokenHash: digest("effective-expiry-invitation"),
+        contactPepper: "q".repeat(32),
+        network: "regtest",
+        now: new Date("2026-01-01T00:00:00Z"),
+      },
+    );
+    const records = await listRecipientInvitationsForObligation(
+      connection.db,
+      organizationA,
+      obligationId,
+      now,
+    );
+    expect(records.find((item) => item.id === invitation.id)).toMatchObject({
+      state: "ACTIVE",
+      effectiveState: "EXPIRED",
+    });
   });
 
   it("fails expired and invalid verification without creating a session", async () => {

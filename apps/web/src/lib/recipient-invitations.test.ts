@@ -1,30 +1,16 @@
 import { describe, expect, it } from "vitest";
 import {
-  type ActivityEvent,
   canIssueInvitations,
   canReviewDestinations,
+  invitationCanBeRevoked,
   invitationBlockers,
+  invitationStateDetail,
+  invitationStateLabel,
   isRecipientSubmitted,
-  issuedInvitations,
   parseIssueReply,
   parseRevokeReply,
   revocationReasons,
-  standingDetail,
-  standingLabel,
 } from "./recipient-invitations";
-
-const created = (
-  subjectId: string,
-  createdAt: string,
-  expiresAt: unknown,
-): ActivityEvent => ({
-  eventType: "RECIPIENT_INVITATION_CREATED",
-  subjectType: "RECIPIENT_INVITATION",
-  subjectId,
-  actorId: "00000000-0000-4000-8000-000000000001",
-  payloadJson: { obligationId: "obligation", expiresAt },
-  createdAt: new Date(createdAt),
-});
 
 describe("who may act", () => {
   it("offers invitations to Owner, CFO and Finance only", () => {
@@ -74,77 +60,30 @@ describe("invitation blockers", () => {
   });
 });
 
-describe("invitations read from the audit history", () => {
-  const now = new Date("2026-10-11T12:00:00.000Z");
-
-  it("ignores every other event", () => {
-    expect(
-      issuedInvitations(
-        [
-          {
-            ...created("a", "2026-10-11T10:00:00Z", null),
-            eventType: "OBLIGATION_CREATED",
-          },
-          {
-            ...created("b", "2026-10-11T10:00:00Z", null),
-            subjectType: "OBLIGATION",
-          },
-        ],
-        now,
-      ),
-    ).toEqual([]);
-  });
-
-  it("does not claim to know the state of an unexpired invitation", () => {
-    const [latest] = issuedInvitations(
-      [created("a", "2026-10-11T10:00:00Z", "2026-10-12T10:00:00.000Z")],
-      now,
-    );
-    expect(latest?.standing).toBe("STATE_NOT_READABLE");
-    expect(standingLabel.STATE_NOT_READABLE).toBe("Issued");
-    expect(standingLabel.STATE_NOT_READABLE).not.toMatch(/active|open|sent/iu);
-    expect(standingDetail.STATE_NOT_READABLE).toMatch(/not shown here/u);
-  });
-
-  it("marks an invitation past its expiry", () => {
-    const [latest] = issuedInvitations(
-      [created("a", "2026-10-10T10:00:00Z", "2026-10-11T10:00:00.000Z")],
-      now,
-    );
-    expect(latest?.standing).toBe("PAST_EXPIRY");
-  });
-
-  it("orders newest first and closes everything before the newest", () => {
-    const rows = issuedInvitations(
-      [
-        created("old", "2026-10-11T08:00:00Z", "2026-10-12T08:00:00.000Z"),
-        created("new", "2026-10-11T11:00:00Z", "2026-10-12T11:00:00.000Z"),
-        created("mid", "2026-10-11T09:00:00Z", "2026-10-12T09:00:00.000Z"),
-      ],
-      now,
-    );
-    expect(rows.map((row) => [row.id, row.standing])).toEqual([
-      ["new", "STATE_NOT_READABLE"],
-      ["mid", "CLOSED"],
-      ["old", "CLOSED"],
-    ]);
-  });
-
-  it("survives a payload without a usable expiry", () => {
-    const [row] = issuedInvitations(
-      [created("a", "2026-10-11T10:00:00Z", "not a date")],
-      now,
-    );
-    expect(row).toMatchObject({
-      expiresAt: null,
-      standing: "STATE_NOT_READABLE",
+describe("persisted invitation states", () => {
+  it("names every backend state without implying payment settlement", () => {
+    expect(invitationStateLabel).toEqual({
+      ACTIVE: "Active",
+      CONTACT_VERIFIED: "Contact verified",
+      CONSUMED: "Destination submitted",
+      EXPIRED: "Expired",
+      REVOKED: "Revoked",
+      SUPERSEDED: "Replaced",
     });
-    expect(
-      issuedInvitations(
-        [{ ...created("a", "2026-10-11T10:00:00Z", null), payloadJson: null }],
-        now,
-      )[0]?.expiresAt,
-    ).toBeNull();
+    for (const detail of Object.values(invitationStateDetail))
+      expect(detail).not.toMatch(/paid|settled|wallet ownership/iu);
+  });
+
+  it("offers revocation only for the two open persisted states", () => {
+    expect(invitationCanBeRevoked("ACTIVE")).toBe(true);
+    expect(invitationCanBeRevoked("CONTACT_VERIFIED")).toBe(true);
+    for (const state of [
+      "CONSUMED",
+      "EXPIRED",
+      "REVOKED",
+      "SUPERSEDED",
+    ] as const)
+      expect(invitationCanBeRevoked(state)).toBe(false);
   });
 });
 

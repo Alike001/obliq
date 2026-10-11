@@ -1,5 +1,67 @@
 import { describe, expect, it } from "vitest";
-import { ProcessZcashObserver } from "./server";
+import { ProcessZcashObserver, parseAddressInspectionOutput } from "./server";
+import type { ZcashAddressInspectionError } from "./server";
+
+describe("address inspection evidence", () => {
+  it("accepts only a structured valid result for the configured network", () => {
+    expect(
+      parseAddressInspectionOutput(
+        JSON.stringify({
+          status: "VALID",
+          network: "testnet",
+          orchardReceiverPresent: true,
+          transparentReceiverPresent: false,
+          receiverFingerprint: "ab".repeat(32),
+        }),
+        "testnet",
+      ),
+    ).toEqual({
+      network: "testnet",
+      orchardReceiverPresent: true,
+      transparentReceiverPresent: false,
+      receiverFingerprint: "ab".repeat(32),
+    });
+  });
+
+  it("recognizes only the sidecar's exact sanitized invalid envelope", () => {
+    expect(() =>
+      parseAddressInspectionOutput(
+        JSON.stringify({
+          status: "INVALID",
+          reasonCode: "ADDRESS_REJECTED",
+        }),
+        "testnet",
+      ),
+    ).toThrowError(
+      expect.objectContaining<Partial<ZcashAddressInspectionError>>({
+        code: "ADDRESS_REJECTED",
+      }),
+    );
+    for (const ambiguous of [
+      "not json",
+      JSON.stringify({ status: "INVALID", reasonCode: "CRASH" }),
+      JSON.stringify({
+        status: "INVALID",
+        reasonCode: "ADDRESS_REJECTED",
+        diagnostic: "recipient material",
+      }),
+      JSON.stringify({
+        status: "VALID",
+        network: "mainnet",
+        orchardReceiverPresent: true,
+        transparentReceiverPresent: false,
+        receiverFingerprint: "ab".repeat(32),
+      }),
+    ])
+      expect(() =>
+        parseAddressInspectionOutput(ambiguous, "testnet"),
+      ).toThrowError(
+        expect.objectContaining<Partial<ZcashAddressInspectionError>>({
+          code: "MALFORMED_OUTPUT",
+        }),
+      );
+  });
+});
 
 describe("process observer adapter", () => {
   it("normalizes sidecar output without returning receiver or viewing authority", async () => {

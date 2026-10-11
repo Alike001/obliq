@@ -132,12 +132,18 @@ amount, currency, due date, network and expiry. It cannot list other records.
 
 The server passes the address over stdin to the pinned Rust address inspector.
 The inspector requires an Orchard receiver and rejects transparent receivers.
+It emits one exact sanitized rejection envelope for deterministic invalid
+input. That envelope maps to `422 INVALID_SHIELDED_DESTINATION`. A missing or
+crashed inspector, nonzero exit, network mismatch, extra diagnostic fields or
+malformed output maps to generic `503`; receiver material and process
+diagnostics are never returned.
 Successful consumption returns the immutable destination ID/version,
 `verificationStatus: "UNVERIFIED"`, `addressOwnershipProof: "UNAVAILABLE"`
 and whether the response was recovered from an idempotency receipt.
 
-The frontend must retain and reuse the same idempotency key after timeouts. It
-must not create a new key merely because the response was uncertain.
+The frontend must persist the exact receiver/key pair before the first request
+and reuse that pair after timeouts or reloads. It must not permit a different
+receiver or create a new key merely because the response was uncertain.
 
 ## Delivery adapter
 
@@ -172,12 +178,15 @@ email address.
   broadcast settlement and observer targets remain bound to their historical
   destination and continue reconciliation.
 - Database or address-inspector uncertainty cannot fabricate confirmation.
+- Authenticated workspace invitation state is read from organization-scoped
+  persisted records. It is not inferred from incomplete audit prose, and the
+  query omits token hashes and contact fingerprints.
 
 ## Frontend
 
 The recipient page and the workspace invitation panel are described in
 [Private Payables Link frontend](./private-payables-link-frontend.md), together
-with the contract gaps the frontend found.
+with the remaining contract gaps found during integration.
 
 ## Still unavailable
 

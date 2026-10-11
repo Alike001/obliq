@@ -354,17 +354,34 @@ fn inspect_recipient_address(
 ) -> Result<(), Box<dyn Error>> {
     let mut encoded = Zeroizing::new(String::new());
     io::stdin().read_line(&mut encoded)?;
-    let (orchard, transparent) = validate_recipient_address(params, &encoded)?;
     println!(
         "{}",
-        json!({
+        recipient_address_inspection(configured, params, &encoded)
+    );
+    Ok(())
+}
+
+fn recipient_address_inspection(
+    configured: &ConfiguredNetwork,
+    params: &ObserverParameters,
+    encoded: &str,
+) -> serde_json::Value {
+    match validate_recipient_address(params, encoded) {
+        Ok((orchard, transparent)) => json!({
+            "status": "VALID",
             "network": configured.label,
             "orchardReceiverPresent": orchard,
             "transparentReceiverPresent": transparent,
             "receiverFingerprint": hex::encode(Sha256::digest(encoded.trim().as_bytes())),
-        })
-    );
-    Ok(())
+        }),
+        // All failures from validate_recipient_address are deterministic
+        // rejections of the supplied value. They intentionally collapse to a
+        // stable reason and never echo the address or decoder diagnostics.
+        Err(_) => json!({
+            "status": "INVALID",
+            "reasonCode": "ADDRESS_REJECTED",
+        }),
+    }
 }
 
 fn verify_recipient(
@@ -853,6 +870,37 @@ mod tests {
         .expect("Orchard and transparent receivers form a UA");
         let encoded = Address::Unified(with_transparent).encode(&configured.params);
         assert!(validate_recipient_address(&configured.params, &encoded).is_err());
+    }
+
+    #[test]
+    fn emits_only_sanitized_address_inspection_evidence() {
+        let configured = configured_network_for("testnet").expect("testnet");
+        let invalid = recipient_address_inspection(
+            &configured,
+            &configured.params,
+            "utest1-sensitive-invalid-material",
+        );
+        assert_eq!(
+            invalid,
+            json!({
+                "status": "INVALID",
+                "reasonCode": "ADDRESS_REJECTED",
+            })
+        );
+        assert!(!invalid.to_string().contains("sensitive"));
+
+        let ufvk = test_ufvk(4);
+        let encoded = orchard_recipient(&ufvk, 21).encode(&configured.params);
+        let valid = recipient_address_inspection(&configured, &configured.params, &encoded);
+        assert_eq!(valid["status"], "VALID");
+        assert_eq!(valid["network"], "testnet");
+        assert_eq!(valid["orchardReceiverPresent"], true);
+        assert_eq!(valid["transparentReceiverPresent"], false);
+        assert_eq!(
+            valid["receiverFingerprint"].as_str().map(str::len),
+            Some(64)
+        );
+        assert!(!valid.to_string().contains(&encoded));
     }
 
     #[test]

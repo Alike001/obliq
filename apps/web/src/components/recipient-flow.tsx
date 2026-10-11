@@ -140,11 +140,29 @@ export function RecipientFlow() {
       }
       idempotencyKey.current ??=
         stored?.idempotencyKey ?? window.crypto.randomUUID();
-      remember(next.invitationId, idempotencyKey.current, !!stored?.submitted);
-      setSeenBefore(!!stored?.submitted);
+      remember(
+        next.invitationId,
+        idempotencyKey.current,
+        stored?.receiver ?? null,
+        stored?.state ?? "UNSENT",
+      );
+      const recovering = Boolean(stored?.receiver);
+      setSeenBefore(recovering);
+      setReceiver(stored?.receiver ?? "");
+      setUncertain(recovering);
+      setChecked(false);
       setSummary(next);
       setMinutesLeft(minutesRemaining(next.sessionExpiresAt, new Date()));
-      go("address");
+      go(
+        recovering ? "review" : "address",
+        recovering
+          ? {
+              tone: "hold",
+              title: "Recover the earlier submission",
+              body: "This browser kept the exact address and retry key from an interrupted or completed request. Retry only this address so Obliq can return the authoritative result. You cannot replace it from this link.",
+            }
+          : null,
+      );
     },
     [go],
   );
@@ -308,21 +326,51 @@ export function RecipientFlow() {
 
   async function submitAddress() {
     if (!summary || !idempotencyKey.current || busy || !checked) return;
+    const submittedReceiver = receiver.trim();
+    // Persist the exact receiver/key pair before the network request. A reload
+    // or lost response can therefore retry only this operation, never bind the
+    // same key to a different destination.
+    remember(
+      summary.invitationId,
+      idempotencyKey.current,
+      submittedReceiver,
+      "PENDING",
+    );
+    setUncertain(true);
     setBusy("submit");
     setMessage(null);
     // The same key goes with every attempt, so a repeat after a lost reply
     // returns the first result and can never record a second address.
     const outcome = destinationOutcome(
       await call("/api/private-payables/destination", {
-        receiver: receiver.trim(),
+        receiver: submittedReceiver,
         idempotencyKey: idempotencyKey.current,
       }),
     );
     setBusy(null);
     if (outcome.kind === "CONFIRMED") {
-      remember(summary.invitationId, idempotencyKey.current, true);
+      remember(
+        summary.invitationId,
+        idempotencyKey.current,
+        submittedReceiver,
+        "CONFIRMED",
+      );
       setConfirmation(outcome.confirmation);
       return go("confirmed");
+    }
+    if (outcome.kind === "INVALID") {
+      // A 422 is emitted only for a structured rejection from the sidecar,
+      // before the database operation. It is therefore safe to start a new
+      // attempt with a new key and let the recipient edit the address.
+      idempotencyKey.current = window.crypto.randomUUID();
+      remember(summary.invitationId, idempotencyKey.current, null, "UNSENT");
+      setUncertain(false);
+      setSeenBefore(false);
+      setChecked(false);
+      setReceiverError(
+        `This is not an Orchard-capable shielded Unified Address for ${networkLabel(summary.network)}, or it contains a transparent receiver. Copy a new address from your wallet.`,
+      );
+      return go("address");
     }
     if (outcome.kind === "CONFLICT") return close("CONFLICT");
     if (outcome.kind === "CLOSED")
@@ -335,7 +383,7 @@ export function RecipientFlow() {
     setMessage({
       tone: "hold",
       title: "We do not know whether your address was recorded",
-      body: `Obliq did not confirm it, so it is not shown as submitted. Either the address is not a valid shielded Unified Address for ${networkLabel(summary.network)}, or the service is unavailable right now. Check the address, then try again. Trying again is safe: it cannot record a second address.`,
+      body: "Obliq did not return an authoritative result. The exact address and retry key are locked together in this browser tab. Retry this same address; do not submit another destination while the outcome is unresolved.",
     });
   }
 
@@ -693,14 +741,16 @@ export function RecipientFlow() {
                         ? "Try again"
                         : "Submit address for review"}
                   </button>
-                  <button
-                    type="button"
-                    className="button button-light"
-                    onClick={() => go("address")}
-                    disabled={busy !== null}
-                  >
-                    Edit address
-                  </button>
+                  {!uncertain && (
+                    <button
+                      type="button"
+                      className="button button-light"
+                      onClick={() => go("address")}
+                      disabled={busy !== null}
+                    >
+                      Edit address
+                    </button>
+                  )}
                 </div>
                 <p className="text-ink-3 mt-5 text-xs leading-5">
                   Submitting sends the address to the payer for review. It does
@@ -872,11 +922,16 @@ function FlowNotice({ message }: { message: Message }) {
   );
 }
 
-function remember(invitationId: string, key: string, submitted: boolean) {
+function remember(
+  invitationId: string,
+  key: string,
+  receiver: string | null,
+  state: "UNSENT" | "PENDING" | "CONFIRMED",
+) {
   try {
     window.sessionStorage.setItem(
       attemptStorageKey,
-      JSON.stringify({ invitationId, idempotencyKey: key, submitted }),
+      JSON.stringify({ invitationId, idempotencyKey: key, receiver, state }),
     );
   } catch {
     // Without storage the key is kept in memory for this page only.

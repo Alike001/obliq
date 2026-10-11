@@ -1,11 +1,4 @@
-/**
- * Workspace-side rules for issuing and following recipient invitations.
- *
- * The workspace has no endpoint that reads an invitation's current state, so
- * this module works from two things it is allowed to see: the reply to its
- * own create or revoke request, and the invitation-created events already in
- * the obligation's audit history. It reports what those prove and no more.
- */
+/** Workspace-side rules for issuing and following recipient invitations. */
 import type { RecipientInvitationRevocationReason } from "@obliq/domain";
 
 const issuerRoles = ["OWNER", "CFO", "FINANCE"];
@@ -60,86 +53,37 @@ export const revocationReasons: readonly {
   { code: "OTHER", label: "Other" },
 ];
 
-/**
- * What the audit history proves about one invitation.
- *
- * - `PAST_EXPIRY`: its expiry has passed, so it cannot be used.
- * - `CLOSED`: a later invitation exists. Sending one closes any earlier link
- *   to the same vendor that was still open.
- * - `STATE_NOT_READABLE`: it was created and has not reached its expiry.
- *   Whether it was delivered, used, revoked or replaced is not available here.
- */
-export type InvitationStanding =
-  "PAST_EXPIRY" | "CLOSED" | "STATE_NOT_READABLE";
+export type InvitationState =
+  | "ACTIVE"
+  | "CONTACT_VERIFIED"
+  | "CONSUMED"
+  | "EXPIRED"
+  | "REVOKED"
+  | "SUPERSEDED";
 
-export interface IssuedInvitation {
-  id: string;
-  issuedAt: Date;
-  expiresAt: Date | null;
-  issuedBy: string | null;
-  standing: InvitationStanding;
-}
-
-export interface ActivityEvent {
-  eventType: string;
-  subjectType: string;
-  subjectId: string;
-  actorId: string | null;
-  payloadJson: unknown;
-  createdAt: Date;
-}
-
-function expiryOf(payload: unknown) {
-  if (!payload || typeof payload !== "object") return null;
-  const value = (payload as Record<string, unknown>).expiresAt;
-  if (typeof value !== "string") return null;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-/** Invitations sent for one obligation, newest first, read from its audit. */
-export function issuedInvitations(
-  activity: readonly ActivityEvent[],
-  now: Date,
-): IssuedInvitation[] {
-  const sent = activity
-    .filter(
-      (event) =>
-        event.eventType === "RECIPIENT_INVITATION_CREATED" &&
-        event.subjectType === "RECIPIENT_INVITATION",
-    )
-    .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  return sent.map((event, index) => {
-    const expiresAt = expiryOf(event.payloadJson);
-    const standing: InvitationStanding =
-      index > 0
-        ? "CLOSED"
-        : expiresAt && expiresAt.getTime() <= now.getTime()
-          ? "PAST_EXPIRY"
-          : "STATE_NOT_READABLE";
-    return {
-      id: event.subjectId,
-      issuedAt: event.createdAt,
-      expiresAt,
-      issuedBy: event.actorId,
-      standing,
-    };
-  });
-}
-
-export const standingLabel: Record<InvitationStanding, string> = {
-  PAST_EXPIRY: "Past expiry",
-  CLOSED: "Closed",
-  STATE_NOT_READABLE: "Issued",
+export const invitationStateLabel: Record<InvitationState, string> = {
+  ACTIVE: "Active",
+  CONTACT_VERIFIED: "Contact verified",
+  CONSUMED: "Destination submitted",
+  EXPIRED: "Expired",
+  REVOKED: "Revoked",
+  SUPERSEDED: "Replaced",
 };
 
-export const standingDetail: Record<InvitationStanding, string> = {
-  PAST_EXPIRY: "Its 24 hours have passed, so the link no longer works.",
-  CLOSED:
-    "A later invitation was created. That closed this one if it was still open.",
-  STATE_NOT_READABLE:
-    "Within its 24 hours. Whether it was delivered, or has since been used, revoked or replaced by a link for another obligation, is not shown here.",
+export const invitationStateDetail: Record<InvitationState, string> = {
+  ACTIVE: "The link may still be used to request and verify an email code.",
+  CONTACT_VERIFIED:
+    "The email check passed. Only a still-unexpired verified session can submit one destination.",
+  CONSUMED:
+    "The recipient submitted a destination. It remains unverified until independent finance review.",
+  EXPIRED: "The invitation's 24-hour validity has ended.",
+  REVOKED: "An authorized finance administrator revoked this invitation.",
+  SUPERSEDED: "A newer invitation replaced this one.",
 };
+
+export function invitationCanBeRevoked(state: InvitationState) {
+  return state === "ACTIVE" || state === "CONTACT_VERIFIED";
+}
 
 export interface IssueResult {
   invitationId: string;

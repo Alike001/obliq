@@ -259,7 +259,12 @@ describe("reading server replies", () => {
     );
     expect(destinationOutcome(reply(404)).kind).toBe("CLOSED");
     expect(destinationOutcome(reply(409)).kind).toBe("CONFLICT");
+    expect(
+      destinationOutcome(reply(422, { error: "INVALID_SHIELDED_DESTINATION" }))
+        .kind,
+    ).toBe("INVALID");
     for (const uncertain of [
+      reply(422, { error: "RECIPIENT_WORKFLOW_UNAVAILABLE" }),
       reply(503, { error: "RECIPIENT_WORKFLOW_UNAVAILABLE" }),
       reply(500),
       reply(200, {}),
@@ -286,14 +291,16 @@ describe("stored retry key", () => {
   const stored = JSON.stringify({
     invitationId: summaryBody.invitationId,
     idempotencyKey: "3b0f6a52-6a4c-4f6e-9a6e-0c1d2e3f4a5b",
-    submitted: true,
+    receiver: regtestAddress,
+    state: "PENDING",
   });
 
   it("is reused for the same invitation", () => {
     expect(readStoredAttempt(stored, summaryBody.invitationId)).toEqual({
       invitationId: summaryBody.invitationId,
       idempotencyKey: "3b0f6a52-6a4c-4f6e-9a6e-0c1d2e3f4a5b",
-      submitted: true,
+      receiver: regtestAddress,
+      state: "PENDING",
     });
   });
 
@@ -314,5 +321,19 @@ describe("stored retry key", () => {
 
   it("never holds the invitation token", () => {
     expect(stored).not.toContain("token");
+  });
+
+  it("rejects a pending retry without its exact original receiver", () => {
+    expect(
+      readStoredAttempt(
+        JSON.stringify({
+          invitationId: summaryBody.invitationId,
+          idempotencyKey: "3b0f6a52-6a4c-4f6e-9a6e-0c1d2e3f4a5b",
+          receiver: null,
+          state: "PENDING",
+        }),
+        summaryBody.invitationId,
+      ),
+    ).toBeNull();
   });
 });

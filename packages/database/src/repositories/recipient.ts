@@ -7,7 +7,7 @@ import {
 } from "@obliq/domain";
 import { hashRecipientSecret } from "@obliq/security";
 import { timingSafeEqual } from "node:crypto";
-import { and, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, lte, ne, sql } from "drizzle-orm";
 import type { createDatabase } from "../index";
 import {
   approvalRequirements,
@@ -88,6 +88,50 @@ async function requireInvitationAdministrator(
     .limit(1);
   if (!membership || !invitationAdministrators.includes(membership.role))
     throw new Error("Actor cannot administer recipient invitations");
+}
+
+/**
+ * Returns the persisted invitation history for one tenant-owned obligation.
+ * Secret hashes and contact fingerprints are deliberately not selected.
+ * An open record past its expiry is reported as effectively expired even if
+ * the expiry worker has not persisted that terminal state yet.
+ */
+export async function listRecipientInvitationsForObligation(
+  db: Database,
+  organizationId: string,
+  obligationId: string,
+  now = new Date(),
+) {
+  const rows = await db
+    .select({
+      id: recipientInvitations.id,
+      state: recipientInvitations.state,
+      network: recipientInvitations.network,
+      expiresAt: recipientInvitations.expiresAt,
+      consumedAt: recipientInvitations.consumedAt,
+      revokedAt: recipientInvitations.revokedAt,
+      reasonCode: recipientInvitations.reasonCode,
+      createdBy: recipientInvitations.createdBy,
+      createdAt: recipientInvitations.createdAt,
+    })
+    .from(recipientInvitations)
+    .where(
+      and(
+        eq(recipientInvitations.organizationId, organizationId),
+        eq(recipientInvitations.obligationId, obligationId),
+      ),
+    )
+    .orderBy(desc(recipientInvitations.createdAt))
+    .limit(20);
+
+  return rows.map((row) => ({
+    ...row,
+    effectiveState:
+      ["ACTIVE", "CONTACT_VERIFIED"].includes(row.state) &&
+      row.expiresAt.getTime() <= now.getTime()
+        ? ("EXPIRED" as const)
+        : row.state,
+  }));
 }
 
 export async function createRecipientInvitation(

@@ -291,6 +291,8 @@ export function summaryOutcome(reply: ApiReply): SummaryOutcome {
 
 export type DestinationOutcome =
   | { kind: "CONFIRMED"; confirmation: RecipientConfirmation }
+  /** The read-only sidecar definitively rejected the submitted address. */
+  | { kind: "INVALID" }
   /** The link or session can no longer accept an address. */
   | { kind: "CLOSED" }
   /** An address was already recorded with different details. */
@@ -306,6 +308,11 @@ export function destinationOutcome(reply: ApiReply): DestinationOutcome {
   if (reply.kind !== "response") return { kind: "UNCERTAIN" };
   if (reply.status === 404) return { kind: "CLOSED" };
   if (reply.status === 409) return { kind: "CONFLICT" };
+  if (
+    reply.status === 422 &&
+    record(reply.body)?.error === "INVALID_SHIELDED_DESTINATION"
+  )
+    return { kind: "INVALID" };
   if (reply.status !== 200) return { kind: "UNCERTAIN" };
   const confirmation = parseConfirmation(reply.body);
   return confirmation
@@ -321,8 +328,9 @@ export function minutesRemaining(expiresAt: Date, now: Date) {
 export interface StoredAttempt {
   invitationId: string;
   idempotencyKey: string;
-  /** Set once this browser tab has seen a recorded result. */
-  submitted: boolean;
+  /** Exact destination bound to the key once the first POST starts. */
+  receiver: string | null;
+  state: "UNSENT" | "PENDING" | "CONFIRMED";
 }
 
 /**
@@ -344,13 +352,19 @@ export function readStoredAttempt(
       value?.invitationId !== invitationId ||
       typeof value.idempotencyKey !== "string" ||
       value.idempotencyKey.length < 16 ||
-      value.idempotencyKey.length > 128
+      value.idempotencyKey.length > 128 ||
+      !["UNSENT", "PENDING", "CONFIRMED"].includes(String(value.state)) ||
+      (value.receiver !== null && typeof value.receiver !== "string") ||
+      (typeof value.receiver === "string" &&
+        (value.receiver.length === 0 || value.receiver.length > 512)) ||
+      (value.state !== "UNSENT" && typeof value.receiver !== "string")
     )
       return null;
     return {
       invitationId,
       idempotencyKey: value.idempotencyKey,
-      submitted: value.submitted === true,
+      receiver: value.receiver,
+      state: value.state as StoredAttempt["state"],
     };
   } catch {
     return null;

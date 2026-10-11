@@ -12,8 +12,9 @@ export default function RecipientInvitationError({
         <p className="eyebrow">Not completed</p>
         <h1 className="mt-4 text-2xl font-semibold">This page did not load.</h1>
         <p className="text-muted mt-3 text-sm leading-6">
-          Nothing was submitted and nothing was changed. Try again, or open the
-          link in your email once more.
+          This page cannot determine whether an in-progress request completed.
+          Try again in this tab to recover the authoritative result, or open the
+          link in your email once more if you had not submitted an address.
         </p>
         <button className="button button-dark mt-6" onClick={reset}>
           Try again

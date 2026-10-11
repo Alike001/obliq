@@ -1,10 +1,10 @@
 # Private Payables Link acceptance contract
 
-Status: **IMPLEMENTED backend / frontend integration pending**
+Status: **IMPLEMENTED backend and Phase 6C frontend integration**
 
-This is the reproducible acceptance contract for the Phase 6B backend. It does
-not claim that the recipient frontend exists, that a recipient owns a submitted
-Zcash address, or that a public-network settlement has occurred.
+This is the reproducible acceptance contract for the Phase 6B backend and
+Phase 6C interface. It does not claim that a recipient owns a submitted Zcash
+address or that a public-network settlement has occurred.
 
 ## Assurance and authority boundary
 
@@ -96,15 +96,19 @@ success.
 4. After verification, fetch `GET /api/private-payables/session`. Render only
    the returned obligation. Do not add organization/vendor discovery calls.
 5. Generate one cryptographically random idempotency key for destination
-   submission. Retain it in page memory across uncertain retries and submit the
-   same receiver/key pair again. A `409` means the key was reused for different
-   content; do not silently create another request.
+   submission. Before sending, retain the exact receiver/key pair in tab-scoped
+   session storage across uncertain retries and reloads. Lock editing while the
+   result is uncertain and submit only the same pair again. A `409` means the
+   key was reused for different content; do not silently create another
+   request. Do not store invitation tokens or session secrets.
 6. Label the result exactly as contact-confirmed and awaiting independent
    finance review. Never say wallet verified, address owner verified, approved,
    ready to pay, paid, or settled.
 7. Treat `404 RECIPIENT_WORKFLOW_UNAVAILABLE` as a terminal or unavailable
-   scoped workflow without revealing whether the invitation existed. Treat
-   `503` as infrastructure uncertainty, not success or rejection.
+   scoped workflow without revealing whether the invitation existed. Treat the
+   exact `422 INVALID_SHIELDED_DESTINATION` as editable invalid input, and every
+   `503`, malformed reply or transport loss as infrastructure uncertainty, not
+   success or rejection.
 8. Do not add recipient controls for approval, settlement, signing, broadcast,
    reconciliation, or evidence issuance.
 
@@ -133,9 +137,11 @@ isolated test environment—not Render preview and not public Zcash.
       protected content from cache.
 - [ ] Keyboard flow, focus movement, labels, error association, status text,
       narrow viewport, reduced motion, and non-color status cues pass review.
-- [ ] Network inspector, analytics, console, server logs, response bodies,
-      referrers, and cached documents contain no raw invitation token, code,
-      session cookie, full receiver, or private contact value.
+- [ ] The invitation token, code and session secret never appear in analytics,
+      console output, logs, rendered markup, referrers, caches or persistent
+      browser storage. The full receiver appears only where required for human
+      review, the same-origin destination request, and tab-scoped retry
+      recovery; it never appears in logs or analytics.
 - [ ] Render preview continues to return 404 for every recipient route and every
       mutation.
 

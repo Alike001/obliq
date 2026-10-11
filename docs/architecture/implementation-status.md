@@ -68,6 +68,9 @@ The Private Payables Link frontend is **IMPLEMENTED** against that contract: a
 recipient page at `/payables/invitation` (email check, scoped obligation
 summary, Unified Address submission and outcome) and an invitation panel on the
 obligation record for sending and revoking links. Reading an invitation's
-current state from the workspace is **UNAVAILABLE** because no endpoint exposes
-it; the panel shows only what a create or revoke reply and the audit history
-prove. See `private-payables-link-frontend.md` for the open backend requests.
+current state is **IMPLEMENTED** through a tenant-scoped server repository that
+omits secret hashes and contact fingerprints. The address inspector exposes a
+sanitized invalid-input result while treating crashes and malformed output as
+infrastructure failure. Uncertain browser retries bind the exact receiver to
+its idempotency key. See `private-payables-link-frontend.md` for the remaining
+contract limitations.

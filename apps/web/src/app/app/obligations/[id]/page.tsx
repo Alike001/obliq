@@ -4,6 +4,7 @@ import {
   getObligation,
   getObligationSettlement,
   getObserverStatus,
+  listRecipientInvitationsForObligation,
   listObligationObservations,
   listVendorDestinations,
 } from "@obliq/database";
@@ -23,7 +24,6 @@ import {
   canIssueInvitations,
   invitationBlockers,
   isRecipientSubmitted,
-  issuedInvitations,
 } from "@/lib/recipient-invitations";
 import { getTenantContext } from "@/lib/session";
 import {
@@ -78,7 +78,11 @@ export default async function ObligationDetail({
         )
       ).find((item) => !item.supersededAt)
     : undefined;
-  const invitations = issuedInvitations(activity, new Date());
+  const invitations = await listRecipientInvitationsForObligation(
+    getDatabase(),
+    tenant.organizationId,
+    id,
+  );
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-6xl">
@@ -445,10 +449,13 @@ export default async function ObligationDetail({
           canRevoke={canIssueInvitations(tenant.role)}
           invitations={invitations.map((invitation) => ({
             id: invitation.id,
-            issuedAt: invitation.issuedAt.toLocaleString(),
-            expiresAt: invitation.expiresAt?.toLocaleString() ?? null,
-            issuedBy: invitation.issuedBy,
-            standing: invitation.standing,
+            issuedAt: invitation.createdAt.toLocaleString(),
+            expiresAt: invitation.expiresAt.toLocaleString(),
+            issuedBy: invitation.createdBy,
+            state: invitation.effectiveState,
+            consumedAt: invitation.consumedAt?.toLocaleString() ?? null,
+            revokedAt: invitation.revokedAt?.toLocaleString() ?? null,
+            reasonCode: invitation.reasonCode,
           }))}
         />
         {openDuplicates.map((d) => (

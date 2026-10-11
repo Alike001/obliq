@@ -27,6 +27,62 @@ export interface ShieldedAddressInspection {
   receiverFingerprint: string;
 }
 
+export type ZcashAddressInspectionErrorCode =
+  "ADDRESS_REJECTED" | "INSPECTOR_UNAVAILABLE" | "MALFORMED_OUTPUT";
+
+export class ZcashAddressInspectionError extends Error {
+  constructor(readonly code: ZcashAddressInspectionErrorCode) {
+    super("Zcash address inspection failed");
+    this.name = "ZcashAddressInspectionError";
+  }
+}
+
+export function parseAddressInspectionOutput(
+  stdout: string,
+  network: ZcashNetwork,
+): ShieldedAddressInspection {
+  let parsed: Record<string, unknown>;
+  try {
+    const value: unknown = JSON.parse(stdout);
+    if (!value || typeof value !== "object" || Array.isArray(value))
+      throw new Error("not an object");
+    parsed = value as Record<string, unknown>;
+  } catch {
+    throw new ZcashAddressInspectionError("MALFORMED_OUTPUT");
+  }
+  if (
+    parsed.status === "INVALID" &&
+    parsed.reasonCode === "ADDRESS_REJECTED" &&
+    Object.keys(parsed).every((key) => ["status", "reasonCode"].includes(key))
+  )
+    throw new ZcashAddressInspectionError("ADDRESS_REJECTED");
+  if (
+    parsed.status !== "VALID" ||
+    !Object.keys(parsed).every((key) =>
+      [
+        "status",
+        "network",
+        "orchardReceiverPresent",
+        "transparentReceiverPresent",
+        "receiverFingerprint",
+      ].includes(key),
+    ) ||
+    Object.keys(parsed).length !== 5 ||
+    parsed.network !== network ||
+    parsed.orchardReceiverPresent !== true ||
+    parsed.transparentReceiverPresent !== false ||
+    typeof parsed.receiverFingerprint !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(parsed.receiverFingerprint)
+  )
+    throw new ZcashAddressInspectionError("MALFORMED_OUTPUT");
+  return {
+    network,
+    orchardReceiverPresent: true,
+    transparentReceiverPresent: false,
+    receiverFingerprint: parsed.receiverFingerprint,
+  };
+}
+
 export class ProcessZcashAddressInspector {
   constructor(
     private readonly binary: string,
@@ -40,43 +96,44 @@ export class ProcessZcashAddressInspector {
         stdio: ["pipe", "pipe", "pipe"],
       });
       let stdout = "";
-      let stderr = "";
       child.stdout.setEncoding("utf8").on("data", (chunk: string) => {
+        if (stdout.length + chunk.length > 16 * 1024) {
+          child.kill();
+          fail("MALFORMED_OUTPUT");
+          return;
+        }
         stdout += chunk;
       });
-      child.stderr.setEncoding("utf8").on("data", (chunk: string) => {
-        stderr += chunk;
-      });
-      child.once("error", (error) =>
-        reject(new Error("Address inspector process failed", { cause: error })),
-      );
+      // Drain, but never retain or surface, process diagnostics. Decoder or
+      // crash output could contain the submitted receiver.
+      child.stderr.resume();
+      let settled = false;
+      const fail = (code: ZcashAddressInspectionErrorCode) => {
+        if (settled) return;
+        settled = true;
+        reject(new ZcashAddressInspectionError(code));
+      };
+      child.once("error", () => fail("INSPECTOR_UNAVAILABLE"));
       child.once("close", (code) => {
-        if (code !== 0)
-          return reject(
-            new Error(
-              redactZcashSecrets(stderr || "Address inspection failed"),
-            ),
-          );
+        if (settled) return;
+        if (code !== 0) return fail("INSPECTOR_UNAVAILABLE");
         try {
-          const parsed = JSON.parse(
-            stdout,
-          ) as Partial<ShieldedAddressInspection>;
-          if (
-            parsed.network !== this.network ||
-            parsed.orchardReceiverPresent !== true ||
-            parsed.transparentReceiverPresent !== false ||
-            !/^[0-9a-f]{64}$/u.test(parsed.receiverFingerprint ?? "")
-          )
-            throw new Error("Malformed address inspection output");
-          resolve(parsed as ShieldedAddressInspection);
+          const parsed = parseAddressInspectionOutput(stdout, this.network);
+          settled = true;
+          resolve(parsed);
         } catch (error) {
+          settled = true;
           reject(
             error instanceof Error
               ? error
-              : new Error("Address inspection output could not be parsed"),
+              : new ZcashAddressInspectionError("MALFORMED_OUTPUT"),
           );
         }
       });
+      // A short-lived process can close stdin after reading but before Node
+      // observes the write completion. The process exit and structured stdout
+      // remain authoritative; EPIPE itself is not classified as invalid.
+      child.stdin.on("error", () => undefined);
       child.stdin.end(`${receiver}\n`);
     });
   }
