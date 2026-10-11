@@ -1,0 +1,68 @@
+{
+  "fixtureStatus": "SEEDED",
+  "warning": "Shape fixture only. Not financial or network evidence.",
+  "invitation": {
+    "request": {
+      "obligationId": "019c6ee4-b488-7a99-b082-b668c0d0fe57"
+    },
+    "response": {
+      "invitationId": "019c6ee4-b488-7a99-b082-b668c0d0fe59",
+      "state": "ACTIVE",
+      "expiresAt": "2026-10-12T12:00:00.000Z"
+    }
+  },
+  "challenge": {
+    "request": {
+      "invitationToken": "<fragment-token-kept-in-browser-memory-only>"
+    },
+    "response": {
+      "status": "IF_VALID_CODE_SENT"
+    }
+  },
+  "contactVerification": {
+    "request": {
+      "invitationToken": "<fragment-token-kept-in-browser-memory-only>",
+      "code": "<six-digit-email-code>"
+    },
+    "response": {
+      "status": "CONTACT_VERIFIED",
+      "addressOwnershipProof": "UNAVAILABLE"
+    }
+  },
+  "session": {
+    "invitationId": "019c6ee4-b488-7a99-b082-b668c0d0fe59",
+    "obligation": {
+      "id": "019c6ee4-b488-7a99-b082-b668c0d0fe57",
+      "reference": "SEEDED-PPL-001",
+      "amountMinor": "12500",
+      "currency": "USD",
+      "dueAt": "2026-10-31T00:00:00.000Z"
+    },
+    "network": "regtest",
+    "contactVerification": "CONTACT_VERIFIED",
+    "addressOwnershipProof": "UNAVAILABLE",
+    "expiresAt": "2026-10-11T12:30:00.000Z"
+  },
+  "destinationConfirmation": {
+    "request": {
+      "receiver": "<network-correct-orchard-capable-unified-address>",
+      "idempotencyKey": "<browser-generated-random-retry-key>"
+    },
+    "response": {
+      "status": "RECIPIENT_CONFIRMED",
+      "destinationId": "019c6ee4-b488-7a99-b082-b668c0d0fe60",
+      "destinationVersion": 2,
+      "verificationStatus": "UNVERIFIED",
+      "addressOwnershipProof": "UNAVAILABLE",
+      "recovered": false
+    }
+  },
+  "forbiddenRecipientClaims": [
+    "ADDRESS_OWNERSHIP_VERIFIED",
+    "APPROVED",
+    "READY_TO_SETTLE",
+    "SIGNED",
+    "BROADCAST",
+    "SETTLED"
+  ]
+}

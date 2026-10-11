@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { defaultPolicyConfig } from "@obliq/policy";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createDatabase, schema } from "../index";
@@ -10,6 +11,7 @@ import {
   createRecipientChallenge,
   createRecipientInvitation,
   createVendor,
+  evaluateObligationControls,
   expireRecipientInvitations,
   getRecipientChallengeContext,
   getRecipientVerificationContext,
@@ -293,7 +295,7 @@ suite("private payables recipient boundary", () => {
       organizationId: organizationA,
       policyId,
       version: 1,
-      configJson: {},
+      configJson: defaultPolicyConfig,
       createdBy: issuerId,
     });
     await connection.db.insert(schema.policyDecisions).values({
@@ -370,7 +372,7 @@ suite("private payables recipient boundary", () => {
       .update(schema.obligations)
       .set({ state: "READY_TO_SETTLE", destinationId: initialDestinationId })
       .where(eq(schema.obligations.id, obligationId));
-  });
+  }, 30_000);
 
   afterAll(async () => {
     const organizations = [organizationA, organizationB];
@@ -409,7 +411,7 @@ suite("private payables recipient boundary", () => {
       .delete(schema.organizations)
       .where(inArray(schema.organizations.id, organizations));
     await connection.close();
-  });
+  }, 30_000);
 
   it("atomically confirms one immutable destination and invalidates authorization", async () => {
     const invitationTokenHash = digest("invitation-token");
@@ -459,6 +461,28 @@ suite("private payables recipient boundary", () => {
     expect(
       session.expiresAt.getTime() - session.contactVerifiedAt.getTime(),
     ).toBe(30 * 60 * 1_000);
+    await expect(
+      verifyRecipientContact(connection.db, {
+        ...context!,
+        codeHash,
+        sessionId: randomUUID(),
+        sessionTokenHash: digest("replayed-session-token"),
+      }),
+    ).rejects.toMatchObject<Partial<RecipientWorkflowError>>({
+      code: "UNAVAILABLE",
+    });
+    expect(
+      await connection.db
+        .select()
+        .from(schema.recipientSessions)
+        .where(eq(schema.recipientSessions.invitationId, invitation.id)),
+    ).toHaveLength(1);
+    expect(
+      await connection.db
+        .select()
+        .from(schema.memberships)
+        .where(eq(schema.memberships.userId, session.id)),
+    ).toEqual([]);
 
     const receiver = `uregtest1${"b".repeat(90)}`;
     const receiverFingerprint = digest(receiver);
@@ -521,6 +545,23 @@ suite("private payables recipient boundary", () => {
       .from(schema.settlementIntents)
       .where(eq(schema.settlementIntents.obligationId, obligationId));
     expect(intent).toMatchObject({ state: "INVALIDATED" });
+    const blockedDecision = await evaluateObligationControls(
+      connection.db,
+      actor,
+      obligationId,
+    );
+    expect(blockedDecision).toMatchObject({ result: "BLOCKED" });
+    expect(
+      await connection.db
+        .select()
+        .from(schema.controlFindings)
+        .where(
+          and(
+            eq(schema.controlFindings.policyDecisionId, blockedDecision!.id),
+            eq(schema.controlFindings.code, "DESTINATION_UNVERIFIED"),
+          ),
+        ),
+    ).toEqual([expect.objectContaining({ outcome: "BLOCK" })]);
     await expect(
       verifyDestinationManually(
         connection.db,
@@ -539,6 +580,9 @@ suite("private payables recipient boundary", () => {
         "Treasury confirmed destination out of band",
       ),
     ).toMatchObject({ verificationStatus: "VERIFIED_MANUALLY" });
+    expect(
+      await evaluateObligationControls(connection.db, actor, obligationId),
+    ).toMatchObject({ result: "APPROVAL_REQUIRED" });
     expect(await verifyAuditChain(connection.db, organizationA)).toMatchObject({
       valid: true,
     });
@@ -550,6 +594,23 @@ suite("private payables recipient boundary", () => {
     );
     expect(stored).not.toContain("invitation-token");
     expect(stored).not.toContain("payables-recipient@example.test");
+    const auditJson = JSON.stringify(
+      await connection.db
+        .select()
+        .from(schema.auditEvents)
+        .where(eq(schema.auditEvents.organizationId, organizationA)),
+      (_key, value) =>
+        typeof value === "bigint" ? value.toString() : (value as unknown),
+    );
+    for (const sensitiveValue of [
+      "invitation-token",
+      "challenge-code",
+      "session-token",
+      "idempotency",
+      receiver,
+      "payables-recipient@example.test",
+    ])
+      expect(auditJson).not.toContain(sensitiveValue);
   });
 
   it("fails expired and invalid verification without creating a session", async () => {
