@@ -2,6 +2,9 @@
 
 Status: **IMPLEMENTED — backend vertical slice**
 
+Acceptance matrix, safe fixture, browser checklist, and frontend handoff:
+[`docs/operations/private-payables-acceptance.md`](../operations/private-payables-acceptance.md).
+
 This document is the integration contract for the recipient-facing frontend.
 It does not authorize a new visual direction and does not change any existing
 workspace page.
