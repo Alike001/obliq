@@ -221,7 +221,7 @@ suite("Phase 2 control repositories", () => {
         "Call",
         "Unauthorized verification attempt",
       ),
-    ).rejects.toThrow("cannot verify destinations");
+    ).rejects.toMatchObject({ code: "FORBIDDEN" });
     expect(
       await decideApproval(
         connection.db,

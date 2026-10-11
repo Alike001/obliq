@@ -2,6 +2,8 @@ import { recipientChallengeRequestSchema } from "@obliq/domain";
 import {
   createRecipientChallenge,
   getRecipientChallengeContext,
+  recordRecipientChallengeDelivery,
+  revokeRecipientChallengeAfterDeliveryFailure,
 } from "@obliq/database";
 import { generateRecipientCode } from "@obliq/security";
 import { randomUUID } from "node:crypto";
@@ -60,11 +62,25 @@ export async function POST(request: Request) {
           `${context.invitation.id}:${challengeId}`,
         ),
       });
-      await sendRecipientEmail({
-        kind: "VERIFICATION_CODE",
-        to: deliveryEmail,
-        code,
-      });
+      try {
+        const delivery = await sendRecipientEmail({
+          kind: "VERIFICATION_CODE",
+          to: deliveryEmail,
+          code,
+        });
+        await recordRecipientChallengeDelivery(getDatabase(), {
+          invitationId: context.invitation.id,
+          organizationId: context.invitation.organizationId,
+          challengeId,
+          providerReference: delivery.providerReference,
+        });
+      } catch {
+        await revokeRecipientChallengeAfterDeliveryFailure(getDatabase(), {
+          invitationId: context.invitation.id,
+          organizationId: context.invitation.organizationId,
+          challengeId,
+        });
+      }
     }
   } catch {
     // Uniform response prevents token and contact enumeration.

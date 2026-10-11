@@ -98,6 +98,7 @@ export function RecipientFlow() {
   const heading = useRef<HTMLHeadingElement>(null);
 
   const [phase, setPhase] = useState<Phase>("starting");
+  const [tokenAvailable, setTokenAvailable] = useState(false);
   const [closed, setClosed] = useState<Closed>("LINK");
   const [busy, setBusy] = useState<Busy>(null);
   const [message, setMessage] = useState<Message | null>(null);
@@ -191,6 +192,7 @@ export function RecipientFlow() {
     if (started.current) return;
     started.current = true;
     token.current = readInvitationToken(window.location.hash);
+    setTokenAvailable(token.current !== null);
     // Drop the fragment, and any query string, from the address bar and from
     // this history entry so the token cannot be copied, bookmarked or synced.
     if (window.location.hash || window.location.search)
@@ -272,8 +274,9 @@ export function RecipientFlow() {
     );
     setBusy(null);
     if (outcome === "VERIFIED") {
-      // The token has done its job; authority is now the HttpOnly cookie.
-      token.current = null;
+      // Keep the token in memory only until this one-time workflow finishes so
+      // an expired 30-minute session can repeat the email check while the
+      // 24-hour invitation is still eligible.
       setCode("");
       return loadSummary(true);
     }
@@ -283,7 +286,6 @@ export function RecipientFlow() {
         await call("/api/private-payables/session"),
       );
       if (session.kind === "SUMMARY") {
-        token.current = null;
         setCode("");
         return openAddressStep(session.summary);
       }
@@ -349,6 +351,8 @@ export function RecipientFlow() {
     );
     setBusy(null);
     if (outcome.kind === "CONFIRMED") {
+      token.current = null;
+      setTokenAvailable(false);
       remember(
         summary.invitationId,
         idempotencyKey.current,
@@ -869,9 +873,26 @@ export function RecipientFlow() {
                   address was submitted.
                 </p>
                 <p className="text-muted mt-3">
-                  This link cannot be verified a second time. Ask the person who
-                  is paying you to send a new one.
+                  If the original 24-hour invitation is still open, you can
+                  repeat the email check. The earlier session and code will no
+                  longer work.
                 </p>
+                {tokenAvailable ? (
+                  <button
+                    type="button"
+                    className="button button-dark mt-6"
+                    onClick={() => void requestCode(true)}
+                    disabled={busy !== null}
+                    aria-busy={busy === "code" || undefined}
+                  >
+                    {busy === "code" ? "Requesting…" : "Email me a new code"}
+                  </button>
+                ) : (
+                  <p className="text-muted mt-3">
+                    Reopen the original invitation from your email, or ask the
+                    payer to send a new one.
+                  </p>
+                )}
               </>
             )}
             {closed === "CONFLICT" && (

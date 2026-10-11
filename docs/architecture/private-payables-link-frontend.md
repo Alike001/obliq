@@ -54,8 +54,9 @@ those modules return.
   only. The fragment and any query string are removed with
   `history.replaceState` before the first request.
 - It is sent only in the body of the same-origin `challenges` and
-  `verify-contact` requests, and dropped from memory once verification
-  succeeds.
+  `verify-contact` requests. It remains in page memory—but never persistent
+  storage—until destination confirmation so an expired 30-minute session can
+  repeat the email check while the 24-hour invitation remains eligible.
 - It is never written to storage, markup, a URL, a log or an analytics call.
   The page loads no third-party script. A browser run confirmed the token
   appears in no request URL, in no storage and nowhere in the document.
@@ -83,41 +84,25 @@ Unchanged. The preview proxy still blocks `/payables/invitation` and every
 `/api/private-payables/*` path, the page calls `notFound()` in preview mode as
 a second check, and the preview boundary test now covers both.
 
-## Gaps in the contract, and what is requested
+## Operational completion
 
-None of these is worked around with invented data.
+- Recipient lifecycle audit events include the bound obligation identifier.
+- Authenticated invitation operations return sanitized reason codes; public
+  recipient routes remain uniform and non-enumerating.
+- A still-valid `CONTACT_VERIFIED` invitation can issue a new email challenge.
+  Creating it revokes prior sessions and challenges; a consumed invitation can
+  never reopen.
+- Authorized finance administrators can correct the vendor contact. The change
+  transaction revokes every open invitation/session and preserves their
+  historical contact fingerprints. An existing link never redirects.
+- Invitation delivery state is persisted from the private adapter's strict,
+  opaque acceptance receipt rather than inferred from audit history.
+- Independent-review failures return typed, actionable workspace messages.
 
-1. **Later invitation events are not tied to the obligation.** Revoked,
-   superseded, expired, contact-verified and destination-confirmed events carry
-   no `obligationId`, so the obligation's activity history shows that a link
-   was created and nothing after.
-   **Request:** include `obligationId` in those audit payloads.
-2. **Create and revoke refuse without a reason.** Every failure is
-   `400 INVITATION_UNAVAILABLE`: wrong role, no contact email, closed
-   obligation, rate limit or failed email delivery. A failed delivery also
-   leaves a created-then-revoked invitation in the audit history.
-   **Request:** reason codes on these authenticated internal endpoints.
-3. **The session summary does not say whether an address was already
-   recorded.** After a reload the page cannot show the outcome until the
-   recipient enters the same address again.
-   **Request:** invitation state, and the recorded destination version when
-   consumed, in `GET /api/private-payables/session`.
-4. **A lapsed verified session strands the invitation.** A code can only be
-   requested while the invitation is `ACTIVE`. Once it is `CONTACT_VERIFIED`,
-   a recipient whose 30-minute session ends, or whose verification reply was
-   lost before the cookie arrived, cannot verify again and needs a new
-   invitation. The page says exactly that.
-   **Request:** allow a new challenge for a `CONTACT_VERIFIED` invitation,
-   revoking the earlier session.
-5. **A vendor's contact email cannot be changed after creation.** When it is
-   missing the panel explains why no link can be sent but cannot offer a fix.
-   **Request:** an authorized vendor-contact edit, which must also supersede
-   open invitations.
-6. **The independent-reviewer rule surfaces as a generic error.** When the
-   member who sent the link tries to record manual verification, the existing
-   server action throws and the workspace error page appears. The vendor
-   record now states the rule beside the form.
-   **Request:** a typed result from the verification action.
+The consumed-session summary still relies on the tab-scoped idempotency
+recovery record to rediscover a lost destination response. This record contains
+the receiver and operation key, not invitation/session authority, and is never
+synced beyond that browser tab.
 
 ## Verification
 

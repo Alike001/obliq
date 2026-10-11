@@ -9,6 +9,7 @@ import {
   type InvitationState,
   type RevokeResult,
   invitationCanBeRevoked,
+  invitationAdministrationMessage,
   invitationStateDetail,
   invitationStateLabel,
   parseIssueReply,
@@ -25,11 +26,12 @@ export interface InvitationRow {
   consumedAt: string | null;
   revokedAt: string | null;
   reasonCode: string | null;
+  deliveryState: string;
 }
 
 type Sent =
   | { kind: "SENT"; expiresAt: string }
-  | { kind: "REFUSED" }
+  | { kind: "REFUSED"; message: string }
   | { kind: "UNCERTAIN" };
 
 const stateTag: Record<InvitationState, string> = {
@@ -99,6 +101,7 @@ export function RecipientInvitationPanel({
     useState<RecipientInvitationRevocationReason>("SENT_IN_ERROR");
   const [working, setWorking] = useState(false);
   const [revoked, setRevoked] = useState<Record<string, RevokeResult>>({});
+  const [revokeErrors, setRevokeErrors] = useState<Record<string, string>>({});
 
   const mayHaveOpen = invitations.some(
     (item) => invitationCanBeRevoked(item.state) && !revoked[item.id],
@@ -119,8 +122,18 @@ export function RecipientInvitationPanel({
         result
           ? { kind: "SENT", expiresAt: result.expiresAt.toLocaleString() }
           : reply.status === 400
-            ? { kind: "REFUSED" }
-            : { kind: "UNCERTAIN" },
+            ? {
+                kind: "REFUSED",
+                message:
+                  invitationAdministrationMessage(reply.body) ??
+                  "The request was refused. Refresh persisted status before retrying.",
+              }
+            : invitationAdministrationMessage(reply.body)
+              ? {
+                  kind: "REFUSED",
+                  message: invitationAdministrationMessage(reply.body)!,
+                }
+              : { kind: "UNCERTAIN" },
       );
     }
     router.refresh();
@@ -139,6 +152,11 @@ export function RecipientInvitationPanel({
       ...current,
       [id]: reply ? parseRevokeReply(reply.status, reply.body) : "REFUSED",
     }));
+    if (reply) {
+      const message = invitationAdministrationMessage(reply.body);
+      if (message)
+        setRevokeErrors((current) => ({ ...current, [id]: message }));
+    }
     router.refresh();
   }
 
@@ -228,12 +246,13 @@ export function RecipientInvitationPanel({
           {sent?.kind === "SENT" && (
             <Notice
               tone="done"
-              title="Invitation emailed"
+              title="Invitation accepted for delivery"
               live
               className="mt-5 text-sm"
             >
-              State: Active. It expires {sent.expiresAt}. The link went only to
-              the contact and is never shown in the workspace.
+              State: Active. It expires {sent.expiresAt}. The private mail
+              adapter accepted the link for the recorded contact; the link is
+              never shown in the workspace.
             </Notice>
           )}
           {sent?.kind === "REFUSED" && (
@@ -243,11 +262,7 @@ export function RecipientInvitationPanel({
               live
               className="mt-5 text-sm"
             >
-              The server refused the request and does not say why. Usual causes:
-              your role cannot send invitations, the vendor has no contact
-              email, the obligation is closed, too many were sent this hour, or
-              email delivery failed. Refresh the persisted status before
-              retrying; do not infer link state from this message alone.
+              {sent.message}
             </Notice>
           )}
           {sent?.kind === "UNCERTAIN" && (
@@ -351,6 +366,15 @@ export function RecipientInvitationPanel({
                         {invitation.reasonCode &&
                           ` Reason: ${invitation.reasonCode}.`}
                       </p>
+                      <p className="text-muted mt-1 text-xs leading-5">
+                        <span>Delivery: </span>
+                        {invitation.deliveryState === "ACCEPTED"
+                          ? "accepted by the configured private mail adapter"
+                          : invitation.deliveryState === "FAILED"
+                            ? "failed; this invitation is not usable"
+                            : "not confirmed; do not assume the email was delivered"}
+                        .
+                      </p>
                     </div>
                     {canRevoke &&
                       invitationCanBeRevoked(invitation.state) &&
@@ -429,9 +453,8 @@ export function RecipientInvitationPanel({
                       live
                       className="mt-4 text-sm"
                     >
-                      The server refused or did not answer, so treat the link as
-                      still open. Try again, or send a new link, which closes
-                      this one.
+                      {revokeErrors[invitation.id] ??
+                        "The server refused or did not answer, so treat the link as still open. Refresh persisted status before retrying."}
                     </Notice>
                   )}
                 </li>

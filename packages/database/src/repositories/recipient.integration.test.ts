@@ -17,7 +17,10 @@ import {
   listRecipientInvitationsForObligation,
   getRecipientVerificationContext,
   ingestShieldedObservation,
+  recordRecipientChallengeDelivery,
+  recordRecipientInvitationDelivery,
   revokeRecipientInvitation,
+  updateRecipientContactEmail,
   verifyAuditChain,
   verifyDestinationManually,
   verifyRecipientContact,
@@ -430,6 +433,14 @@ suite("private payables recipient boundary", () => {
       invitation.expiresAt.getTime() - invitation.createdAt.getTime(),
     ).toBeGreaterThanOrEqual(24 * 60 * 60 * 1_000 - 10);
     await expect(
+      recordRecipientInvitationDelivery(
+        connection.db,
+        actor,
+        invitation.id,
+        "mail:123e4567-e89b-12d3-a456-426614174001",
+      ),
+    ).resolves.toMatchObject({ deliveryState: "ACCEPTED" });
+    await expect(
       revokeRecipientInvitation(
         connection.db,
         outsider,
@@ -445,6 +456,16 @@ suite("private payables recipient boundary", () => {
       organizationId: organizationA,
       challengeId,
       codeHash,
+    });
+    await expect(
+      recordRecipientChallengeDelivery(connection.db, {
+        invitationId: invitation.id,
+        organizationId: organizationA,
+        challengeId,
+        providerReference: "mail:123e4567-e89b-12d3-a456-426614174002",
+      }),
+    ).resolves.toMatchObject({
+      providerReference: "mail:123e4567-e89b-12d3-a456-426614174002",
     });
     const context = await getRecipientVerificationContext(
       connection.db,
@@ -571,7 +592,7 @@ suite("private payables recipient boundary", () => {
         "Email follow-up",
         "Issuer attempting self-review",
       ),
-    ).rejects.toThrow("independent reviewer");
+    ).rejects.toMatchObject({ code: "INDEPENDENT_REVIEW_REQUIRED" });
     expect(
       await verifyDestinationManually(
         connection.db,
@@ -1053,6 +1074,116 @@ suite("private payables recipient boundary", () => {
       );
   });
 
+  it("attributes a superseded invitation audit event to its original obligation", async () => {
+    const dedicatedVendor = await createVendor(connection.db, actor, {
+      legalName: "Supersession Attribution Limited",
+      displayName: "Supersession Attribution",
+      contactEmail: "supersession@example.test",
+    });
+    const [firstSource, secondSource] = await connection.db
+      .insert(schema.obligationSources)
+      .values([
+        {
+          id: randomUUID(),
+          organizationId: organizationA,
+          kind: "MANUAL",
+          metadataJson: {},
+        },
+        {
+          id: randomUUID(),
+          organizationId: organizationA,
+          kind: "MANUAL",
+          metadataJson: {},
+        },
+      ])
+      .returning();
+    const firstObligation = await createObligation(connection.db, actor, {
+      vendorId: dedicatedVendor.id,
+      sourceId: firstSource!.id,
+      type: "VENDOR_INVOICE",
+      reference: "SUPERSESSION-A",
+      currency: "USD",
+      amount: "10.00",
+      dueDate: "2026-12-10",
+      description: "Original invitation attribution",
+    });
+    const secondObligation = await createObligation(connection.db, actor, {
+      vendorId: dedicatedVendor.id,
+      sourceId: secondSource!.id,
+      type: "VENDOR_INVOICE",
+      reference: "SUPERSESSION-B",
+      currency: "USD",
+      amount: "20.00",
+      dueDate: "2026-12-11",
+      description: "Replacement invitation attribution",
+    });
+    const { invitation: firstInvitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId: firstObligation.id,
+        tokenHash: digest("supersession-attribution-first"),
+        contactPepper: "s".repeat(32),
+        network: "regtest",
+      },
+    );
+    const { invitation: secondInvitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId: secondObligation.id,
+        tokenHash: digest("supersession-attribution-second"),
+        contactPepper: "s".repeat(32),
+        network: "regtest",
+      },
+    );
+
+    const invitations = await connection.db
+      .select()
+      .from(schema.recipientInvitations)
+      .where(
+        inArray(schema.recipientInvitations.id, [
+          firstInvitation.id,
+          secondInvitation.id,
+        ]),
+      );
+    expect(invitations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: firstInvitation.id,
+          obligationId: firstObligation.id,
+          state: "SUPERSEDED",
+        }),
+        expect.objectContaining({
+          id: secondInvitation.id,
+          obligationId: secondObligation.id,
+          state: "ACTIVE",
+        }),
+      ]),
+    );
+
+    const [supersessionEvent] = await connection.db
+      .select()
+      .from(schema.auditEvents)
+      .where(
+        and(
+          eq(schema.auditEvents.organizationId, organizationA),
+          eq(schema.auditEvents.eventType, "RECIPIENT_INVITATION_SUPERSEDED"),
+          eq(schema.auditEvents.subjectId, firstInvitation.id),
+        ),
+      );
+    expect(supersessionEvent?.payloadJson).toMatchObject({
+      obligationId: firstObligation.id,
+      reasonCode: "REPLACED",
+    });
+    expect(supersessionEvent?.payloadJson).not.toMatchObject({
+      obligationId: secondObligation.id,
+    });
+    expect(await verifyAuditChain(connection.db, organizationA)).toMatchObject({
+      valid: true,
+    });
+  });
+
   it("allows exactly one of two concurrent one-time confirmations", async () => {
     const tokenHash = digest("concurrent-invitation");
     const { invitation } = await createRecipientInvitation(
@@ -1188,5 +1319,205 @@ suite("private payables recipient boundary", () => {
         .from(schema.recipientSessions)
         .where(eq(schema.recipientSessions.invitationId, invitation.id)),
     ).toEqual([]);
+  });
+
+  it("re-verifies a still-valid invitation after session expiry and revokes prior authority", async () => {
+    const start = new Date("2026-10-11T10:00:00Z");
+    const tokenHash = digest("recoverable-session-invitation");
+    const { invitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId,
+        tokenHash,
+        contactPepper: "v".repeat(32),
+        network: "regtest",
+        now: start,
+      },
+    );
+    const firstChallengeId = randomUUID();
+    const firstCodeHash = digest("recoverable-first-code");
+    await createRecipientChallenge(connection.db, {
+      invitationId: invitation.id,
+      organizationId: organizationA,
+      challengeId: firstChallengeId,
+      codeHash: firstCodeHash,
+      now: start,
+    });
+    const firstSession = await verifyRecipientContact(connection.db, {
+      invitationId: invitation.id,
+      organizationId: organizationA,
+      challengeId: firstChallengeId,
+      codeHash: firstCodeHash,
+      sessionId: randomUUID(),
+      sessionTokenHash: digest("recoverable-first-session"),
+      now: start,
+    });
+
+    await expect(
+      createRecipientChallenge(connection.db, {
+        invitationId: invitation.id,
+        organizationId: organizationA,
+        challengeId: randomUUID(),
+        codeHash: digest("premature-reverification"),
+        now: new Date(start.getTime() + 10 * 60 * 1_000),
+      }),
+    ).rejects.toMatchObject({ code: "UNAVAILABLE" });
+    const [stillActiveSession] = await connection.db
+      .select()
+      .from(schema.recipientSessions)
+      .where(eq(schema.recipientSessions.id, firstSession.id));
+    expect(stillActiveSession?.state).toBe("ACTIVE");
+
+    const retryAt = new Date(start.getTime() + 31 * 60 * 1_000);
+    expect(
+      await getRecipientChallengeContext(
+        connection.db,
+        tokenHash,
+        "v".repeat(32),
+        retryAt,
+      ),
+    ).not.toBeNull();
+    const secondChallengeId = randomUUID();
+    const secondCodeHash = digest("recoverable-second-code");
+    await createRecipientChallenge(connection.db, {
+      invitationId: invitation.id,
+      organizationId: organizationA,
+      challengeId: secondChallengeId,
+      codeHash: secondCodeHash,
+      now: retryAt,
+    });
+    const [expiredFirstSession] = await connection.db
+      .select()
+      .from(schema.recipientSessions)
+      .where(eq(schema.recipientSessions.id, firstSession.id));
+    expect(expiredFirstSession?.state).toBe("ACTIVE");
+
+    const secondSession = await verifyRecipientContact(connection.db, {
+      invitationId: invitation.id,
+      organizationId: organizationA,
+      challengeId: secondChallengeId,
+      codeHash: secondCodeHash,
+      sessionId: randomUUID(),
+      sessionTokenHash: digest("recoverable-second-session"),
+      now: retryAt,
+    });
+    expect(secondSession.state).toBe("ACTIVE");
+    const [revokedFirstSession] = await connection.db
+      .select()
+      .from(schema.recipientSessions)
+      .where(eq(schema.recipientSessions.id, firstSession.id));
+    expect(revokedFirstSession?.state).toBe("REVOKED");
+    const receiver = `uregtest1${"9".repeat(90)}`;
+    await confirmRecipientDestination(connection.db, {
+      sessionTokenHash: digest("recoverable-second-session"),
+      receiver,
+      receiverFingerprint: digest(receiver),
+      network: "regtest",
+      idempotencyKeyHash: digest("recoverable-key"),
+      requestHash: digest("recoverable-request"),
+      now: retryAt,
+    });
+    expect(
+      await getRecipientChallengeContext(
+        connection.db,
+        tokenHash,
+        "v".repeat(32),
+        retryAt,
+      ),
+    ).toBeNull();
+  });
+
+  it("changes a vendor contact atomically while revoking old invitations and sessions", async () => {
+    const pepper = "u".repeat(32);
+    const tokenHash = digest("authorized-contact-change");
+    const { invitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId,
+        tokenHash,
+        contactPepper: pepper,
+        network: "regtest",
+      },
+    );
+    const challengeId = randomUUID();
+    const codeHash = digest("authorized-contact-change-code");
+    await createRecipientChallenge(connection.db, {
+      invitationId: invitation.id,
+      organizationId: organizationA,
+      challengeId,
+      codeHash,
+    });
+    const session = await verifyRecipientContact(connection.db, {
+      invitationId: invitation.id,
+      organizationId: organizationA,
+      challengeId,
+      codeHash,
+      sessionId: randomUUID(),
+      sessionTokenHash: digest("authorized-contact-change-session"),
+    });
+
+    await expect(
+      updateRecipientContactEmail(
+        connection.db,
+        outsider,
+        vendorId,
+        "attacker@example.test",
+        pepper,
+      ),
+    ).rejects.toMatchObject({ code: "NOT_FOUND" });
+    const result = await updateRecipientContactEmail(
+      connection.db,
+      actor,
+      vendorId,
+      "corrected-recipient@example.test",
+      pepper,
+    );
+    expect(result.revokedInvitationCount).toBeGreaterThanOrEqual(1);
+    const [closedInvitation] = await connection.db
+      .select()
+      .from(schema.recipientInvitations)
+      .where(eq(schema.recipientInvitations.id, invitation.id));
+    const [closedSession] = await connection.db
+      .select()
+      .from(schema.recipientSessions)
+      .where(eq(schema.recipientSessions.id, session.id));
+    expect(closedInvitation).toMatchObject({
+      state: "REVOKED",
+      reasonCode: "CONTACT_CHANGED",
+    });
+    expect(closedSession?.state).toBe("REVOKED");
+    expect(
+      await getRecipientChallengeContext(connection.db, tokenHash, pepper),
+    ).toBeNull();
+
+    const audit = await connection.db
+      .select()
+      .from(schema.auditEvents)
+      .where(
+        and(
+          eq(schema.auditEvents.organizationId, organizationA),
+          inArray(schema.auditEvents.eventType, [
+            "RECIPIENT_INVITATION_REVOKED",
+            "VENDOR_CONTACT_CHANGED",
+          ]),
+        ),
+      );
+    const serialized = JSON.stringify(audit, (_key, value) =>
+      typeof value === "bigint" ? value.toString() : (value as unknown),
+    );
+    expect(serialized).not.toContain("corrected-recipient@example.test");
+    expect(serialized).not.toContain("payables-recipient@example.test");
+
+    await connection.db
+      .update(schema.vendors)
+      .set({ contactEmail: "payables-recipient@example.test" })
+      .where(
+        and(
+          eq(schema.vendors.organizationId, organizationA),
+          eq(schema.vendors.id, vendorId),
+        ),
+      );
   });
 });

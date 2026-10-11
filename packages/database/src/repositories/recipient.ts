@@ -1,5 +1,6 @@
 import {
   recipientChallengeTtlMs,
+  recipientContactUpdateSchema,
   recipientInvitationPurpose,
   recipientInvitationTtlMs,
   recipientSessionTtlMs,
@@ -65,6 +66,21 @@ export class RecipientWorkflowError extends Error {
   }
 }
 
+export type RecipientAdministrationErrorCode =
+  | "FORBIDDEN"
+  | "NOT_FOUND"
+  | "MISSING_CONTACT"
+  | "OBLIGATION_CLOSED"
+  | "INVITATION_NOT_OPEN"
+  | "CONTACT_UNCHANGED";
+
+export class RecipientAdministrationError extends Error {
+  constructor(readonly code: RecipientAdministrationErrorCode) {
+    super("Recipient administration request was refused");
+    this.name = "RecipientAdministrationError";
+  }
+}
+
 async function lockOrganization(tx: Transaction, organizationId: string) {
   await tx.execute(
     sql`select pg_advisory_xact_lock(hashtext(${organizationId}))`,
@@ -87,7 +103,7 @@ async function requireInvitationAdministrator(
     )
     .limit(1);
   if (!membership || !invitationAdministrators.includes(membership.role))
-    throw new Error("Actor cannot administer recipient invitations");
+    throw new RecipientAdministrationError("FORBIDDEN");
 }
 
 /**
@@ -112,6 +128,7 @@ export async function listRecipientInvitationsForObligation(
       revokedAt: recipientInvitations.revokedAt,
       reasonCode: recipientInvitations.reasonCode,
       createdBy: recipientInvitations.createdBy,
+      deliveryState: recipientInvitations.deliveryState,
       createdAt: recipientInvitations.createdAt,
     })
     .from(recipientInvitations)
@@ -178,14 +195,15 @@ export async function createRecipientInvitation(
         ),
       )
       .limit(1);
+    if (!record) throw new RecipientAdministrationError("NOT_FOUND");
+    if (!record.vendor.contactEmail)
+      throw new RecipientAdministrationError("MISSING_CONTACT");
     if (
-      !record ||
-      !record.vendor.contactEmail ||
       terminalObligationStates.includes(
         record.obligation.state as (typeof terminalObligationStates)[number],
       )
     )
-      throw new RecipientWorkflowError("UNAVAILABLE");
+      throw new RecipientAdministrationError("OBLIGATION_CLOSED");
 
     const replaced = await tx
       .update(recipientInvitations)
@@ -203,7 +221,10 @@ export async function createRecipientInvitation(
           inArray(recipientInvitations.state, ["ACTIVE", "CONTACT_VERIFIED"]),
         ),
       )
-      .returning({ id: recipientInvitations.id });
+      .returning({
+        id: recipientInvitations.id,
+        obligationId: recipientInvitations.obligationId,
+      });
     for (const prior of replaced) {
       await tx
         .update(recipientVerificationChallenges)
@@ -217,7 +238,10 @@ export async function createRecipientInvitation(
         eventType: "RECIPIENT_INVITATION_SUPERSEDED",
         subjectType: "RECIPIENT_INVITATION",
         subjectId: prior.id,
-        payload: { reasonCode: "REPLACED" },
+        payload: {
+          obligationId: prior.obligationId,
+          reasonCode: "REPLACED",
+        },
       });
     }
 
@@ -259,6 +283,42 @@ export async function createRecipientInvitation(
   });
 }
 
+export async function recordRecipientInvitationDelivery(
+  db: Database,
+  actor: TenantActor,
+  invitationId: string,
+  providerReference: string,
+) {
+  return db.transaction(async (tx) => {
+    await lockOrganization(tx, actor.organizationId);
+    await requireInvitationAdministrator(tx, actor);
+    const [invitation] = await tx
+      .update(recipientInvitations)
+      .set({ deliveryState: "ACCEPTED", providerReference })
+      .where(
+        and(
+          eq(recipientInvitations.organizationId, actor.organizationId),
+          eq(recipientInvitations.id, invitationId),
+          eq(recipientInvitations.state, "ACTIVE"),
+          eq(recipientInvitations.deliveryState, "PENDING"),
+        ),
+      )
+      .returning();
+    if (!invitation)
+      throw new RecipientAdministrationError("INVITATION_NOT_OPEN");
+    await appendAuditEvent(tx, actor, {
+      eventType: "RECIPIENT_INVITATION_DELIVERY_ACCEPTED",
+      subjectType: "RECIPIENT_INVITATION",
+      subjectId: invitation.id,
+      payload: {
+        obligationId: invitation.obligationId,
+        providerReference,
+      },
+    });
+    return invitation;
+  });
+}
+
 export async function revokeRecipientInvitation(
   db: Database,
   actor: TenantActor,
@@ -269,10 +329,26 @@ export async function revokeRecipientInvitation(
   return db.transaction(async (tx) => {
     await lockOrganization(tx, actor.organizationId);
     await requireInvitationAdministrator(tx, actor);
+    const [existing] = await tx
+      .select()
+      .from(recipientInvitations)
+      .where(
+        and(
+          eq(recipientInvitations.organizationId, actor.organizationId),
+          eq(recipientInvitations.id, invitationId),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!existing) return null;
+    if (!["ACTIVE", "CONTACT_VERIFIED"].includes(existing.state))
+      throw new RecipientAdministrationError("INVITATION_NOT_OPEN");
     const [invitation] = await tx
       .update(recipientInvitations)
       .set({
         state: "REVOKED",
+        deliveryState:
+          reasonCode === "DELIVERY_FAILED" ? "FAILED" : existing.deliveryState,
         revokedAt: now,
         revokedBy: actor.userId,
         reasonCode,
@@ -285,7 +361,8 @@ export async function revokeRecipientInvitation(
         ),
       )
       .returning();
-    if (!invitation) return null;
+    if (!invitation)
+      throw new RecipientAdministrationError("INVITATION_NOT_OPEN");
     await tx
       .update(recipientVerificationChallenges)
       .set({ state: "REVOKED" })
@@ -298,7 +375,10 @@ export async function revokeRecipientInvitation(
       eventType: "RECIPIENT_INVITATION_REVOKED",
       subjectType: "RECIPIENT_INVITATION",
       subjectId: invitation.id,
-      payload: { reasonCode: invitation.reasonCode },
+      payload: {
+        obligationId: invitation.obligationId,
+        reasonCode: invitation.reasonCode,
+      },
     });
     return invitation;
   });
@@ -364,13 +444,116 @@ export async function expireRecipientInvitations(
           eventType: "RECIPIENT_INVITATION_EXPIRED",
           subjectType: "RECIPIENT_INVITATION",
           subjectId: invitation.id,
-          payload: { reasonCode: "EXPIRED" },
+          payload: {
+            obligationId: invitation.obligationId,
+            reasonCode: "EXPIRED",
+          },
         },
       );
       return 1;
     });
   }
   return expired;
+}
+
+/**
+ * Changes only the operational recipient contact. Open recipient authority is
+ * revoked in the same transaction, so an old link can never silently follow a
+ * newly entered email address. Historical invitation fingerprints remain.
+ */
+export async function updateRecipientContactEmail(
+  db: Database,
+  actor: TenantActor,
+  vendorId: string,
+  contactEmail: string,
+  contactPepper: string,
+  now = new Date(),
+) {
+  const value = recipientContactUpdateSchema.parse({ contactEmail });
+  return db.transaction(async (tx) => {
+    await lockOrganization(tx, actor.organizationId);
+    await requireInvitationAdministrator(tx, actor);
+    const [vendor] = await tx
+      .select()
+      .from(vendors)
+      .where(
+        and(
+          eq(vendors.organizationId, actor.organizationId),
+          eq(vendors.id, vendorId),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!vendor) throw new RecipientAdministrationError("NOT_FOUND");
+    const previous = vendor.contactEmail?.trim().toLowerCase() ?? null;
+    if (previous === value.contactEmail)
+      throw new RecipientAdministrationError("CONTACT_UNCHANGED");
+
+    const closed = await tx
+      .update(recipientInvitations)
+      .set({
+        state: "REVOKED",
+        revokedAt: now,
+        revokedBy: actor.userId,
+        reasonCode: "CONTACT_CHANGED",
+      })
+      .where(
+        and(
+          eq(recipientInvitations.organizationId, actor.organizationId),
+          eq(recipientInvitations.vendorId, vendorId),
+          inArray(recipientInvitations.state, ["ACTIVE", "CONTACT_VERIFIED"]),
+        ),
+      )
+      .returning();
+    for (const invitation of closed) {
+      await tx
+        .update(recipientVerificationChallenges)
+        .set({ state: "REVOKED" })
+        .where(eq(recipientVerificationChallenges.invitationId, invitation.id));
+      await tx
+        .update(recipientSessions)
+        .set({ state: "REVOKED", revokedAt: now })
+        .where(eq(recipientSessions.invitationId, invitation.id));
+      await appendAuditEvent(tx, actor, {
+        eventType: "RECIPIENT_INVITATION_REVOKED",
+        subjectType: "RECIPIENT_INVITATION",
+        subjectId: invitation.id,
+        payload: {
+          obligationId: invitation.obligationId,
+          reasonCode: "CONTACT_CHANGED",
+        },
+      });
+    }
+
+    const [updated] = await tx
+      .update(vendors)
+      .set({ contactEmail: value.contactEmail, updatedAt: now })
+      .where(
+        and(
+          eq(vendors.organizationId, actor.organizationId),
+          eq(vendors.id, vendorId),
+        ),
+      )
+      .returning();
+    if (!updated) throw new RecipientAdministrationError("NOT_FOUND");
+    await appendAuditEvent(tx, actor, {
+      eventType: "VENDOR_CONTACT_CHANGED",
+      subjectType: "VENDOR",
+      subjectId: vendorId,
+      payload: {
+        previousContactFingerprint: previous
+          ? hashRecipientSecret("contact", previous, contactPepper)
+          : null,
+        currentContactFingerprint: hashRecipientSecret(
+          "contact",
+          value.contactEmail,
+          contactPepper,
+        ),
+        revokedInvitationCount: closed.length,
+      },
+    });
+    return { vendor: updated, revokedInvitationCount: closed.length };
+  });
 }
 
 export async function getRecipientChallengeContext(
@@ -395,7 +578,7 @@ export async function getRecipientChallengeContext(
     .where(
       and(
         eq(recipientInvitations.tokenHash, tokenHash),
-        eq(recipientInvitations.state, "ACTIVE"),
+        inArray(recipientInvitations.state, ["ACTIVE", "CONTACT_VERIFIED"]),
         gt(recipientInvitations.expiresAt, now),
       ),
     )
@@ -434,13 +617,27 @@ export async function createRecipientChallenge(
         and(
           eq(recipientInvitations.id, input.invitationId),
           eq(recipientInvitations.organizationId, input.organizationId),
-          eq(recipientInvitations.state, "ACTIVE"),
+          inArray(recipientInvitations.state, ["ACTIVE", "CONTACT_VERIFIED"]),
           gt(recipientInvitations.expiresAt, now),
         ),
       )
       .for("update")
       .limit(1);
     if (!invitation) throw new RecipientWorkflowError("UNAVAILABLE");
+    if (invitation.state === "CONTACT_VERIFIED") {
+      const [unexpiredSession] = await tx
+        .select({ id: recipientSessions.id })
+        .from(recipientSessions)
+        .where(
+          and(
+            eq(recipientSessions.invitationId, invitation.id),
+            eq(recipientSessions.state, "ACTIVE"),
+            gt(recipientSessions.expiresAt, now),
+          ),
+        )
+        .limit(1);
+      if (unexpiredSession) throw new RecipientWorkflowError("UNAVAILABLE");
+    }
     await tx
       .update(recipientVerificationChallenges)
       .set({ state: "REVOKED" })
@@ -464,6 +661,57 @@ export async function createRecipientChallenge(
     if (!challenge) throw new Error("Challenge insert failed");
     return challenge;
   });
+}
+
+export async function recordRecipientChallengeDelivery(
+  db: Database,
+  input: {
+    invitationId: string;
+    organizationId: string;
+    challengeId: string;
+    providerReference: string;
+  },
+) {
+  const [challenge] = await db
+    .update(recipientVerificationChallenges)
+    .set({ providerReference: input.providerReference })
+    .where(
+      and(
+        eq(
+          recipientVerificationChallenges.organizationId,
+          input.organizationId,
+        ),
+        eq(recipientVerificationChallenges.invitationId, input.invitationId),
+        eq(recipientVerificationChallenges.id, input.challengeId),
+        eq(recipientVerificationChallenges.state, "ACTIVE"),
+      ),
+    )
+    .returning();
+  return challenge ?? null;
+}
+
+export async function revokeRecipientChallengeAfterDeliveryFailure(
+  db: Database,
+  input: {
+    invitationId: string;
+    organizationId: string;
+    challengeId: string;
+  },
+) {
+  await db
+    .update(recipientVerificationChallenges)
+    .set({ state: "REVOKED" })
+    .where(
+      and(
+        eq(
+          recipientVerificationChallenges.organizationId,
+          input.organizationId,
+        ),
+        eq(recipientVerificationChallenges.invitationId, input.invitationId),
+        eq(recipientVerificationChallenges.id, input.challengeId),
+        eq(recipientVerificationChallenges.state, "ACTIVE"),
+      ),
+    );
 }
 
 export async function getRecipientVerificationContext(
@@ -491,7 +739,7 @@ export async function getRecipientVerificationContext(
     .where(
       and(
         eq(recipientInvitations.tokenHash, tokenHash),
-        eq(recipientInvitations.state, "ACTIVE"),
+        inArray(recipientInvitations.state, ["ACTIVE", "CONTACT_VERIFIED"]),
         gt(recipientInvitations.expiresAt, now),
         gt(recipientVerificationChallenges.expiresAt, now),
       ),
@@ -540,7 +788,7 @@ export async function verifyRecipientContact(
     if (
       !invitation ||
       !challenge ||
-      invitation.state !== "ACTIVE" ||
+      !["ACTIVE", "CONTACT_VERIFIED"].includes(invitation.state) ||
       invitation.expiresAt <= now ||
       challenge.state !== "ACTIVE" ||
       challenge.expiresAt <= now
@@ -570,6 +818,15 @@ export async function verifyRecipientContact(
       .update(recipientInvitations)
       .set({ state: "CONTACT_VERIFIED" })
       .where(eq(recipientInvitations.id, invitation.id));
+    await tx
+      .update(recipientSessions)
+      .set({ state: "REVOKED", revokedAt: now })
+      .where(
+        and(
+          eq(recipientSessions.invitationId, invitation.id),
+          eq(recipientSessions.state, "ACTIVE"),
+        ),
+      );
     const [session] = await tx
       .insert(recipientSessions)
       .values({
@@ -595,6 +852,7 @@ export async function verifyRecipientContact(
         subjectType: "RECIPIENT_INVITATION",
         subjectId: invitation.id,
         payload: {
+          obligationId: invitation.obligationId,
           method: "EMAIL_CODE",
           contactFingerprint: invitation.contactFingerprint,
         },
@@ -971,6 +1229,7 @@ export async function confirmRecipientDestination(
       subjectId: destination.id,
       payload: {
         invitationId: invitation.id,
+        obligationId: invitation.obligationId,
         version: destination.version,
         fingerprint: destination.fingerprint,
         addressOwnershipProof: "UNAVAILABLE",
@@ -981,6 +1240,7 @@ export async function confirmRecipientDestination(
       subjectType: "VENDOR_DESTINATION",
       subjectId: destination.id,
       payload: {
+        obligationId: invitation.obligationId,
         vendorId: destination.vendorId,
         fingerprint: destination.fingerprint,
         verificationStatus: "UNVERIFIED",

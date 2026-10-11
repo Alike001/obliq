@@ -456,6 +456,7 @@ export default async function ObligationDetail({
             consumedAt: invitation.consumedAt?.toLocaleString() ?? null,
             revokedAt: invitation.revokedAt?.toLocaleString() ?? null,
             reasonCode: invitation.reasonCode,
+            deliveryState: invitation.deliveryState,
           }))}
         />
         {openDuplicates.map((d) => (

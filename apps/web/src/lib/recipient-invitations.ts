@@ -91,6 +91,31 @@ export interface IssueResult {
   expiresAt: Date;
 }
 
+const administrationMessages: Record<string, string> = {
+  FORBIDDEN: "Your role cannot perform this recipient operation.",
+  NOT_FOUND:
+    "The invitation or linked record was not found in this organization.",
+  MISSING_CONTACT: "Add a vendor contact email before issuing an invitation.",
+  OBLIGATION_CLOSED:
+    "This obligation is closed and cannot accept a new destination.",
+  INVITATION_NOT_OPEN:
+    "The invitation is no longer open, so nothing was changed.",
+  CONTACT_UNCHANGED: "The submitted contact is already current.",
+  EMAIL_DELIVERY_UNAVAILABLE:
+    "The private email service did not accept delivery. No usable invitation was left open.",
+  INVALID_REQUEST: "The request was incomplete or invalid.",
+  OPERATION_UNAVAILABLE:
+    "The operation could not be completed. Refresh persisted status before retrying.",
+};
+
+export function invitationAdministrationMessage(body: unknown) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return null;
+  const code = (body as Record<string, unknown>).error;
+  return typeof code === "string"
+    ? (administrationMessages[code] ?? null)
+    : null;
+}
+
 /** Reads the create reply. Anything short of `201 ACTIVE` is not a send. */
 export function parseIssueReply(
   status: number,

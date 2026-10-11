@@ -156,8 +156,13 @@ Production startup requires:
 The adapter accepts only the `INVITATION` and `VERIFICATION_CODE` message
 shapes implemented by the server. These values are necessarily disclosed to
 the mail provider, but are never logged or persisted in plaintext by Obliq.
-Provider delivery evidence must use an opaque reference and must not encode an
-email address.
+It must return `{"accepted":true,"providerReference":"<opaque>"}`. The
+reference is a bounded UUID-like adapter identifier, must not encode an email
+address, and is the only delivery evidence persisted. `ACCEPTED` means the
+configured adapter accepted the message; it does not assert inbox delivery.
+Remote endpoints require HTTPS and bearer authentication. Plain HTTP is
+accepted only for the loopback development sink and is rejected in production.
+See [private payables email operations](../operations/private-payables-email.md).
 
 ## Failure and recovery
 
@@ -165,6 +170,14 @@ email address.
   response.
 - Five invalid code attempts lock the challenge. Resend creates a new bounded
   challenge and revokes the old one.
+- A still-valid `CONTACT_VERIFIED` invitation may re-verify only after its
+  active session expires. A premature challenge is refused without disrupting
+  that session. Successful replacement verification revokes every prior
+  session and creates one new 30-minute session. A `CONSUMED` invitation can
+  never re-verify.
+- Changing a vendor contact is an authorized tenant transaction that revokes
+  open invitations, challenges and sessions. Old invitations retain their
+  original contact fingerprint and never follow the new address.
 - Invitation/session state, destination insertion, invalidation, operation
   receipt and audit events commit atomically.
 - A retry with the same idempotency key and request returns the original result

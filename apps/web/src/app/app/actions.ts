@@ -12,6 +12,7 @@ import {
   createPolicyVersion,
   createControlledRegtestQuote,
   decideApproval,
+  DestinationReviewError,
   evaluateObligationControls,
   evaluateSettlementReadiness,
   prepareSettlementIntent,
@@ -21,6 +22,8 @@ import {
   recordExternalSigning,
   requestExternalSignature,
   resolveDuplicateFinding,
+  RecipientAdministrationError,
+  updateRecipientContactEmail,
   updateObligation,
   verifyDestinationManually,
 } from "@obliq/database";
@@ -46,6 +49,7 @@ import {
   opaqueId,
   positiveInteger,
 } from "@/lib/input-validation";
+import { recipientTokenPepper } from "@/lib/recipient-security";
 
 function field(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -103,6 +107,33 @@ export async function addDestinationAction(
   if (!destination) throw new Error("Vendor not found");
   revalidatePath(`/app/vendors/${vendorId}`);
   redirect(`/app/vendors/${vendorId}?destination=added`);
+}
+
+export async function updateVendorContactAction(
+  vendorId: string,
+  formData: FormData,
+) {
+  opaqueId(vendorId, "vendor identifier");
+  const actor = await mutationActor("vendor-contact", 20, 3600);
+  try {
+    const result = await updateRecipientContactEmail(
+      getDatabase(),
+      actor,
+      vendorId,
+      field(formData, "contactEmail"),
+      recipientTokenPepper(),
+    );
+    revalidatePath(`/app/vendors/${vendorId}`);
+    redirect(
+      `/app/vendors/${vendorId}?contact=updated&revoked=${result.revokedInvitationCount}`,
+    );
+  } catch (error) {
+    if (error instanceof RecipientAdministrationError)
+      redirect(
+        `/app/vendors/${vendorId}?contactError=${encodeURIComponent(error.code)}`,
+      );
+    throw error;
+  }
 }
 
 async function persistObligation(formData: FormData, sourceId?: string) {
@@ -354,13 +385,21 @@ export async function verifyDestinationAction(
   opaqueId(vendorId, "vendor identifier");
   opaqueId(destinationId, "destination identifier");
   const actor = await mutationActor();
-  await verifyDestinationManually(
-    getDatabase(),
-    actor,
-    destinationId,
-    field(formData, "method"),
-    field(formData, "note"),
-  );
+  try {
+    await verifyDestinationManually(
+      getDatabase(),
+      actor,
+      destinationId,
+      field(formData, "method"),
+      field(formData, "note"),
+    );
+  } catch (error) {
+    if (error instanceof DestinationReviewError)
+      redirect(
+        `/app/vendors/${vendorId}?verificationError=${encodeURIComponent(error.code)}`,
+      );
+    throw error;
+  }
   revalidatePath(`/app/vendors/${vendorId}`);
   redirect(`/app/vendors/${vendorId}?verified=1`);
 }
