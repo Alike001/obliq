@@ -173,9 +173,14 @@ email address.
   destination and continue reconciliation.
 - Database or address-inspector uncertainty cannot fabricate confirmation.
 
+## Frontend
+
+The recipient page and the workspace invitation panel are described in
+[Private Payables Link frontend](./private-payables-link-frontend.md), together
+with the contract gaps the frontend found.
+
 ## Still unavailable
 
-- recipient frontend page;
 - address-ownership proof;
 - automatic destination verification;
 - recipient organization membership or portal navigation;
