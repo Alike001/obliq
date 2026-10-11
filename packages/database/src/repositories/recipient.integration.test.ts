@@ -1074,6 +1074,116 @@ suite("private payables recipient boundary", () => {
       );
   });
 
+  it("attributes a superseded invitation audit event to its original obligation", async () => {
+    const dedicatedVendor = await createVendor(connection.db, actor, {
+      legalName: "Supersession Attribution Limited",
+      displayName: "Supersession Attribution",
+      contactEmail: "supersession@example.test",
+    });
+    const [firstSource, secondSource] = await connection.db
+      .insert(schema.obligationSources)
+      .values([
+        {
+          id: randomUUID(),
+          organizationId: organizationA,
+          kind: "MANUAL",
+          metadataJson: {},
+        },
+        {
+          id: randomUUID(),
+          organizationId: organizationA,
+          kind: "MANUAL",
+          metadataJson: {},
+        },
+      ])
+      .returning();
+    const firstObligation = await createObligation(connection.db, actor, {
+      vendorId: dedicatedVendor.id,
+      sourceId: firstSource!.id,
+      type: "VENDOR_INVOICE",
+      reference: "SUPERSESSION-A",
+      currency: "USD",
+      amount: "10.00",
+      dueDate: "2026-12-10",
+      description: "Original invitation attribution",
+    });
+    const secondObligation = await createObligation(connection.db, actor, {
+      vendorId: dedicatedVendor.id,
+      sourceId: secondSource!.id,
+      type: "VENDOR_INVOICE",
+      reference: "SUPERSESSION-B",
+      currency: "USD",
+      amount: "20.00",
+      dueDate: "2026-12-11",
+      description: "Replacement invitation attribution",
+    });
+    const { invitation: firstInvitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId: firstObligation.id,
+        tokenHash: digest("supersession-attribution-first"),
+        contactPepper: "s".repeat(32),
+        network: "regtest",
+      },
+    );
+    const { invitation: secondInvitation } = await createRecipientInvitation(
+      connection.db,
+      actor,
+      {
+        obligationId: secondObligation.id,
+        tokenHash: digest("supersession-attribution-second"),
+        contactPepper: "s".repeat(32),
+        network: "regtest",
+      },
+    );
+
+    const invitations = await connection.db
+      .select()
+      .from(schema.recipientInvitations)
+      .where(
+        inArray(schema.recipientInvitations.id, [
+          firstInvitation.id,
+          secondInvitation.id,
+        ]),
+      );
+    expect(invitations).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: firstInvitation.id,
+          obligationId: firstObligation.id,
+          state: "SUPERSEDED",
+        }),
+        expect.objectContaining({
+          id: secondInvitation.id,
+          obligationId: secondObligation.id,
+          state: "ACTIVE",
+        }),
+      ]),
+    );
+
+    const [supersessionEvent] = await connection.db
+      .select()
+      .from(schema.auditEvents)
+      .where(
+        and(
+          eq(schema.auditEvents.organizationId, organizationA),
+          eq(schema.auditEvents.eventType, "RECIPIENT_INVITATION_SUPERSEDED"),
+          eq(schema.auditEvents.subjectId, firstInvitation.id),
+        ),
+      );
+    expect(supersessionEvent?.payloadJson).toMatchObject({
+      obligationId: firstObligation.id,
+      reasonCode: "REPLACED",
+    });
+    expect(supersessionEvent?.payloadJson).not.toMatchObject({
+      obligationId: secondObligation.id,
+    });
+    expect(await verifyAuditChain(connection.db, organizationA)).toMatchObject({
+      valid: true,
+    });
+  });
+
   it("allows exactly one of two concurrent one-time confirmations", async () => {
     const tokenHash = digest("concurrent-invitation");
     const { invitation } = await createRecipientInvitation(

@@ -221,7 +221,10 @@ export async function createRecipientInvitation(
           inArray(recipientInvitations.state, ["ACTIVE", "CONTACT_VERIFIED"]),
         ),
       )
-      .returning({ id: recipientInvitations.id });
+      .returning({
+        id: recipientInvitations.id,
+        obligationId: recipientInvitations.obligationId,
+      });
     for (const prior of replaced) {
       await tx
         .update(recipientVerificationChallenges)
@@ -236,7 +239,7 @@ export async function createRecipientInvitation(
         subjectType: "RECIPIENT_INVITATION",
         subjectId: prior.id,
         payload: {
-          obligationId: record.obligation.id,
+          obligationId: prior.obligationId,
           reasonCode: "REPLACED",
         },
       });
