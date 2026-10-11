@@ -551,14 +551,11 @@ export async function verifyDestinationManually(
   note: string,
 ) {
   if (method.trim().length < 3 || note.trim().length < 3)
-    throw new Error("Verification method and note are required");
+    throw new DestinationReviewError("INVALID_INPUT");
   return db.transaction(async (tx) => {
     await lock(tx, actor.organizationId);
-    requireRole(
-      await actorRole(tx, actor),
-      destinationVerifiers,
-      "verify destinations",
-    );
+    if (!destinationVerifiers.includes(await actorRole(tx, actor)))
+      throw new DestinationReviewError("FORBIDDEN");
     const [recipientOrigin] = await tx
       .select({ invitationCreator: recipientInvitations.createdBy })
       .from(destinationAttestations)
@@ -580,9 +577,7 @@ export async function verifyDestinationManually(
       )
       .limit(1);
     if (recipientOrigin?.invitationCreator === actor.userId)
-      throw new Error(
-        "Recipient-confirmed destinations require an independent reviewer",
-      );
+      throw new DestinationReviewError("INDEPENDENT_REVIEW_REQUIRED");
     const [destination] = await tx
       .update(vendorDestinations)
       .set({
@@ -600,7 +595,7 @@ export async function verifyDestinationManually(
         ),
       )
       .returning();
-    if (!destination) return null;
+    if (!destination) throw new DestinationReviewError("NOT_REVIEWABLE");
     await appendAuditEvent(tx, actor, {
       eventType: "DESTINATION_VERIFIED",
       subjectType: "VENDOR_DESTINATION",
@@ -609,6 +604,19 @@ export async function verifyDestinationManually(
     });
     return destination;
   });
+}
+
+export class DestinationReviewError extends Error {
+  constructor(
+    readonly code:
+      | "INVALID_INPUT"
+      | "FORBIDDEN"
+      | "INDEPENDENT_REVIEW_REQUIRED"
+      | "NOT_REVIEWABLE",
+  ) {
+    super("Destination review was refused");
+    this.name = "DestinationReviewError";
+  }
 }
 
 function eligibleFor(role: MembershipRole, requirement: string) {

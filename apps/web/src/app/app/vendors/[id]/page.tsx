@@ -13,11 +13,16 @@ import { StateTag } from "@/components/state-tag";
 import { SubmitButton } from "@/components/submit-button";
 import { getDatabase } from "@/lib/db";
 import {
+  canIssueInvitations,
   canReviewDestinations,
   isRecipientSubmitted,
 } from "@/lib/recipient-invitations";
 import { getTenantContext } from "@/lib/session";
-import { addDestinationAction, verifyDestinationAction } from "../../actions";
+import {
+  addDestinationAction,
+  updateVendorContactAction,
+  verifyDestinationAction,
+} from "../../actions";
 export const dynamic = "force-dynamic";
 
 export default async function VendorDetail({
@@ -29,6 +34,10 @@ export default async function VendorDetail({
     created?: string;
     destination?: string;
     verified?: string;
+    verificationError?: string;
+    contact?: string;
+    contactError?: string;
+    revoked?: string;
   }>;
 }) {
   const { id } = await params;
@@ -43,6 +52,7 @@ export default async function VendorDetail({
   const add = addDestinationAction.bind(null, id);
   // Chooses what to show. The server action checks the role again.
   const canVerify = canReviewDestinations(tenant.role);
+  const canManageContact = canIssueInvitations(tenant.role);
   const current = destinations.find((d) => !d.supersededAt);
   return (
     <main className="p-4 md:p-8">
@@ -85,6 +95,71 @@ export default async function VendorDetail({
             This records that a person checked the destination. It is not
             cryptographic proof of who controls the wallet.
           </Notice>
+        )}
+        {notice.verificationError && (
+          <Notice
+            tone="stop"
+            title="Manual verification was not recorded"
+            live
+            className="mt-6"
+          >
+            {notice.verificationError === "INDEPENDENT_REVIEW_REQUIRED"
+              ? "The member who issued the recipient invitation cannot independently verify its destination. Ask another Owner, CFO or Treasury member to review it."
+              : notice.verificationError === "FORBIDDEN"
+                ? "Your role cannot verify payment destinations."
+                : notice.verificationError === "INVALID_INPUT"
+                  ? "Provide both a verification method and a useful review note."
+                  : "This destination is no longer current or reviewable. Refresh the record before trying again."}
+          </Notice>
+        )}
+        {notice.contact === "updated" && (
+          <Notice
+            tone="done"
+            title="Vendor contact updated"
+            live
+            className="mt-6"
+          >
+            The new email applies only to future invitations.
+            {Number(notice.revoked ?? "0") > 0
+              ? `${notice.revoked} outstanding invitation(s) and their recipient sessions were revoked.`
+              : "No outstanding invitation needed revocation."}
+          </Notice>
+        )}
+        {notice.contactError && (
+          <Notice
+            tone="stop"
+            title="Vendor contact was not changed"
+            live
+            className="mt-6"
+          >
+            {notice.contactError === "FORBIDDEN"
+              ? "Only an Owner, CFO or Finance member can change the recipient contact."
+              : notice.contactError === "CONTACT_UNCHANGED"
+                ? "That email is already the current recipient contact."
+                : notice.contactError === "NOT_FOUND"
+                  ? "This vendor is not available in your organization."
+                  : "Enter a valid email address and try again."}
+          </Notice>
+        )}
+        {canManageContact && (
+          <form
+            action={updateVendorContactAction.bind(null, id)}
+            className="card mt-6 grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-end"
+          >
+            <Field
+              label="Recipient contact email"
+              hint="Changing it revokes every open invitation and verified recipient session. Existing links never redirect to the new contact."
+            >
+              <Input
+                name="contactEmail"
+                type="email"
+                required
+                defaultValue={vendor.contactEmail ?? ""}
+                autoComplete="off"
+              />
+            </Field>
+            <SubmitButton pendingLabel="Updating…">Update contact</SubmitButton>
+          </form>
         )}
         <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_.8fr]">
           <section className="card p-6" aria-labelledby="destinations-h">

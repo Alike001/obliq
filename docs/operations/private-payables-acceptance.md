@@ -73,6 +73,11 @@ test:integration`. Unit cases run through `npm test` without PostgreSQL.
 | PPL-18 | Preview receives any recipient route or financial mutation                 | 404/denied; no private runtime configured                                                  | public-preview and runtime-security tests                                |
 | PPL-19 | Email verification is interpreted as wallet ownership                      | fail; all responses say `addressOwnershipProof=UNAVAILABLE`                                | domain/API contract plus recipient integration                           |
 | PPL-20 | Recipient attempts approval or settlement authorization                    | impossible through recipient contract; internal commands require active membership         | strict schemas, repository authorization tests, manual browser checklist |
+| PPL-21 | Verified session expires while invitation remains valid                    | new challenge revokes old sessions; contact may re-verify; consumed invite cannot reopen   | recipient integration: bounded session recovery                          |
+| PPL-22 | Authorized vendor contact changes                                          | open invitations/challenges/sessions revoked atomically; old link never redirects          | recipient integration: contact-change transaction                        |
+| PPL-23 | Mail adapter times out or returns malformed evidence                       | no success claim; bounded sanitized delivery failure                                       | recipient email adapter unit tests                                       |
+| PPL-24 | Invitation lifecycle is shown in finance workspace                         | organization-scoped canonical invitation and delivery state, never audit inference         | recipient integration and invitation UI tests                            |
+| PPL-25 | Invitation issuer attempts destination review                              | typed independent-review refusal; another eligible reviewer may record manual verification | recipient/control integration and workspace action                       |
 
 ## Safe frontend fixture
 
@@ -125,6 +130,9 @@ isolated test environment—not Render preview and not public Zcash.
       tokens; resend invalidates the prior code.
 - [ ] Code expiry, attempt exhaustion, invitation revocation, and session expiry
       have neutral, accessible terminal states.
+- [ ] While the 24-hour invitation remains eligible, session expiry can repeat
+      the email check and invalidates the earlier session. A consumed invitation
+      cannot reopen.
 - [ ] Verified summary contains only the invited obligation and cannot navigate
       into `/app`, another invitation, evidence, or organization records.
 - [ ] Destination entry states that email control is not address ownership;
@@ -160,6 +168,25 @@ TEST_DATABASE_URL=postgresql://obliq:obliq@127.0.0.1:5433/obliq npm run test:int
 npm run security:secrets
 npm run build
 ```
+
+The browser ceremony requires an already-built release observer, installed
+Chrome, migrated isolated PostgreSQL and a non-sensitive Orchard-only regtest
+fixture receiver. It starts its own loopback mail sink and two local web
+processes for the issuer and independent reviewer:
+
+```bash
+cargo build --release --locked --manifest-path tools/zcash-observer/Cargo.toml
+TEST_DATABASE_URL=postgresql://obliq:obliq@127.0.0.1:5433/obliq \
+OBLIQ_ACCEPTANCE_RECEIVER='<local-regtest-fixture-only>' \
+npm run accept:private-payables
+```
+
+Never use a real vendor receiver in this local harness. The command emits only
+a sanitized PASS/NOT_TESTED report and writes ignored, mode-`0600` evidence
+under `.data/private-payables-acceptance/`. It deliberately marks external
+email delivery and every signing, broadcast and settlement behavior as not
+tested. See [`private-payables-email.md`](./private-payables-email.md) for the
+mail boundary. Never copy a sink message response into logs or screenshots.
 
 No command above creates a wallet, signs, broadcasts, moves funds, or changes
 the public-network qualification state.

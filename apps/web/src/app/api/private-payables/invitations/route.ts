@@ -1,12 +1,14 @@
 import { recipientInvitationRequestSchema } from "@obliq/domain";
 import {
   createRecipientInvitation,
+  recordRecipientInvitationDelivery,
   revokeRecipientInvitation,
 } from "@obliq/database";
 import { generateRecipientToken } from "@obliq/security";
 import { getDatabase } from "@/lib/db";
 import { sendRecipientEmail } from "@/lib/recipient-email";
 import { recipientNoStoreHeaders } from "@/lib/recipient-api";
+import { recipientAdministrationErrorResponse } from "@/lib/recipient-admin-errors";
 import {
   recipientSecretHash,
   recipientTokenPepper,
@@ -41,11 +43,17 @@ export async function POST(request: Request) {
     const baseUrl =
       process.env.OBLIQ_APP_BASE_URL ?? new URL(request.url).origin;
     try {
-      await sendRecipientEmail({
+      const delivery = await sendRecipientEmail({
         kind: "INVITATION",
         to: contact.deliveryEmail,
         invitationUrl: `${baseUrl}/payables/invitation#token=${rawToken}`,
       });
+      await recordRecipientInvitationDelivery(
+        getDatabase(),
+        actor,
+        contact.invitation.id,
+        delivery.providerReference,
+      );
     } catch (error) {
       await revokeRecipientInvitation(
         getDatabase(),
@@ -59,14 +67,12 @@ export async function POST(request: Request) {
       {
         invitationId: contact.invitation.id,
         state: "ACTIVE",
+        deliveryState: "ACCEPTED",
         expiresAt: contact.invitation.expiresAt.toISOString(),
       },
       { status: 201, headers: recipientNoStoreHeaders },
     );
-  } catch {
-    return Response.json(
-      { error: "INVITATION_UNAVAILABLE" },
-      { status: 400, headers: recipientNoStoreHeaders },
-    );
+  } catch (error) {
+    return recipientAdministrationErrorResponse(error);
   }
 }

@@ -72,5 +72,11 @@ current state is **IMPLEMENTED** through a tenant-scoped server repository that
 omits secret hashes and contact fingerprints. The address inspector exposes a
 sanitized invalid-input result while treating crashes and malformed output as
 infrastructure failure. Uncertain browser retries bind the exact receiver to
-its idempotency key. See `private-payables-link-frontend.md` for the remaining
-contract limitations.
+its idempotency key. Session re-verification after expiry, authorized vendor
+contact correction with atomic link/session revocation, canonical delivery
+acceptance status and a loopback-only development mail sink are
+**IMPLEMENTED**. A production-compatible private HTTPS mail-adapter contract is
+implemented, but real external delivery is **BLOCKED** until provider
+credentials and a controlled delivery test are supplied. See
+`private-payables-link-frontend.md` and `private-payables-email.md` for the
+remaining contract and operational limitations.

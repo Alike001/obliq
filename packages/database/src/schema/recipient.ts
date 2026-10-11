@@ -41,6 +41,8 @@ export const recipientInvitations = pgTable(
     contactChannel: text("contact_channel").notNull(),
     contactFingerprint: text("contact_fingerprint").notNull(),
     tokenHash: text("token_hash").notNull(),
+    deliveryState: text("delivery_state").notNull().default("PENDING"),
+    providerReference: text("provider_reference"),
     state: recipientInvitationState("state").notNull().default("ACTIVE"),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdBy: uuid("created_by")

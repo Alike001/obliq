@@ -27,6 +27,10 @@ export const recipientInvitationRevocationSchema = z.strictObject({
   ]),
 });
 
+export const recipientContactUpdateSchema = z.strictObject({
+  contactEmail: z.string().trim().toLowerCase().pipe(z.email()),
+});
+
 export type RecipientInvitationRevocationReason = z.infer<
   typeof recipientInvitationRevocationSchema
 >["reasonCode"];

@@ -29,6 +29,8 @@
     "zcash:testnet:prepare": "tsx scripts/prepare-public-testnet-tracer.ts",
     "zcash:testnet:validate-operator-evidence": "tsx scripts/preflight-public-testnet-signer.ts",
     "zcash:testnet:verify": "tsx scripts/verify-public-testnet-tracer.ts",
+    "dev:recipient-mail": "tsx scripts/run-recipient-mail-sink.ts",
+    "accept:private-payables": "tsx scripts/accept-private-payables.ts",
     "test:integration": "vitest run packages/database/src/repositories/*integration.test.ts",
     "security:secrets": "node scripts/check-secrets.mjs",
     "runtime:check": "tsx scripts/check-runtime-config.ts",
@@ -40,11 +42,12 @@
     "@types/node": "26.6.4",
     "eslint": "9.39.5",
     "eslint-config-next": "16.3.8",
+    "playwright-core": "1.63.0",
     "prettier": "3.9.9",
     "prettier-plugin-tailwindcss": "0.8.1",
+    "tsx": "4.20.6",
     "typescript": "5.9.3",
     "typescript-eslint": "8.71.0",
-    "tsx": "4.20.6",
     "vitest": "5.0.3"
   }
 }

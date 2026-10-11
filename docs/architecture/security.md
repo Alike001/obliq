@@ -81,3 +81,12 @@ evidence for the affected settlement.
 Never commit or log seed phrases, spending keys, viewing keys, wallet RPC credentials, database passwords, or provider API keys. Public client environment variables must contain non-sensitive presentation configuration only.
 
 Structured operational logging recursively redacts secret-bearing keys and known Zcash viewing/spending patterns. Runtime proof and health output use an allowlist of modes/statuses. The observer sidecar reports its network identity; application/observer mismatch fails closed. The current CSP deliberately permits inline Next.js scripts/styles; it still denies external scripts, objects, frames and base sources. A nonce-based CSP remains future browser-hardening work.
+
+Recipient invitation tokens and verification codes necessarily cross the
+private email-provider boundary. Production configuration requires an
+authenticated HTTPS adapter; the application persists only a bounded opaque
+acceptance reference and never equates acceptance with inbox delivery. The
+loopback memory sink is development-only and production mode rejects its HTTP
+endpoint. Changing a vendor contact is a privileged tenant mutation that
+revokes every open invitation, challenge and recipient session in the same
+transaction, while retaining historical fingerprints and audit events.
