@@ -32,7 +32,10 @@ services:
       - key: OBLIQ_PUBLIC_NETWORK_STATUS
         value: PUBLIC_NETWORK_BLOCKED
       - key: OBLIQ_APP_BASE_URL
-        sync: false
+        fromService:
+          name: obliq-public-pilot
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
       - key: OBLIQ_SESSION_PEPPER
         generateValue: true
       - key: DATABASE_URL
