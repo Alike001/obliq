@@ -73,8 +73,9 @@ captured at 2x). All 36 were retaken after the last code change.
 
 Landing page:
 
-- The first paragraph now states the problem before the product: on a public
-  blockchain every payment shows who you pay, how much and how often. It then
+- The first paragraph now states the problem before the product: a payment
+  from a transparent blockchain address shows who you pay, how much and how
+  often. It then
   names who Obliq is for and how a bill moves.
 - "What a transparent payment reveals" says what each exposure costs a
   business, not only what is visible.

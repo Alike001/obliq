@@ -46,7 +46,7 @@ const stages = [
   {
     title: "A read-only observer saw it arrive",
     lane: "Observation",
-    text: "A separate observer that holds a viewing key, and nothing that can spend, decrypted the output and matched it to the intent by receiver, memo reference and exact amount.",
+    text: "A separate observer that holds a viewing key, and nothing that can spend, decrypted the output. The match rests on the signed transaction ID, the memo reference and the exact amount. The submitted and observed receiver fingerprints are both kept as evidence, but they are not claimed to be identical.",
     facts: [
       ["Confirmations seen", `${firstSeen}, then ${lastSeen}`],
       ["Match", run.correlation],

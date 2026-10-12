@@ -450,7 +450,7 @@ export function RecipientInvitationPanel({
                       className="mt-4 text-sm"
                     >
                       {revokeErrors[invitation.id] ??
-                        "The server refused the request, so the link is still open."}
+                        "The server refused the request. Refresh this page to see the invitation's saved status before you try again."}
                     </Notice>
                   )}
                   {result === "UNCERTAIN" && (
