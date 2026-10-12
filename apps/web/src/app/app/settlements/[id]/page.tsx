@@ -23,6 +23,8 @@ import {
   requestExternalSignatureAction,
 } from "../../actions";
 
+export const metadata = { title: "Settlement" };
+
 export const dynamic = "force-dynamic";
 
 export default async function SettlementDetail({

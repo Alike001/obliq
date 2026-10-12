@@ -11,6 +11,8 @@ import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import { previewEvidenceAction, revokeEvidenceAction } from "../../actions";
 
+export const metadata = { title: "Evidence record" };
+
 export const dynamic = "force-dynamic";
 
 export default async function EvidenceDetailPage({

@@ -5,6 +5,8 @@ import { BackLink } from "@/components/record";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import { createManualObligationAction } from "../../actions";
+
+export const metadata = { title: "Record an obligation" };
 export const dynamic = "force-dynamic";
 
 export default async function NewObligationPage() {

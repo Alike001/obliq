@@ -52,6 +52,7 @@ export const docs: readonly DocPage[] = [
           "Version-bound policy decisions, approvals and readiness records",
           "UFVK-only shielded observation proven on isolated Zcash regtest",
           "External Zallet shielded signing and broadcast proven on isolated regtest",
+          "A private payables link that lets a vendor contact submit a shielded address, saved as unverified",
           "Explicit-disclosure evidence, canonical JSON hashing and external verification",
           "OIDC identity/session, PostgreSQL abuse-control and private upload boundaries",
         ],
@@ -319,7 +320,7 @@ export const docs: readonly DocPage[] = [
         id: "implemented",
         title: "Implemented",
         paragraphs: [
-          "PostgreSQL-backed vendors and obligations, deterministic controls and approvals, immutable settlement quotes/intents, external Zallet signing receipts, UFVK-only observation, three-signal correlation, controlled evidence, OIDC sessions, shared rate limits, private upload/scanner boundaries, idempotent persistence, and organization-scoped audit events.",
+          "PostgreSQL-backed vendors and obligations, deterministic controls and approvals, immutable settlement quotes/intents, recipient-submitted destinations through a private payables link, external Zallet signing receipts, UFVK-only observation, three-signal correlation, controlled evidence, OIDC sessions, shared rate limits, private upload/scanner boundaries, idempotent persistence, and organization-scoped audit events.",
         ],
       },
       {
@@ -396,6 +397,25 @@ export const docs: readonly DocPage[] = [
           tone: "warning",
           title: "No wallet integration",
           text: "A destination change invalidates approvals and readiness. Later settlement must bind the exact reviewed destination version. No destination record can move funds.",
+        },
+      },
+      {
+        id: "private-payables-link",
+        title: "Private payables link",
+        paragraphs: [
+          "Instead of typing a vendor's address by hand, a member can email the vendor's recorded finance contact a one-time link from the obligation record. The contact confirms a code sent to that mailbox, sees only the reference, amount, due date and network, and submits one shielded Zcash address.",
+          "The submitted address is saved as a new destination marked Unverified. It supersedes the current destination and invalidates approvals that relied on it, exactly as a manual change does. A Treasury, CFO or Owner member other than the one who sent the link must review it before the obligation can become ready to settle.",
+        ],
+        bullets: [
+          "The email check shows that someone could read the contact's mailbox. It is not proof of who controls the wallet",
+          "The recipient cannot approve, sign, schedule or start a payment",
+          "A link is single-use, expires, and can be revoked from the obligation record",
+          "Obliq never asks the recipient for a seed phrase, a private key or a viewing key",
+        ],
+        callout: {
+          tone: "note",
+          title: "Needs a mail adapter",
+          text: "Sending a link requires a private mail adapter supplied by the operator. If the email cannot be delivered, the send is refused and the link is revoked before anyone can use it. The recipient page is not served in the public preview.",
         },
       },
     ],

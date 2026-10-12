@@ -13,6 +13,8 @@ import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import { previewEvidenceAction } from "../actions";
 
+export const metadata = { title: "Evidence" };
+
 export const dynamic = "force-dynamic";
 
 const fieldOrder = Object.keys(evidenceFields) as EvidenceFieldKey[];

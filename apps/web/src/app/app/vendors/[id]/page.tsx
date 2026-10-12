@@ -23,6 +23,8 @@ import {
   updateVendorContactAction,
   verifyDestinationAction,
 } from "../../actions";
+
+export const metadata = { title: "Vendor" };
 export const dynamic = "force-dynamic";
 
 export default async function VendorDetail({
@@ -81,8 +83,10 @@ export default async function VendorDetail({
             live
             className="mt-6"
           >
-            It replaced the previous destination, and approvals that relied on
-            the old one no longer count. It still needs manual verification.
+            {destinations.length > 1
+              ? "It replaced the previous destination, and approvals that relied on the old one no longer count. "
+              : "This is the vendor's first destination. "}
+            It still needs manual verification.
           </Notice>
         )}
         {notice.verified && (
