@@ -6,6 +6,7 @@ import {
   operationalFingerprint,
 } from "@obliq/security";
 import { headers } from "next/headers";
+import { clientAddressFromHeaders } from "./client-address";
 import { getDatabase } from "./db";
 
 export function securityPepper() {
@@ -18,8 +19,7 @@ export function securityPepper() {
 
 export async function requestSubject() {
   const incoming = await headers();
-  const forwarded = incoming.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const remote = forwarded || incoming.get("x-real-ip") || "unknown";
+  const remote = clientAddressFromHeaders(incoming);
   return operationalFingerprint(remote, securityPepper());
 }
 

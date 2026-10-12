@@ -4,9 +4,15 @@ import {
   finalizePilotWorkspace,
   RateLimitExceededError,
 } from "@obliq/database";
+import { writeOperationalLog } from "@obliq/security";
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/lib/db";
 import { setPilotSessionCookie } from "@/lib/pilot-session";
+import {
+  enforcePilotStartRateLimits,
+  pilotRateLimitResponse,
+  safePilotRateLimitDetails,
+} from "@/lib/pilot-start-rate-limit";
 import {
   rateLimitRequest,
   requestSubject,
@@ -20,11 +26,7 @@ export async function POST(request: Request) {
     return new Response("Not found", { status: 404 });
   try {
     requireSameOrigin(request);
-    // The global bucket bounds workspace creation even if an upstream proxy
-    // accepts a caller-controlled forwarding header. The per-subject bucket
-    // remains the tighter normal limit.
-    await rateLimitRequest("pilot:start:global", "public-pilot", 100, 3600);
-    await rateLimitRequest("pilot:start", await requestSubject(), 5, 3600);
+    await enforcePilotStartRateLimits(await requestSubject(), rateLimitRequest);
     const created = await createPilotWorkspace(getDatabase(), {
       pepper: securityPepper(),
     });
@@ -37,14 +39,14 @@ export async function POST(request: Request) {
     setPilotSessionCookie(response, created.token, created.expiresAt);
     return response;
   } catch (error) {
-    if (error instanceof RateLimitExceededError)
-      return new Response("Pilot workspace rate limit reached. Try later.", {
-        status: 429,
-        headers: {
-          "Cache-Control": "no-store",
-          "Retry-After": String(error.retryAfterSeconds),
-        },
+    if (error instanceof RateLimitExceededError) {
+      const details = safePilotRateLimitDetails(error);
+      writeOperationalLog("warn", "pilot_workspace_rate_limited", {
+        scope: details.scope,
+        retryAfterSeconds: details.seconds,
       });
+      return pilotRateLimitResponse(error);
+    }
     return new Response("Pilot workspace could not be created.", {
       status: 503,
       headers: { "Cache-Control": "no-store" },
