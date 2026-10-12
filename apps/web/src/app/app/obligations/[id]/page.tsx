@@ -26,6 +26,7 @@ import {
   isRecipientSubmitted,
 } from "@/lib/recipient-invitations";
 import { getTenantContext } from "@/lib/session";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 import {
   approvalDecisionAction,
   createSettlementIntentAction,
@@ -54,6 +55,7 @@ export default async function ObligationDetail({
   const { id } = await params;
   const notice = await searchParams;
   const tenant = await getTenantContext();
+  const pilot = getRuntimeSecurityConfig().deploymentMode === "pilot";
   const [record, control, settlement, observations, observerStatus] =
     await Promise.all([
       getObligation(getDatabase(), tenant.organizationId, id),
@@ -358,7 +360,8 @@ export default async function ObligationDetail({
                       {req.state === "PENDING" &&
                         obligationAcceptsApproval &&
                         canAct &&
-                        !creatorRestricted && (
+                        !creatorRestricted &&
+                        !pilot && (
                           <form
                             action={action}
                             className="flex flex-wrap items-end gap-2"
@@ -390,13 +393,16 @@ export default async function ObligationDetail({
                       {req.state === "PENDING" &&
                         (!obligationAcceptsApproval ||
                           !canAct ||
-                          creatorRestricted) && (
+                          creatorRestricted ||
+                          pilot) && (
                           <span className="text-muted text-xs">
-                            {!obligationAcceptsApproval
-                              ? "Resolve blocking controls before this approval can be decided"
-                              : creatorRestricted
-                                ? "You requested this, so you cannot decide it"
-                                : `Your role cannot decide this; it needs ${stateLabel(req.role)}`}
+                            {pilot
+                              ? "Guest trials cannot provide genuine human approval. Use a verified organization identity in a private deployment."
+                              : !obligationAcceptsApproval
+                                ? "Resolve blocking controls before this approval can be decided"
+                                : creatorRestricted
+                                  ? "You requested this, so you cannot decide it"
+                                  : `Your role cannot decide this; it needs ${stateLabel(req.role)}`}
                           </span>
                         )}
                     </div>
@@ -445,29 +451,43 @@ export default async function ObligationDetail({
               .
             </Notice>
           )}
-        <RecipientInvitationPanel
-          obligationId={id}
-          vendorHref={vendor ? `/app/vendors/${vendor.id}` : null}
-          contactEmail={vendor?.contactEmail ?? null}
-          blockers={invitationBlockers({
-            role: tenant.role,
-            hasVendor: Boolean(vendor),
-            hasContactEmail: Boolean(vendor?.contactEmail),
-            obligationState: o.state,
-          }).map((blocker) => blockerMessage[blocker])}
-          canRevoke={canIssueInvitations(tenant.role)}
-          invitations={invitations.map((invitation) => ({
-            id: invitation.id,
-            issuedAt: invitation.createdAt.toLocaleString(),
-            expiresAt: invitation.expiresAt.toLocaleString(),
-            issuedBy: invitation.createdBy,
-            state: invitation.effectiveState,
-            consumedAt: invitation.consumedAt?.toLocaleString() ?? null,
-            revokedAt: invitation.revokedAt?.toLocaleString() ?? null,
-            reasonCode: invitation.reasonCode,
-            deliveryState: invitation.deliveryState,
-          }))}
-        />
+        {!pilot && (
+          <RecipientInvitationPanel
+            obligationId={id}
+            vendorHref={vendor ? `/app/vendors/${vendor.id}` : null}
+            contactEmail={vendor?.contactEmail ?? null}
+            blockers={invitationBlockers({
+              role: tenant.role,
+              hasVendor: Boolean(vendor),
+              hasContactEmail: Boolean(vendor?.contactEmail),
+              obligationState: o.state,
+            }).map((blocker) => blockerMessage[blocker])}
+            canRevoke={canIssueInvitations(tenant.role)}
+            invitations={invitations.map((invitation) => ({
+              id: invitation.id,
+              issuedAt: invitation.createdAt.toLocaleString(),
+              expiresAt: invitation.expiresAt.toLocaleString(),
+              issuedBy: invitation.createdBy,
+              state: invitation.effectiveState,
+              consumedAt: invitation.consumedAt?.toLocaleString() ?? null,
+              revokedAt: invitation.revokedAt?.toLocaleString() ?? null,
+              reasonCode: invitation.reasonCode,
+              deliveryState: invitation.deliveryState,
+            }))}
+          />
+        )}
+        {pilot && (
+          <Notice
+            tone="hold"
+            title="Recipient identity and destination workflows are disabled"
+            className="mt-5"
+          >
+            The public pilot demonstrates persisted capture and deterministic
+            controls only. Recipient email, address collection, independent
+            destination review, approvals, and payment remain behind verified
+            organization identities.
+          </Notice>
+        )}
         {openDuplicates.map((d) => (
           <section className="notice notice-hold mt-5" key={d.id}>
             <span className="glyph glyph-attn" aria-hidden />
@@ -544,16 +564,18 @@ export default async function ObligationDetail({
                 </p>
               )}
             </div>
-            <form action={readinessAction.bind(null, id)}>
-              <SubmitButton
-                disabled={o.state !== "APPROVED"}
-                pendingLabel="Evaluating…"
-              >
-                Evaluate readiness
-              </SubmitButton>
-            </form>
+            {!pilot && (
+              <form action={readinessAction.bind(null, id)}>
+                <SubmitButton
+                  disabled={o.state !== "APPROVED"}
+                  pendingLabel="Evaluating…"
+                >
+                  Evaluate readiness
+                </SubmitButton>
+              </form>
+            )}
           </div>
-          {o.state === "READY_TO_SETTLE" && !settlement && (
+          {!pilot && o.state === "READY_TO_SETTLE" && !settlement && (
             <form
               action={createSettlementIntentAction.bind(null, id)}
               className="mt-6 border-t pt-5"

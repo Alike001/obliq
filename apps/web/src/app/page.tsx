@@ -15,7 +15,7 @@ import { NetworkStamp, StatusPill } from "@/components/status-pill";
 import { TrackReveal } from "@/components/track-reveal";
 import { networkClaims, networkSummary } from "@/lib/network-claims";
 import { readNetworkStatus } from "@/lib/network-status";
-import { isReadOnlyPreview, siteLinks } from "@/lib/site-links";
+import { isPublicPilot, isReadOnlyPreview, siteLinks } from "@/lib/site-links";
 
 // Network claims come from runtime configuration, not from this file.
 export const dynamic = "force-dynamic";
@@ -102,7 +102,8 @@ export default function LandingPage() {
   const claims = networkClaims(status, network);
   const summary = networkSummary(status);
   const preview = isReadOnlyPreview();
-  const { primary, secondary } = siteLinks(preview);
+  const pilot = isPublicPilot();
+  const { primary, secondary } = siteLinks(preview, pilot);
   return (
     <>
       <a href="#main" className="button button-dark skip-link">
@@ -158,6 +159,22 @@ export default function LandingPage() {
                     available here. The interactive demo is a browser-only
                     fictional sandbox; nothing on this site can record, approve
                     or move a payment.
+                  </p>
+                </div>
+              </div>
+            )}
+            {pilot && (
+              <div className="notice notice-hold" role="note">
+                <span className="glyph glyph-attn" aria-hidden />
+                <div>
+                  <strong>
+                    Try the real persisted capture and control path.
+                  </strong>
+                  <p>
+                    The public pilot creates an isolated, expiring workspace for
+                    fictional vendors and bills. It uses PostgreSQL and
+                    server-side controls; identity, payment, settlement, and
+                    evidence issuance remain disabled.
                   </p>
                 </div>
               </div>

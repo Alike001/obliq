@@ -1,5 +1,5 @@
 import { operationalFingerprint } from "@obliq/security";
-import { and, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lte, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 import type { createDatabase } from "../index";
 import {
@@ -9,7 +9,10 @@ import {
   evidenceAccessEvents,
   evidencePackages,
   memberships,
+  organizations,
+  pilotWorkspaces,
   rateLimitBuckets,
+  users,
 } from "../schema";
 
 type Database = ReturnType<typeof createDatabase>["db"];
@@ -139,6 +142,218 @@ export async function createDatabaseSession(
     .returning();
   if (!session) throw new Error("Authentication session was not persisted");
   return { token, expiresAt, session };
+}
+
+export const pilotLimits = {
+  vendors: 20,
+  obligations: 50,
+  mutations: 200,
+} as const;
+
+async function insertPilotWorkspace(
+  tx: Parameters<Parameters<Database["transaction"]>[0]>[0],
+  pepper: string,
+  lifetimeMinutes: number,
+) {
+  const expiresAt = new Date(Date.now() + lifetimeMinutes * 60_000);
+  const [organization] = await tx
+    .insert(organizations)
+    .values({ name: "Obliq fictional pilot workspace" })
+    .returning();
+  if (!organization) throw new Error("Pilot organization was not persisted");
+  const [user] = await tx
+    .insert(users)
+    .values({
+      email: `pilot-${organization.id}@invalid.obliq.local`,
+      displayName: "Pilot finance operator",
+    })
+    .returning();
+  if (!user) throw new Error("Pilot user was not persisted");
+  await tx.insert(memberships).values({
+    organizationId: organization.id,
+    userId: user.id,
+    // Temporarily OWNER so the standard policy repository can seed the one
+    // supported pilot policy before the session is returned to the browser.
+    role: "OWNER",
+  });
+  const [workspace] = await tx
+    .insert(pilotWorkspaces)
+    .values({
+      organizationId: organization.id,
+      userId: user.id,
+      expiresAt,
+    })
+    .returning();
+  if (!workspace) throw new Error("Pilot workspace was not persisted");
+  const token = randomBytes(32).toString("base64url");
+  const [session] = await tx
+    .insert(authSessions)
+    .values({
+      tokenHash: operationalFingerprint(token, pepper),
+      userId: user.id,
+      organizationId: organization.id,
+      expiresAt,
+    })
+    .returning();
+  if (!session) throw new Error("Pilot session was not persisted");
+  return { token, expiresAt, workspace, organization, user };
+}
+
+export async function finalizePilotWorkspace(
+  db: Database,
+  workspaceId: string,
+) {
+  return db.transaction(async (tx) => {
+    const [workspace] = await tx
+      .select()
+      .from(pilotWorkspaces)
+      .where(
+        and(
+          eq(pilotWorkspaces.id, workspaceId),
+          eq(pilotWorkspaces.state, "ACTIVE"),
+          gt(pilotWorkspaces.expiresAt, new Date()),
+        ),
+      )
+      .limit(1);
+    if (!workspace) throw new Error("Pilot workspace cannot be activated");
+    await tx
+      .update(memberships)
+      .set({ role: "FINANCE" })
+      .where(
+        and(
+          eq(memberships.organizationId, workspace.organizationId),
+          eq(memberships.userId, workspace.userId),
+          eq(memberships.status, "ACTIVE"),
+        ),
+      );
+    return workspace;
+  });
+}
+
+export async function createPilotWorkspace(
+  db: Database,
+  input: { pepper: string; lifetimeMinutes?: number },
+) {
+  const lifetimeMinutes = input.lifetimeMinutes ?? 120;
+  if (
+    !Number.isSafeInteger(lifetimeMinutes) ||
+    lifetimeMinutes < 15 ||
+    lifetimeMinutes > 240
+  )
+    throw new Error("Pilot workspace lifetime is outside the allowed range");
+  return db.transaction(async (tx) => {
+    await tx
+      .update(pilotWorkspaces)
+      .set({ state: "EXPIRED" })
+      .where(
+        and(
+          eq(pilotWorkspaces.state, "ACTIVE"),
+          lte(pilotWorkspaces.expiresAt, new Date()),
+        ),
+      );
+    return insertPilotWorkspace(tx, input.pepper, lifetimeMinutes);
+  });
+}
+
+export async function resetPilotWorkspace(
+  db: Database,
+  input: {
+    organizationId: string;
+    userId: string;
+    token: string;
+    pepper: string;
+    lifetimeMinutes?: number;
+  },
+) {
+  const lifetimeMinutes = input.lifetimeMinutes ?? 120;
+  if (
+    !Number.isSafeInteger(lifetimeMinutes) ||
+    lifetimeMinutes < 15 ||
+    lifetimeMinutes > 240
+  )
+    throw new Error("Pilot workspace lifetime is outside the allowed range");
+  return db.transaction(async (tx) => {
+    const [retired] = await tx
+      .update(pilotWorkspaces)
+      .set({ state: "RESET", resetAt: new Date() })
+      .where(
+        and(
+          eq(pilotWorkspaces.organizationId, input.organizationId),
+          eq(pilotWorkspaces.userId, input.userId),
+          eq(pilotWorkspaces.state, "ACTIVE"),
+          gt(pilotWorkspaces.expiresAt, new Date()),
+        ),
+      )
+      .returning({ id: pilotWorkspaces.id });
+    if (!retired) throw new Error("Active pilot workspace was not found");
+    await tx
+      .update(authSessions)
+      .set({ revokedAt: new Date() })
+      .where(
+        and(
+          eq(
+            authSessions.tokenHash,
+            operationalFingerprint(input.token, input.pepper),
+          ),
+          eq(authSessions.organizationId, input.organizationId),
+          isNull(authSessions.revokedAt),
+        ),
+      );
+    return insertPilotWorkspace(tx, input.pepper, lifetimeMinutes);
+  });
+}
+
+export async function requireActivePilotWorkspace(
+  db: Database,
+  input: { organizationId: string; userId: string },
+) {
+  const [workspace] = await db
+    .select()
+    .from(pilotWorkspaces)
+    .where(
+      and(
+        eq(pilotWorkspaces.organizationId, input.organizationId),
+        eq(pilotWorkspaces.userId, input.userId),
+        eq(pilotWorkspaces.state, "ACTIVE"),
+        gt(pilotWorkspaces.expiresAt, new Date()),
+      ),
+    )
+    .limit(1);
+  if (!workspace) throw new Error("Pilot workspace is expired or unavailable");
+  return workspace;
+}
+
+export type PilotQuotaKind = "vendor" | "obligation" | "mutation";
+
+/** Atomic counters bound concurrent pilot writes without touching other tenants. */
+export async function consumePilotQuota(
+  db: Database,
+  input: { organizationId: string; userId: string; kind: PilotQuotaKind },
+) {
+  const vendorIncrement = input.kind === "vendor" ? 1 : 0;
+  const obligationIncrement = input.kind === "obligation" ? 1 : 0;
+  const [workspace] = await db
+    .update(pilotWorkspaces)
+    .set({
+      mutationCount: sql`${pilotWorkspaces.mutationCount} + 1`,
+      vendorCount: sql`${pilotWorkspaces.vendorCount} + ${vendorIncrement}`,
+      obligationCount: sql`${pilotWorkspaces.obligationCount} + ${obligationIncrement}`,
+    })
+    .where(
+      and(
+        eq(pilotWorkspaces.organizationId, input.organizationId),
+        eq(pilotWorkspaces.userId, input.userId),
+        eq(pilotWorkspaces.state, "ACTIVE"),
+        gt(pilotWorkspaces.expiresAt, new Date()),
+        sql`${pilotWorkspaces.mutationCount} < ${pilotLimits.mutations}`,
+        sql`${pilotWorkspaces.vendorCount} + ${vendorIncrement} <= ${pilotLimits.vendors}`,
+        sql`${pilotWorkspaces.obligationCount} + ${obligationIncrement} <= ${pilotLimits.obligations}`,
+      ),
+    )
+    .returning();
+  if (!workspace)
+    throw new Error("Pilot workspace quota or lifetime has been exceeded");
+  return workspace;
 }
 
 export async function resolveDatabaseSession(

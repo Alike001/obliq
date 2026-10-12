@@ -10,6 +10,7 @@ import { StateTag } from "@/components/state-tag";
 import { stateLabel } from "@/components/state-tone";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
 export const metadata = { title: "Obligations" };
 export const dynamic = "force-dynamic";
@@ -21,6 +22,7 @@ export default async function ObligationsPage({
 }) {
   const query = await searchParams;
   const tenant = await getTenantContext();
+  const pilot = getRuntimeSecurityConfig().deploymentMode === "pilot";
   // Only a state the product knows is passed on; anything else is ignored.
   const state: ObligationState | undefined = obligationStates.find(
     (known) => known === query.state,
@@ -44,13 +46,15 @@ export default async function ObligationsPage({
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link
-              className="button button-light"
-              href="/app/obligations/upload"
-            >
-              <Upload size={16} />
-              Upload invoice
-            </Link>
+            {!pilot && (
+              <Link
+                className="button button-light"
+                href="/app/obligations/upload"
+              >
+                <Upload size={16} />
+                Upload invoice
+              </Link>
+            )}
             <Link className="button button-dark" href="/app/obligations/new">
               <FilePlus2 size={16} />
               Manual entry

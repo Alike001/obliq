@@ -2,6 +2,7 @@ import { parseRuntimeSecurityConfig } from "@obliq/security";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isPublicPreviewRequestAllowed } from "./lib/public-preview";
+import { isPublicPilotRequestAllowed } from "./lib/public-pilot";
 
 function unavailable(status: 404 | 503, message: string) {
   return new NextResponse(message, {
@@ -22,9 +23,17 @@ export function proxy(request: NextRequest) {
     return unavailable(503, "Obliq runtime configuration is unavailable.");
   }
 
-  if (runtime.deploymentMode !== "preview") return NextResponse.next();
+  if (
+    runtime.deploymentMode !== "preview" &&
+    runtime.deploymentMode !== "pilot"
+  )
+    return NextResponse.next();
 
-  const allowed = isPublicPreviewRequestAllowed({
+  const check =
+    runtime.deploymentMode === "preview"
+      ? isPublicPreviewRequestAllowed
+      : isPublicPilotRequestAllowed;
+  const allowed = check({
     method: request.method,
     pathname: request.nextUrl.pathname,
     serverAction: request.headers.has("next-action"),
@@ -32,7 +41,9 @@ export function proxy(request: NextRequest) {
   if (!allowed)
     return unavailable(
       404,
-      "This financial operation is unavailable in the public preview.",
+      runtime.deploymentMode === "preview"
+        ? "This financial operation is unavailable in the public preview."
+        : "This operation is unavailable in the public pilot.",
     );
   return NextResponse.next();
 }

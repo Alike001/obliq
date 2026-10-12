@@ -26,10 +26,12 @@ export async function GET() {
     return Response.json(
       {
         status: "ready",
+        deploymentMode: runtime.deploymentMode,
         authMode: runtime.authMode,
         storageMode: runtime.storageMode,
         rateLimitMode: runtime.rateLimitMode,
         network: runtime.network,
+        observer: runtime.network === "disabled" ? "disabled" : "configured",
         publicNetworkStatus: runtime.publicNetworkStatus,
       },
       { headers: { "Cache-Control": "no-store" } },

@@ -120,6 +120,11 @@ export const recipientSessionState = pgEnum("recipient_session_state", [
   "EXPIRED",
   "REVOKED",
 ]);
+export const pilotWorkspaceState = pgEnum("pilot_workspace_state", [
+  "ACTIVE",
+  "EXPIRED",
+  "RESET",
+]);
 
 export const id = () => uuid("id").primaryKey().defaultRandom();
 export const organizationId = () => uuid("organization_id").notNull();

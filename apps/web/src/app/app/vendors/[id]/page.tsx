@@ -18,9 +18,11 @@ import {
   isRecipientSubmitted,
 } from "@/lib/recipient-invitations";
 import { getTenantContext } from "@/lib/session";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 import {
   addDestinationAction,
   updateVendorContactAction,
+  updatePilotVendorAction,
   verifyDestinationAction,
 } from "../../actions";
 
@@ -40,11 +42,13 @@ export default async function VendorDetail({
     contact?: string;
     contactError?: string;
     revoked?: string;
+    updated?: string;
   }>;
 }) {
   const { id } = await params;
   const notice = await searchParams;
   const tenant = await getTenantContext();
+  const pilot = getRuntimeSecurityConfig().deploymentMode === "pilot";
   const [vendor, destinations, history] = await Promise.all([
     getVendor(getDatabase(), tenant.organizationId, id),
     listVendorDestinations(getDatabase(), tenant.organizationId, id),
@@ -75,6 +79,49 @@ export default async function VendorDetail({
             It has no payment destination yet. Add one below before an
             obligation to this vendor can be settled.
           </Notice>
+        )}
+        {notice.updated && (
+          <Notice
+            tone="done"
+            title="Fictional vendor updated"
+            live
+            className="mt-6"
+          >
+            The persisted vendor record and audit history were updated.
+          </Notice>
+        )}
+        {pilot && (
+          <form
+            action={updatePilotVendorAction.bind(null, id)}
+            className="card mt-6 grid gap-4 p-5 sm:grid-cols-3 sm:items-end"
+          >
+            <Field label="Display name">
+              <Input
+                name="displayName"
+                required
+                maxLength={100}
+                defaultValue={vendor.displayName}
+              />
+            </Field>
+            <Field label="Legal name">
+              <Input
+                name="legalName"
+                required
+                maxLength={160}
+                defaultValue={vendor.legalName}
+              />
+            </Field>
+            <Field label="Category (optional)">
+              <Input
+                name="category"
+                maxLength={80}
+                defaultValue={vendor.category ?? ""}
+              />
+            </Field>
+            <SubmitButton pendingLabel="Saving…">
+              Save fictional vendor
+            </SubmitButton>
+          </form>
         )}
         {notice.destination === "added" && (
           <Notice
@@ -145,7 +192,7 @@ export default async function VendorDetail({
                   : "Enter a valid email address and try again."}
           </Notice>
         )}
-        {canManageContact && (
+        {canManageContact && !pilot && (
           <form
             action={updateVendorContactAction.bind(null, id)}
             className="card mt-6 grid gap-4 p-5 sm:grid-cols-[1fr_auto] sm:items-end"
@@ -165,138 +212,155 @@ export default async function VendorDetail({
             <SubmitButton pendingLabel="Updating…">Update contact</SubmitButton>
           </form>
         )}
-        <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_.8fr]">
-          <section className="card p-6" aria-labelledby="destinations-h">
-            <h2 id="destinations-h" className="font-semibold">
-              Payment destination history
-            </h2>
-            <p className="text-muted mt-1 text-xs">
-              Newest first. Manual records are never treated as
-              cryptographically verified.
-            </p>
-            {destinations.length ? (
-              <ol className="mt-5 space-y-3">
-                {destinations.map((d) => (
-                  <li
-                    key={d.id}
-                    className="border-line rounded-lg border p-4 text-xs"
-                  >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <strong className="text-sm">
-                        {d.network}
-                        {d === current && (
-                          <span className="text-muted font-normal">
-                            {" "}
-                            · current
-                          </span>
-                        )}
-                      </strong>
-                      <StateTag
-                        state={
-                          d.supersededAt ? "SUPERSEDED" : d.verificationStatus
-                        }
-                      />
-                    </div>
-                    <p className="mt-3 font-mono break-all">{d.receiver}</p>
-                    <p className="text-muted mt-2">
-                      Version {d.version} · fingerprint{" "}
-                      {d.fingerprint.slice(0, 16)}… · added{" "}
-                      {d.createdAt.toLocaleString()}
-                    </p>
-                    {isRecipientSubmitted(d) && (
-                      <p className="mt-3 leading-5">
-                        <span className="scope">Recipient submitted</span>{" "}
-                        <span className="text-muted">
-                          Entered through a private payables link after an email
-                          check. That shows access to the contact&rsquo;s
-                          mailbox. It is not proof of who controls the wallet.
-                          {d.verificationStatus === "UNVERIFIED" &&
-                            !d.supersededAt &&
-                            " The member who sent the link cannot record this verification."}
-                        </span>
-                      </p>
-                    )}
-                    {d.verifiedAt && (
-                      <p className="mt-2 font-medium">
-                        Verified manually {d.verifiedAt.toLocaleString()} ·{" "}
-                        {d.verificationMethod} · actor{" "}
-                        {d.verifiedBy?.slice(0, 8)}…
-                      </p>
-                    )}
-                    {d.verificationStatus === "UNVERIFIED" &&
-                      !d.supersededAt &&
-                      (canVerify ? (
-                        <form
-                          action={verifyDestinationAction.bind(null, id, d.id)}
-                          className="border-line mt-4 grid gap-3 border-t pt-4"
-                        >
-                          <Field
-                            label="How it was verified"
-                            hint="For example: video call with the vendor's finance contact."
-                          >
-                            <Input name="method" required minLength={3} />
-                          </Field>
-                          <Field label="Verification note">
-                            <Input name="note" required minLength={3} />
-                          </Field>
-                          <SubmitButton pendingLabel="Recording…">
-                            Record manual verification
-                          </SubmitButton>
-                        </form>
-                      ) : (
-                        <p className="text-muted mt-3">
-                          An Owner, CFO or Treasury member can record manual
-                          verification.
-                        </p>
-                      ))}
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-muted mt-5 text-sm">
-                No destination recorded. Obligations to this vendor cannot be
-                settled until one is added and verified.
+        {pilot ? (
+          <Notice
+            tone="hold"
+            title="Payment destinations are disabled in the public pilot"
+            className="mt-8"
+          >
+            Do not enter real Zcash addresses or wallet information. Destination
+            confirmation and independent review require verified organization
+            identities and are not guest actions.
+          </Notice>
+        ) : (
+          <div className="mt-8 grid gap-5 lg:grid-cols-[1fr_.8fr]">
+            <section className="card p-6" aria-labelledby="destinations-h">
+              <h2 id="destinations-h" className="font-semibold">
+                Payment destination history
+              </h2>
+              <p className="text-muted mt-1 text-xs">
+                Newest first. Manual records are never treated as
+                cryptographically verified.
               </p>
-            )}
-          </section>
-          <form action={add} className="card self-start p-6">
-            <h2 className="font-semibold">
-              {current ? "Replace destination" : "Add destination"}
-            </h2>
-            <Notice
-              tone="hold"
-              title="Saved as unverified"
-              className="mt-4 text-xs"
-            >
-              {current
-                ? "This supersedes the current destination and invalidates approvals that relied on it. "
-                : ""}
-              Saving does not prove who controls the wallet.
-            </Notice>
-            <div className="mt-5">
-              <Field
-                label="Zcash receiver"
-                hint="The earlier record is kept in the history, never deleted."
+              {destinations.length ? (
+                <ol className="mt-5 space-y-3">
+                  {destinations.map((d) => (
+                    <li
+                      key={d.id}
+                      className="border-line rounded-lg border p-4 text-xs"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <strong className="text-sm">
+                          {d.network}
+                          {d === current && (
+                            <span className="text-muted font-normal">
+                              {" "}
+                              · current
+                            </span>
+                          )}
+                        </strong>
+                        <StateTag
+                          state={
+                            d.supersededAt ? "SUPERSEDED" : d.verificationStatus
+                          }
+                        />
+                      </div>
+                      <p className="mt-3 font-mono break-all">{d.receiver}</p>
+                      <p className="text-muted mt-2">
+                        Version {d.version} · fingerprint{" "}
+                        {d.fingerprint.slice(0, 16)}… · added{" "}
+                        {d.createdAt.toLocaleString()}
+                      </p>
+                      {isRecipientSubmitted(d) && (
+                        <p className="mt-3 leading-5">
+                          <span className="scope">Recipient submitted</span>{" "}
+                          <span className="text-muted">
+                            Entered through a private payables link after an
+                            email check. That shows access to the
+                            contact&rsquo;s mailbox. It is not proof of who
+                            controls the wallet.
+                            {d.verificationStatus === "UNVERIFIED" &&
+                              !d.supersededAt &&
+                              " The member who sent the link cannot record this verification."}
+                          </span>
+                        </p>
+                      )}
+                      {d.verifiedAt && (
+                        <p className="mt-2 font-medium">
+                          Verified manually {d.verifiedAt.toLocaleString()} ·{" "}
+                          {d.verificationMethod} · actor{" "}
+                          {d.verifiedBy?.slice(0, 8)}…
+                        </p>
+                      )}
+                      {d.verificationStatus === "UNVERIFIED" &&
+                        !d.supersededAt &&
+                        (canVerify ? (
+                          <form
+                            action={verifyDestinationAction.bind(
+                              null,
+                              id,
+                              d.id,
+                            )}
+                            className="border-line mt-4 grid gap-3 border-t pt-4"
+                          >
+                            <Field
+                              label="How it was verified"
+                              hint="For example: video call with the vendor's finance contact."
+                            >
+                              <Input name="method" required minLength={3} />
+                            </Field>
+                            <Field label="Verification note">
+                              <Input name="note" required minLength={3} />
+                            </Field>
+                            <SubmitButton pendingLabel="Recording…">
+                              Record manual verification
+                            </SubmitButton>
+                          </form>
+                        ) : (
+                          <p className="text-muted mt-3">
+                            An Owner, CFO or Treasury member can record manual
+                            verification.
+                          </p>
+                        ))}
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-muted mt-5 text-sm">
+                  No destination recorded. Obligations to this vendor cannot be
+                  settled until one is added and verified.
+                </p>
+              )}
+            </section>
+            <form action={add} className="card self-start p-6">
+              <h2 className="font-semibold">
+                {current ? "Replace destination" : "Add destination"}
+              </h2>
+              <Notice
+                tone="hold"
+                title="Saved as unverified"
+                className="mt-4 text-xs"
               >
-                <Input
-                  name="receiver"
-                  required
-                  minLength={20}
-                  maxLength={512}
-                  autoComplete="off"
-                  spellCheck={false}
-                  className="font-mono"
-                />
-              </Field>
-            </div>
-            <SubmitButton
-              className="button button-dark mt-5 w-full"
-              pendingLabel="Saving…"
-            >
-              Save unverified destination
-            </SubmitButton>
-          </form>
-        </div>
+                {current
+                  ? "This supersedes the current destination and invalidates approvals that relied on it. "
+                  : ""}
+                Saving does not prove who controls the wallet.
+              </Notice>
+              <div className="mt-5">
+                <Field
+                  label="Zcash receiver"
+                  hint="The earlier record is kept in the history, never deleted."
+                >
+                  <Input
+                    name="receiver"
+                    required
+                    minLength={20}
+                    maxLength={512}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="font-mono"
+                  />
+                </Field>
+              </div>
+              <SubmitButton
+                className="button button-dark mt-5 w-full"
+                pendingLabel="Saving…"
+              >
+                Save unverified destination
+              </SubmitButton>
+            </form>
+          </div>
+        )}
         <section className="card mt-5 overflow-hidden" aria-labelledby="ob-h">
           <div className="hairline border-b p-5">
             <h2 id="ob-h" className="font-semibold">

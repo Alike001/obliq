@@ -8,6 +8,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { createdAt, id, membershipRole, recordStatus } from "./shared";
+import { pilotWorkspaceState } from "./shared";
 
 export const organizations = pgTable("organizations", {
   id: id(),
@@ -92,6 +93,33 @@ export const authSessions = pgTable(
     uniqueIndex("auth_sessions_token_hash_unique").on(table.tokenHash),
     index("auth_sessions_user_org_idx").on(table.userId, table.organizationId),
     index("auth_sessions_expiry_idx").on(table.expiresAt),
+  ],
+);
+
+export const pilotWorkspaces = pgTable(
+  "pilot_workspaces",
+  {
+    id: id(),
+    organizationId: uuid("organization_id")
+      .notNull()
+      .references(() => organizations.id),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id),
+    state: pilotWorkspaceState("state").notNull().default("ACTIVE"),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    vendorCount: integer("vendor_count").notNull().default(0),
+    obligationCount: integer("obligation_count").notNull().default(0),
+    mutationCount: integer("mutation_count").notNull().default(0),
+    createdAt: createdAt(),
+    resetAt: timestamp("reset_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("pilot_workspaces_organization_unique").on(
+      table.organizationId,
+    ),
+    uniqueIndex("pilot_workspaces_user_unique").on(table.userId),
+    index("pilot_workspaces_expiry_idx").on(table.expiresAt),
   ],
 );
 

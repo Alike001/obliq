@@ -3,6 +3,7 @@ import "server-only";
 import type { OrganizationId, TenantContext, UserId } from "@obliq/domain";
 import {
   requireActiveMembership,
+  requireActivePilotWorkspace,
   resolveDatabaseSession,
 } from "@obliq/database";
 import { cookies } from "next/headers";
@@ -17,7 +18,7 @@ import { getRuntimeSecurityConfig } from "./runtime-config";
 export async function getTenantContext(): Promise<TenantContext> {
   const runtime = getRuntimeSecurityConfig();
   if (runtime.authMode === "disabled") throw new AuthenticationRequiredError();
-  if (runtime.authMode === "oidc") {
+  if (runtime.authMode === "oidc" || runtime.authMode === "guest") {
     const token = (await cookies()).get(sessionCookieName())?.value;
     if (!token) throw new AuthenticationRequiredError();
     const result = await resolveDatabaseSession(
@@ -26,6 +27,11 @@ export async function getTenantContext(): Promise<TenantContext> {
       securityPepper(),
     );
     if (!result) throw new AuthenticationRequiredError();
+    if (runtime.authMode === "guest")
+      await requireActivePilotWorkspace(getDatabase(), {
+        userId: result.session.userId,
+        organizationId: result.session.organizationId,
+      });
     return {
       userId: result.session.userId as UserId,
       organizationId: result.session.organizationId as OrganizationId,

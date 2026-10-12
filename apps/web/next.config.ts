@@ -35,7 +35,8 @@ const nextConfig: NextConfig = {
   ],
   experimental: {
     serverActions: {
-      bodySizeLimit: "11mb",
+      bodySizeLimit:
+        process.env.OBLIQ_DEPLOYMENT_MODE === "pilot" ? "256kb" : "11mb",
       ...(process.env.OBLIQ_SERVER_ACTION_ALLOWED_ORIGINS
         ? {
             allowedOrigins:
@@ -54,6 +55,20 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "Cache-Control", value: "private, no-store, max-age=0" },
           { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      {
+        source: "/pilot/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
+          { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
+        ],
+      },
+      {
+        source: "/app/:path*",
+        headers: [
+          { key: "Cache-Control", value: "private, no-store, max-age=0" },
           { key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" },
         ],
       },
