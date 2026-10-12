@@ -1,132 +1,192 @@
 # Obliq
 
-Obliq is private financial operations software for crypto-native organizations. It is designed to help finance teams capture vendor and contractor obligations, apply deterministic controls and human approvals, settle privately with Zcash, reconcile settlement to the original business object, and create controlled financial evidence—without surrendering treasury spending authority.
+**Private accounts payable for crypto-native teams.**
 
-> **Current status:** the full lifecycle remains verified on isolated regtest.
-> The UFVK-only observer has now completed a real public-testnet TLS sync with
-> current Ironwood subtree data and is `PUBLIC_NETWORK_READY_FOR_FUNDED_TEST`.
-> No public payment has been observed, and mainnet remains blocked.
+Obliq helps organizations capture vendor and contractor bills, apply deterministic controls and human approvals, settle with shielded Zcash, reconcile the payment to the original obligation, and share only the financial evidence a recipient or accountant needs. The organization keeps control of its treasury throughout.
+
+> **Evidence boundary:** Capture, Control, Settle, Reconcile, and Prove have been demonstrated end to end on an isolated Z3 regtest network. A UFVK-only observer has synchronized against public Zcash testnet with current Ironwood subtree data, but no funded public-testnet payment has been signed, observed, or reconciled. Mainnet and production operation are not verified.
 
 ## The problem
 
-Crypto-native teams often coordinate bills across inboxes, chat, spreadsheets, accounting systems, and wallets. Transparent settlement can additionally reveal counterparties, amounts, cadence, and treasury relationships. Obliq’s initial wedge is vendor and contractor accounts payable; the longer-term category is private financial operations.
+A crypto-native finance team may receive an invoice by email, copy vendor details into a spreadsheet, request approval in chat, prepare a wallet transaction, and later assemble an accounting record by hand. On a transparent chain, that operational fragmentation comes with another cost: competitors and counterparties can infer who the company pays, how much, and how often.
 
-The product lifecycle is **Capture → Control → Settle → Reconcile → Prove**. The primary domain object is an **Obligation**, not a blockchain transaction.
+Wallets can send Zcash. Payment requests can describe a payment. Neither is an accounts-payable control system.
+
+Obliq makes the **Obligation**—the bill and its business context—the primary record. The chain transaction remains subordinate to it.
+
+## The product
+
+```text
+CAPTURE → CONTROL → SETTLE → RECONCILE → PROVE
+```
+
+| Stage         | What Obliq does                                                                                                                                           | Authority boundary                                                                                               |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Capture**   | Persists a vendor, source document, exact amount, due date, category, and immutable destination history.                                                  | Extraction can suggest fields; a human confirms the financial record.                                            |
+| **Control**   | Runs versioned deterministic policy, duplicate checks, destination controls, separation of duties, and human approvals.                                   | Business approval answers “should we pay?” It is never a wallet signature.                                       |
+| **Settle**    | Binds the approved obligation, destination version, quote, zatoshis, network, privacy mode, and opaque memo into an immutable intent and ZIP-321 request. | A separate human-operated Zallet signer reviews and authorizes the exact transaction. Obliq has no spending key. |
+| **Reconcile** | Uses an isolated UFVK-only observer to detect the shielded output, correlate amount and opaque reference, and track confirmations idempotently.           | Viewing authority can read relevant activity but cannot spend. Failure means `UNAVAILABLE`, never “unpaid.”      |
+| **Prove**     | Issues immutable, selectively disclosed JSON evidence from the settled canonical record.                                                                  | An authorized issuer chooses fields; recipients never receive treasury-wide viewing access.                      |
+
+### Private Payables Link
+
+The first product workflow lets an authorized finance operator invite a vendor or contractor to confirm one Orchard-capable Zcash Unified Address for one obligation.
+
+- The link token is high entropy, hashed at rest, expires after 24 hours, and is removed from the browser URL fragment immediately.
+- Email-code verification creates a 30-minute session scoped to the invited obligation. It proves mailbox access—not legal identity or wallet ownership.
+- Confirmation creates a new immutable destination version marked `UNVERIFIED`.
+- A different eligible finance reviewer must verify the destination before fresh controls and approvals can make the obligation ready.
+- The recipient cannot approve, sign, broadcast, settle, or issue evidence.
+
+This is not a bearer claim, checkout link, escrow, wallet, or payment button. Its job is to connect the counterparty safely to the controlled payable.
 
 ## Why Zcash
 
-Shielded Zcash settlement is the privacy primitive that keeps the central promise meaningful. ZIP-321 is the canonical payment-request format. Phase 4 proved an external Zallet PCZT signing path and the Phase-3 read-only observer reconciled it end to end on isolated regtest. Public testnet synchronization is now ready for an externally funded observation test; it is not yet public-network verification. There is no transparent fallback presented as private.
+Obliq needs a payment rail where vendor, amount, and payment cadence are not automatically published to the world. Zcash shielded transactions provide that on-chain privacy primitive.
+
+Obliq adds the business controls around it:
+
+- [ZIP-321](https://zips.z.cash/zip-0321) for canonical payment requests;
+- Unified Addresses with a required shielded receiver and no transparent fallback;
+- external `FullPrivacy` PCZT inspection and signing;
+- UFVK-only observation with no spending authority; and
+- controlled evidence that does not disclose the wider treasury history.
+
+Privacy is not invisibility. Obliq, the recipient, the email provider, and the UFVK observer each learn information appropriate to their role. The threat model treats those metadata and viewing-authority risks explicitly.
+
+## Why Obliq is different
+
+| Alternative                     | What it does well                            | What Obliq adds                                                                                                                |
+| ------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Zcash wallet or ZIP-321 request | Constructs and authorizes a private payment. | Obligation provenance, duplicate protection, policy, approvals, destination history, reconciliation, and evidence.             |
+| Spreadsheet + chat              | Flexible coordination.                       | Server-enforced tenancy, immutable versions, separation of duties, idempotency, and an audit hash chain.                       |
+| Generic crypto AP platform      | Broad invoice and payout workflows.          | A Zcash-native privacy model, external signing, and read-only shielded reconciliation without surrendering treasury authority. |
+| Block explorer                  | Public transaction inspection.               | Business-object reconciliation for shielded payments and deliberately scoped disclosure.                                       |
+
+Obliq does not claim customer adoption yet. The commercial thesis still requires structured customer interviews and supervised pilots.
+
+## Architecture and trust boundaries
+
+```text
+Finance operator                     Treasury signer
+      │                                    │
+      │ capture, policy, approvals         │ deliberate cryptographic authorization
+      ▼                                    ▼
+┌──────────────────────── Obliq application ────────────────────────┐
+│ PostgreSQL obligation record → version-bound settlement intent     │
+│ No seed phrase · no spending key · no unrestricted signer RPC      │
+└──────────────────────────────┬─────────────────────────────────────┘
+                               │ sanitized handoff / receipt
+                               ▼
+                    External Zallet + Zcash network
+                               │ shielded chain data
+                               ▼
+┌──────────────────── isolated read-only observer ───────────────────┐
+│ UFVK + private scan cache · no proposal/sign/broadcast capability   │
+└──────────────────────────────┬─────────────────────────────────────┘
+                               ▼
+                   reconciliation → controlled evidence
+```
+
+The signer and observer are deliberately different authorities. Compromising viewing authority is a serious privacy incident, but it must not permit expenditure. Compromising the web application must not yield an unrestricted treasury signer.
+
+See the [judge-facing technical summary](docs/submission/TECHNICAL_SUMMARY.md), [architecture](docs/architecture/overview.md), [security model](docs/architecture/security.md), and [threat model](docs/architecture/threat-model.md).
+
+## What has actually been demonstrated
+
+| Capability                                                                 | Status                    | Evidence                                                                                                        |
+| -------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Persisted vendors, obligations, policies, approvals, and audit history     | **IMPLEMENTED**           | PostgreSQL integration tests and application surfaces                                                           |
+| Private Payables Link through independent destination review               | **IMPLEMENTED**           | Isolated local browser ceremony using migrated PostgreSQL and a memory-only development mail sink               |
+| AI extraction boundary                                                     | **SEEDED**                | Strict suggestion schema and clearly labelled fixture; no production model provider                             |
+| External Zallet shielded signing and UFVK reconciliation                   | **REGTEST VERIFIED**      | Real isolated Z3 transaction, 25,000,000 zatoshis, mined at height 119 and observed through three confirmations |
+| Public-testnet read-only synchronization                                   | **READY FOR FUNDED TEST** | Real TLS sync and UFVK-only scan; no payment observed                                                           |
+| Funded public-testnet or mainnet settlement                                | **BLOCKED**               | Current Zallet/NU7 signer qualification and funded ceremony remain incomplete                                   |
+| Controlled disclosure and canonical JSON evidence                          | **IMPLEMENTED**           | Eligibility, disclosure, tamper, revocation, and verification tests                                             |
+| Production email delivery and infrastructure                               | **UNAVAILABLE**           | Adapter exists; provider credentials and delivery validation do not                                             |
+| Native PDF receipts, live pricing, production AI, external audit anchoring | **PLANNED**               | Preserved roadmap; not represented as current behavior                                                          |
+
+The public Render deployment is a read-only preview. It intentionally denies `/app`, `/auth`, `/verify`, recipient workflows, and all mutations; it is not the full product runtime.
+
+## Demo and submission material
+
+- [Founder/product presentation script](docs/submission/PITCH_SCRIPT.md)
+- [Technical product-demo script](docs/submission/DEMO_SCRIPT.md)
+- [Local demo runbook](docs/submission/LOCAL_DEMO_RUNBOOK.md)
+- [Project description](docs/submission/PROJECT_DESCRIPTION.md)
+- [Technical summary](docs/submission/TECHNICAL_SUMMARY.md)
+- [Submission checklist](docs/submission/SUBMISSION_CHECKLIST.md)
+- [Private Payables operational evidence](docs/operations/evidence/PRIVATE_PAYABLES_OPERATIONAL_2026-10-11.md)
+- [Public-testnet compatibility evidence](docs/operations/evidence/PUBLIC_TESTNET_COMPATIBILITY_2026-10-10.md)
 
 ## Repository
 
 ```text
-apps/web             Next.js product, application, docs, security and proof surfaces
-packages/domain      Exact money, lifecycle status, tenant and authority types
-packages/database    PostgreSQL/Drizzle schema and migration ownership
-packages/policy      Deterministic controls and settlement-readiness rules
-packages/ai          Strict extraction suggestion contract and labelled fixture
-packages/storage     Private invoice document storage abstraction
-packages/zcash       ZIP-321/intent types plus signer-free observer and redaction
-packages/evidence    Canonical artifacts, disclosure policy and integrity checks
+apps/web             Next.js product and public surfaces
+packages/domain      Exact money, lifecycle, tenant, and authority types
+packages/database    PostgreSQL schema, migrations, repositories, audit chain
+packages/policy      Deterministic controls and settlement readiness
+packages/ai          Extraction suggestion contract and labelled fixture
+packages/storage     Private invoice storage and quarantine boundary
+packages/zcash       ZIP-321, observer, signer-handoff, and redaction boundaries
+packages/evidence    Canonical disclosure artifacts and integrity checks
+packages/security    Runtime validation, sessions, redaction, and origin checks
 tools/zcash-observer Pinned UFVK-only librustzcash scanner
-docs/architecture    System boundaries and security model
-docs/decisions       Architecture decision records
-scripts              Repository quality checks
+docs                 Architecture, ADRs, operations, research, and submission
 ```
 
-Ledger remains planned. Policy and evidence are framework-independent packages with no AI or network dependency.
+Ledger settlement entries remain planned. Domain, policy, and evidence logic remain independent of the UI framework.
 
-## Local setup
+## Local development
 
-Requirements: Node.js 24, npm 11+, Docker Compose or PostgreSQL 16+.
+Requirements: Node.js 24, npm 11+, Docker Compose, PostgreSQL 16+, and Rust for observer work.
 
 ```bash
 cp .env.example .env
-npm install
+npm ci
 docker compose up -d postgres
 npm run db:migrate
 DATABASE_URL=postgresql://obliq:obliq@127.0.0.1:5433/obliq npm run db:seed
 npm run dev
 ```
 
-Open `http://localhost:3000`. Public presentation routes tolerate unavailable infrastructure; application routes require PostgreSQL. `.env.example` contains names and development placeholders only. Production mode requires OIDC, a strong session pepper, private object storage and an HTTPS scanner and fails closed without them.
+Open `http://localhost:3000`. Application routes require PostgreSQL and fail explicitly when it is unavailable. No in-memory database silently replaces persistence. Development uploads live under ignored `.data/` storage.
 
-The provided PostgreSQL service binds only to `127.0.0.1:5433`. Export `DATABASE_URL` when running the seed command (the migration command also defaults to the documented loopback development URL), and copy `.env.example` to `.env` for the application. Uploaded development documents are written beneath `.data/uploads` and ignored by Git. Missing or unavailable PostgreSQL fails explicitly—Obliq never substitutes fake persistence.
+For a safe demonstration, use the [local demo runbook](docs/submission/LOCAL_DEMO_RUNBOOK.md); do not attempt to recreate the historical settlement during a presentation.
 
-## Quality gates
+## Validation
 
 ```bash
-npm run format:check
-npm run lint
-npm run typecheck
-npm test
-DATABASE_URL=postgresql://obliq:obliq@127.0.0.1:5433/obliq npm run test:integration
-npm run build
+npm run validate
+TEST_DATABASE_URL=postgresql://obliq:obliq@127.0.0.1:5433/obliq npm run test:integration
 npm run security:secrets
-npm audit --omit=dev
+npm audit --omit=dev --audit-level=high
 cargo fmt --check --manifest-path tools/zcash-observer/Cargo.toml
 cargo check --locked --manifest-path tools/zcash-observer/Cargo.toml
+cargo test --locked --manifest-path tools/zcash-observer/Cargo.toml
 cargo audit --file tools/zcash-observer/Cargo.lock
 ```
 
-`npm run validate` runs the non-database suite. The database integration command proves migrations, repositories, tenant isolation and audit chaining against PostgreSQL. CI runs quality gates plus a production dependency audit.
+CI migrates an empty PostgreSQL database, runs integration and non-database suites, builds the production application, checks Rust, scans for secrets, and audits production dependencies.
 
-## Security posture
+## Security guarantees enforced in code
 
-- The server has no seed phrase, private spending key, or unrestricted signer credential.
-- AI types expose suggestions requiring human review, not approval or execution authority.
-- Money is represented with `bigint` minor units and zatoshis, never floating point.
-- Tenant-owned financial tables carry `organization_id`; server repositories scope reads and writes and integration tests exercise cross-organization denial.
-- Production OIDC uses PKCE/state/nonce, pre-provisioned identities and revocable hashed database sessions; development identity is a distinct rejected production mode.
-- PostgreSQL-coordinated rate limits protect authentication, mutations, uploads and public evidence access.
-- Invoice uploads validate size, file signature and MIME agreement; production objects are private/quarantined and require a real scanner CLEAN result.
-- Vendor destinations are immutable history. Authorized actors can record `VERIFIED_MANUALLY` with provenance; this is not cryptographic ownership proof.
-- Policies are immutable versions. Decisions bind the exact policy, obligation and destination versions.
-- Approval role eligibility and creator restrictions are enforced server-side; one actor cannot count twice in one policy decision.
-- Material obligation or destination changes invalidate active approvals and force fresh evaluation.
-- Settlement records require an obligation and settlement intent at the database level.
-- The observer imports a UFVK as `ViewOnly` and exposes no proposal, signing or broadcast method.
-- Viewing authority is never stored in PostgreSQL, logged, rendered, or sent client-side; its scan cache remains privacy-sensitive.
-- Node/scanner failure records infrastructure `UNAVAILABLE` without changing paid/unpaid state.
-- Controlled-regtest quotes and intent preparation are implemented. Signing remains external to Obliq; the application stores sanitized receipts only.
-- Broadcast is not settlement. The UFVK-only observer alone advances matching evidence through confirmation to `SETTLED`.
-- Evidence can only derive from a canonically `SETTLED` obligation and matching observation. Disclosure keys and sensitive-role capabilities are server enforced.
-- Issued evidence is immutable. Corrections supersede it; revocation preserves history. Public identifiers contain 256 bits of random entropy.
-- Evidence links are non-enumerable, no-store/no-referrer/noindex, rate-limited and access-recorded without claims. JSON remains canonical; native PDF remains planned.
+- Exact money uses integer minor units and zatoshis—never floating point.
+- Every financial repository operation is organization scoped and server authorized.
+- Policies, obligation versions, destinations, approvals, settlement intents, and evidence are version bound.
+- Material changes invalidate stale authorization; a signed or broadcast transaction is preserved for safe reconciliation rather than rewritten.
+- AI cannot approve, verify a destination, sign, broadcast, or issue evidence.
+- The backend has no seed, spending key, wallet passphrase, PCZT, raw transaction, or unrestricted signer credential.
+- Viewing authority never enters the browser, PostgreSQL business tables, logs, proof, or evidence.
+- `BROADCAST != SETTLED`; only observer evidence and the confirmation policy can settle an obligation.
+- Recipient contact verification is not wallet ownership proof.
+- Evidence is immutable, selectively disclosed, hashed canonically, and visibly revoked or superseded rather than rewritten.
+- Preview mode fails closed and cannot enable financial operations.
 
-PostgreSQL RLS is not active; ADR 0009 records the transaction-context prerequisite and compensating server enforcement. Provider credentials, secret-manager injection, scanner/object-store operations, encrypted observer volumes and independent audit anchoring are deployment responsibilities and are not claimed as configured.
+PostgreSQL row-level security is not active; repository-level tenant isolation and its compensating controls are documented in ADR 0009. Production identity, object storage, malware scanning, rate-limit infrastructure, email delivery, observer hosting, and signer operations require real deployment infrastructure and credentials.
 
-See [security architecture](docs/architecture/security.md), [threat model](docs/architecture/threat-model.md), and the in-product `/security` and `/proof` surfaces.
+## Roadmap
 
-The optional [Render Free public preview](docs/operations/render-free-preview.md)
-runs without PostgreSQL or Zcash infrastructure. Its explicit `preview` mode
-exposes only presentation, documentation, security, proof, and health routes;
-it is not a product or production deployment.
+Obliq’s roadmap retains production AI-assisted extraction with mandatory human review, live quote providers, native PDF receipts derived from canonical evidence, accounting integrations, external audit anchoring, and public-network qualification. It does not include autonomous payment authority, embedded treasury custody, transparent fallback disguised as private settlement, or fabricated proof paths.
 
-## Phase status
-
-| Capability                                          | Status                |
-| --------------------------------------------------- | --------------------- |
-| Monorepo, UI system, public routes, app shell, docs | IMPLEMENTED           |
-| PostgreSQL migrations and runtime persistence       | IMPLEMENTED           |
-| Vendors, obligations, invoice ingestion, duplicates | IMPLEMENTED           |
-| Tenant repository isolation and audit hash chain    | IMPLEMENTED           |
-| Development extraction provider                     | SEEDED                |
-| Production OIDC/session architecture                | IMPLEMENTED           |
-| PostgreSQL rate limiting / private storage boundary | IMPLEMENTED           |
-| Provider credentials and production infrastructure  | UNAVAILABLE           |
-| Versioned policies, approvals and readiness         | IMPLEMENTED           |
-| UFVK-only shielded observation and reconciliation   | IMPLEMENTED (regtest) |
-| External Zallet PCZT signing/broadcast              | IMPLEMENTED (regtest) |
-| Public-network observer synchronization             | READY FOR FUNDED TEST |
-| Public-network settlement/execution                 | BLOCKED               |
-| Controlled evidence, JSON and external verification | IMPLEMENTED           |
-| Native PDF evidence generation                      | PLANNED               |
-
-The canonical vocabulary is `IMPLEMENTED`, `SEEDED`, `PLANNED`, `BLOCKED`, and `UNAVAILABLE`. “Verified” is reserved for evidence-backed results.
-
-## Roadmap and limits
-
-Phase 6 hardens Capture → Control → Settle → Reconcile → Prove without adding a domain. Issue #5 has qualified public testnet synchronization for a funded test, but public observation and settlement remain unverified and no Phase-7 polish is included. See [implementation status](docs/architecture/implementation-status.md), [deployment](docs/operations/deployment.md), [observer operations](docs/operations/zcash-observer.md), and [ADRs](docs/decisions) for material decisions.
-
-The authoritative product source is `obliq-context/Obliq_Master_Context.docx`; implementation-critical Zcash notes under `obliq-context/implementation-reference/` take precedence over the broader research archive. Context files are retained unchanged.
+The authoritative product source is `obliq-context/Obliq_Master_Context.docx`. Implementation-critical Zcash references under `obliq-context/implementation-reference/` take precedence over historical research notes.
