@@ -1,0 +1,63 @@
+{
+  "schema": "obliq.public-testnet-compatibility-audit.v1",
+  "collectedAt": "2026-10-12T12:40:10Z",
+  "repositoryRevision": "69ea46b46940cea3fd4fcefe9f37d49e2af7f132",
+  "network": "testnet",
+  "classification": {
+    "readOnlyObserver": "PASS",
+    "existingRecipient": "PASS",
+    "limitedZingoReceipt": "NOT_TESTED",
+    "externalPcztSigner": "BLOCKED",
+    "fundedSettlement": "NOT_TESTED",
+    "publicNetworkVerified": false
+  },
+  "observer": {
+    "endpoint": "https://testnet.zec.rocks:443",
+    "serviceChain": "test",
+    "serviceVendor": "ECC LightWalletD",
+    "serviceVersion": "v0.5.4",
+    "serviceCommit": "c22ca9ba67676e61cd8ee107538ffd9a77799bab",
+    "nodeBuild": "v7.0.0-rc.0",
+    "chainTipHeightAtPreflight": 4492164,
+    "activeConsensusBranchId": "77190ad9",
+    "nu7ActivationHeight": 4465026,
+    "nu7Active": true,
+    "authority": "UFVK_VIEW_ONLY",
+    "spendingAuthority": false,
+    "fullyScannedHeight": 4492165,
+    "synchronizedAtScan": true,
+    "observationCount": 0,
+    "recipientReceiverMatch": "MATCH"
+  },
+  "signers": {
+    "zalletBeta3": {
+      "status": "BLOCKED",
+      "reason": "PINNED_DEPENDENCY_GRAPH_PREDATES_FINAL_NU7"
+    },
+    "zalletMain": {
+      "commit": "d9a096342d0d5247c8c6d5c74f87b3b14095fd50",
+      "status": "BLOCKED",
+      "reason": "UNRELEASED_ZAINO_BACKEND_REMOVED_AND_PRE_FINAL_LIBRUSTZCASH_PIN"
+    },
+    "zingoPc": {
+      "version": "2.0.26-196",
+      "releaseChannel": "PRERELEASE",
+      "commit": "48fdae3cb81a37c7130c2292942777724e5ccd24",
+      "zingolibCommit": "6d43e7c48343cc39cf99bad7e05349baaf4f0b90",
+      "status": "NOT_TESTED",
+      "maximumClaimIfSuccessful": "PUBLIC_TESTNET_OBSERVATION_VERIFIED",
+      "externalPcztBoundarySatisfied": false
+    }
+  },
+  "funding": {
+    "service": "Fauzec",
+    "reportedReady": true,
+    "telemetryFresh": false,
+    "claimAttempted": false
+  },
+  "secretsRecorded": false,
+  "walletCreated": false,
+  "fundingAttempted": false,
+  "signingAttempted": false,
+  "broadcastAttempted": false
+}

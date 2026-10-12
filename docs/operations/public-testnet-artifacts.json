@@ -1,6 +1,6 @@
 {
   "schema": "obliq.public-testnet-artifacts.v1",
-  "reviewedAt": "2026-10-08",
+  "reviewedAt": "2026-10-12",
   "network": "testnet",
   "nu7": {
     "activationHeight": 4465026,
@@ -29,6 +29,25 @@
       "aarch64-unknown-linux-gnu": {
         "sha256": "8ccce997a4e89446ee7be214c603d955083bbe58d06ef11df20a970f81b139ac"
       }
+    }
+  },
+  "qualificationNotes": {
+    "zalletMain": {
+      "reviewedCommit": "d9a096342d0d5247c8c6d5c74f87b3b14095fd50",
+      "releasedArtifact": false,
+      "zainoBackendPresent": false,
+      "embeddedLibrustzcashCommit": "1f6bb2072e7fcb142b0d90ff7b267a8699a84818",
+      "classification": "BLOCKED_NOT_A_RELEASE_AND_NO_NETWORK_ONLY_SIGNER_BACKEND"
+    },
+    "zingoPc": {
+      "version": "2.0.26-196",
+      "releaseChannel": "PRERELEASE",
+      "sourceCommit": "48fdae3cb81a37c7130c2292942777724e5ccd24",
+      "embeddedZingolibCommit": "6d43e7c48343cc39cf99bad7e05349baaf4f0b90",
+      "linuxAmd64DebSha256": "d8cc98a307679f80fd180f781085df335f9e6d3e3411f1c54098f2295b318168",
+      "nu7SupportClaimedByRelease": true,
+      "classification": "LIMITED_OBSERVER_RECEIPT_CANDIDATE_ONLY",
+      "reason": "The wallet proposes, signs, and broadcasts internally; it does not provide Obliq's inspectable external PCZT handoff. No public transaction was attempted."
     }
   }
 }
