@@ -150,8 +150,9 @@ export default function LandingPage() {
                   <strong>This is a read-only preview.</strong>
                   <p>
                     The workspace, sign-in and evidence verification are not
-                    available here. Nothing on this site can record, approve or
-                    move a payment.
+                    available here. The interactive demo is a browser-only
+                    fictional sandbox; nothing on this site can record, approve
+                    or move a payment.
                   </p>
                 </div>
               </div>

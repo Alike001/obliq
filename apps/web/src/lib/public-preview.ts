@@ -6,6 +6,7 @@ export type PreviewRequest = {
 
 const exactPublicPaths = new Set([
   "/",
+  "/demo",
   "/health/live",
   "/health/ready",
   "/icon.svg",
