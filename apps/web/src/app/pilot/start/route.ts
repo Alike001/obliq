@@ -6,6 +6,7 @@ import {
 } from "@obliq/database";
 import { writeOperationalLog } from "@obliq/security";
 import { NextResponse } from "next/server";
+import { applicationUrl } from "@/lib/application-url";
 import { getDatabase } from "@/lib/db";
 import { setPilotSessionCookie } from "@/lib/pilot-session";
 import {
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
       userId: created.user.id,
     });
     await finalizePilotWorkspace(getDatabase(), created.workspace.id);
-    const response = NextResponse.redirect(new URL("/app", request.url), 303);
+    const response = NextResponse.redirect(applicationUrl("/app"), 303);
     setPilotSessionCookie(response, created.token, created.expiresAt);
     return response;
   } catch (error) {

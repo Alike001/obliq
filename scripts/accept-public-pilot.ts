@@ -1,61 +1,128 @@
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
-import { chromium, type BrowserContext } from "playwright-core";
+import { chromium, type BrowserContext, type Page } from "playwright-core";
 
 const baseUrl =
   process.env.OBLIQ_PILOT_ACCEPTANCE_URL ?? "http://127.0.0.1:3102";
 const mutationOrigin =
   process.env.OBLIQ_PILOT_ACCEPTANCE_ORIGIN ?? new URL(baseUrl).origin;
-const chrome = process.env.OBLIQ_ACCEPTANCE_CHROME ?? "/usr/bin/google-chrome";
+const chrome = process.env.OBLIQ_ACCEPTANCE_CHROME;
+const bundledChrome = chromium.executablePath();
+const browserExecutable = chrome
+  ? chrome
+  : existsSync(bundledChrome)
+    ? undefined
+    : existsSync("/usr/bin/google-chrome")
+      ? "/usr/bin/google-chrome"
+      : undefined;
 const artifactDirectory = "artifacts/public-pilot";
+const browserEvents: Array<{
+  context: string;
+  kind: "crash" | "pageerror";
+  stage: string;
+  detail?: string;
+}> = [];
+let acceptanceStage = "launch";
 
 function check(value: unknown, message: string): asserts value {
   if (!value) throw new Error(message);
 }
 
-async function newGuestCookie() {
-  const response = await fetch(baseUrl + "/pilot/start", {
-    method: "POST",
-    headers: { origin: mutationOrigin },
-    redirect: "manual",
+function safeDiagnostic(value: unknown) {
+  const message = value instanceof Error ? value.message : String(value);
+  return message
+    .replace(/([?#])[A-Za-z0-9_%+./=&-]+/gu, "$1[redacted]")
+    .replace(/[A-Za-z0-9_-]{32,}/gu, "[redacted]")
+    .slice(0, 600);
+}
+
+function monitorPage(page: Page, context: string) {
+  page.on("crash", () => {
+    browserEvents.push({ context, kind: "crash", stage: acceptanceStage });
   });
-  check(response.status === 303, "Pilot session creation did not redirect");
-  const raw = response.headers.get("set-cookie") ?? "";
-  const attributes = raw.toLowerCase();
-  check(
-    attributes.includes("httponly") &&
-      attributes.includes("secure") &&
-      attributes.includes("samesite=lax"),
-    "Pilot cookie security attributes are missing",
-  );
-  const pair = raw.split(";", 1)[0] ?? "";
-  const separator = pair.indexOf("=");
-  check(separator > 0, "Pilot cookie was not returned");
-  return { name: pair.slice(0, separator), value: pair.slice(separator + 1) };
+  page.on("pageerror", (error) => {
+    browserEvents.push({
+      context,
+      kind: "pageerror",
+      stage: acceptanceStage,
+      detail: safeDiagnostic(error),
+    });
+  });
 }
 
 async function contextFor(
   browser: Awaited<ReturnType<typeof chromium.launch>>,
   viewport: { width: number; height: number },
+  label: string,
 ) {
-  const cookie = await newGuestCookie();
   const context = await browser.newContext({
     viewport,
     ignoreHTTPSErrors: true,
   });
-  await context.addCookies([
-    {
-      ...cookie,
-      domain: new URL(baseUrl).hostname,
-      path: "/",
-      httpOnly: true,
-      // The local acceptance server is HTTP. The response itself was checked
-      // above for Secure; this browser-only injection simulates Render's TLS
-      // termination without weakening the application cookie.
-      secure: new URL(baseUrl).protocol === "https:",
-      sameSite: "Lax",
-    },
+  const externalFontRequests: string[] = [];
+  context.on("request", (request) => {
+    const hostname = new URL(request.url()).hostname;
+    if (hostname === "fonts.googleapis.com" || hostname === "fonts.gstatic.com")
+      externalFontRequests.push(hostname);
+  });
+  const page = await context.newPage();
+  page.setDefaultNavigationTimeout(90_000);
+  monitorPage(page, label);
+  acceptanceStage = `${label}:pilot-entry`;
+  const entry = await page.goto(baseUrl + "/pilot", {
+    waitUntil: "domcontentloaded",
+  });
+  check(entry, "Pilot entry did not return a response");
+  check(entry.ok(), "Pilot entry did not load");
+  check(
+    entry.headers()["content-security-policy"]?.includes("form-action 'self'"),
+    "Pilot entry is missing the strict form-action policy",
+  );
+  const form = await page
+    .locator('form[action="/pilot/start"]')
+    .evaluate((element) => ({
+      action: (element as HTMLFormElement).action,
+      method: (element as HTMLFormElement).method,
+      origin: window.location.origin,
+    }));
+  check(form.origin === mutationOrigin, "Pilot document origin is unexpected");
+  check(
+    new URL(form.action).origin === mutationOrigin && form.method === "post",
+    "Pilot start form is not an HTTPS same-origin POST",
+  );
+
+  acceptanceStage = `${label}:workspace-start`;
+  const responsePromise = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/pilot/start" &&
+      response.request().method() === "POST",
+  );
+  await Promise.all([
+    page.waitForURL(new URL("/app", baseUrl).href),
+    page.getByRole("button", { name: /Create isolated workspace/u }).click(),
   ]);
-  return context;
+  const response = await responsePromise;
+  check(response.status() === 303, "Pilot session creation did not redirect");
+  const location = response.headers()["location"];
+  check(location, "Pilot redirect location is missing");
+  const redirect = new URL(location, baseUrl);
+  check(
+    redirect.protocol === "https:" &&
+      redirect.origin === mutationOrigin &&
+      redirect.pathname === "/app",
+    "Pilot redirect is not HTTPS and same-origin",
+  );
+  const sessionCookie = (await context.cookies(baseUrl)).find((cookie) =>
+    cookie.name.endsWith("obliq_session"),
+  );
+  check(
+    sessionCookie?.httpOnly &&
+      sessionCookie.secure &&
+      sessionCookie.sameSite === "Lax",
+    "Pilot cookie security attributes are missing",
+  );
+  check(externalFontRequests.length === 0, "Pilot requested an external font");
+  return { context, page };
 }
 
 async function assertNoBrowserSecrets(context: BrowserContext) {
@@ -76,23 +143,20 @@ async function assertNoBrowserSecrets(context: BrowserContext) {
 
 await mkdir(artifactDirectory, { recursive: true });
 const browser = await chromium.launch({
-  executablePath: chrome,
+  ...(browserExecutable ? { executablePath: browserExecutable } : {}),
   headless: true,
-  args: [
-    "--no-sandbox",
-    "--disable-gpu",
-    "--disable-dev-shm-usage",
-    "--no-zygote",
-    "--single-process",
-    "--renderer-process-limit=2",
-  ],
 });
 
 try {
-  const trialA = await contextFor(browser, { width: 1440, height: 1000 });
-  const pageA = await trialA.newPage();
+  const desktop = await contextFor(
+    browser,
+    { width: 1440, height: 1000 },
+    "trial-a-desktop",
+  );
+  const trialA = desktop.context;
+  const pageA = desktop.page;
 
-  await pageA.goto(baseUrl + "/app");
+  acceptanceStage = "trial-a:vendor";
   await pageA
     .getByRole("link", { name: "Vendors", exact: true })
     .first()
@@ -109,6 +173,7 @@ try {
   await pageA.reload();
   await pageA.getByText("Northstar Studio — fictional").waitFor();
 
+  acceptanceStage = "trial-a:obligation";
   await pageA.goto(baseUrl + "/app/obligations/new");
   check(
     pageA.url().includes("/app/obligations/new"),
@@ -139,6 +204,7 @@ try {
     .first()
     .waitFor();
 
+  acceptanceStage = "trial-a:duplicate";
   await pageA.goto(baseUrl + "/app/obligations/new");
   await pageA
     .locator('select[name="vendorId"]')
@@ -161,7 +227,13 @@ try {
   await assertNoBrowserSecrets(trialA);
   await trialA.close();
 
-  const trialB = await contextFor(browser, { width: 390, height: 844 });
+  const mobile = await contextFor(
+    browser,
+    { width: 390, height: 844 },
+    "trial-b-mobile",
+  );
+  const trialB = mobile.context;
+  acceptanceStage = "trial-b:tenant-isolation";
   const crossTenant = await trialB.request.get(vendorUrl);
   const crossTenantBody = await crossTenant.text();
   check(
@@ -170,12 +242,40 @@ try {
       !crossTenantBody.includes("Northstar Studio — fictional"),
     "Trial B could read Trial A's vendor",
   );
-  const mobileB = await trialB.newPage();
+  const mobileB = mobile.page;
   await mobileB.goto(baseUrl + "/app");
   await mobileB.screenshot({
     path: artifactDirectory + "/isolated-mobile.png",
   });
+  acceptanceStage = "trial-b:workspace-reset";
+  const resetResponsePromise = mobileB.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === "/pilot/reset" &&
+      response.request().method() === "POST",
+  );
+  await Promise.all([
+    mobileB.waitForURL(new URL("/app", baseUrl).href),
+    mobileB.getByRole("button", { name: "Reset workspace" }).click(),
+  ]);
+  const resetResponse = await resetResponsePromise;
+  check(
+    resetResponse.status() === 303,
+    `Pilot reset did not redirect (status ${resetResponse.status()})`,
+  );
+  const resetLocation = resetResponse.headers()["location"];
+  check(resetLocation, "Pilot reset redirect location is missing");
+  const resetRedirect = new URL(resetLocation, baseUrl);
+  check(
+    resetRedirect.protocol === "https:" &&
+      resetRedirect.origin === mutationOrigin &&
+      resetRedirect.pathname === "/app",
+    "Pilot reset redirect is not HTTPS and same-origin",
+  );
   await assertNoBrowserSecrets(trialB);
+  check(
+    !browserEvents.some((event) => event.kind === "crash"),
+    "A browser page crashed during acceptance",
+  );
 
   console.log(
     JSON.stringify({
@@ -184,12 +284,26 @@ try {
       tenantIsolation: "PASS",
       policyEvaluation: "PASS",
       scriptReadableSessionMaterial: "ABSENT",
+      onboardingForm: "PASS",
+      redirectBoundary: "HTTPS_SAME_ORIGIN",
+      resetRedirectBoundary: "HTTPS_SAME_ORIGIN",
+      externalFontRequests: "ABSENT",
       screenshots: [
         artifactDirectory + "/obligation-desktop.png",
         artifactDirectory + "/isolated-mobile.png",
       ],
     }),
   );
+} catch (error) {
+  console.error(
+    JSON.stringify({
+      status: "FAIL",
+      stage: acceptanceStage,
+      error: safeDiagnostic(error),
+      browserEvents,
+    }),
+  );
+  throw new Error(`Pilot acceptance failed at ${acceptanceStage}`);
 } finally {
   await browser.close();
 }

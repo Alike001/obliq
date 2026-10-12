@@ -1,5 +1,6 @@
 import { revokeDatabaseSession } from "@obliq/database";
 import { NextResponse } from "next/server";
+import { applicationUrl } from "@/lib/application-url";
 import { getDatabase } from "@/lib/db";
 import { requestSessionToken } from "@/lib/pilot-session";
 import { requireSameOrigin, securityPepper } from "@/lib/request-security";
@@ -17,7 +18,7 @@ export async function POST(request: Request) {
   const token = requestSessionToken(request);
   if (token)
     await revokeDatabaseSession(getDatabase(), token, securityPepper());
-  const response = NextResponse.redirect(new URL("/pilot", request.url), 303);
+  const response = NextResponse.redirect(applicationUrl("/pilot"), 303);
   response.cookies.delete(sessionCookieName());
   return response;
 }

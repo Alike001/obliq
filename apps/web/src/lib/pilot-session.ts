@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { NextResponse } from "next/server";
+import { cookieValue } from "./cookie-value";
 import { sessionCookieName } from "./session";
 
 export function setPilotSessionCookie(
@@ -18,11 +19,5 @@ export function setPilotSessionCookie(
 }
 
 export function requestSessionToken(request: Request) {
-  const name = sessionCookieName();
-  const encoded = request.headers
-    .get("cookie")
-    ?.match(
-      new RegExp("(?:^|;\\s*)" + name.replace("-", "\\-") + "=([^;]+)", "u"),
-    )?.[1];
-  return encoded ? decodeURIComponent(encoded) : null;
+  return cookieValue(request.headers.get("cookie"), sessionCookieName());
 }
