@@ -106,6 +106,48 @@ describe("runtime security configuration", () => {
     });
   });
 
+  it("accepts only a database-backed, network-disabled public pilot", () => {
+    const pilot = {
+      NODE_ENV: "production",
+      OBLIQ_DEPLOYMENT_MODE: "pilot",
+      OBLIQ_SESSION_MODE: "guest",
+      OBLIQ_STORAGE_MODE: "disabled",
+      OBLIQ_ZCASH_NETWORK: "disabled",
+      OBSERVER_NETWORK: "disabled",
+      OBLIQ_PUBLIC_NETWORK_STATUS: "PUBLIC_NETWORK_BLOCKED",
+      OBLIQ_APP_BASE_URL: "https://pilot.obliq.example",
+      DATABASE_URL: "postgresql://private",
+      OBLIQ_SESSION_PEPPER: "p".repeat(32),
+    };
+    expect(parseRuntimeSecurityConfig(pilot)).toEqual({
+      deploymentMode: "pilot",
+      authMode: "guest",
+      storageMode: "disabled",
+      rateLimitMode: "postgresql",
+      network: "disabled",
+      observerNetwork: "disabled",
+      publicNetworkStatus: "PUBLIC_NETWORK_BLOCKED",
+    });
+    expect(() =>
+      parseRuntimeSecurityConfig({ ...pilot, OBLIQ_SESSION_MODE: "oidc" }),
+    ).toThrow("database-backed guest sessions");
+    expect(() =>
+      parseRuntimeSecurityConfig({ ...pilot, OBSERVER_ENDPOINT: "secret" }),
+    ).toThrow("must not configure OBSERVER_ENDPOINT");
+    expect(() =>
+      parseRuntimeSecurityConfig({
+        ...pilot,
+        OBLIQ_RECIPIENT_EMAIL_ENDPOINT: "https://mail.example",
+      }),
+    ).toThrow("must not configure OBLIQ_RECIPIENT_EMAIL_ENDPOINT");
+    expect(() =>
+      parseRuntimeSecurityConfig({
+        ...pilot,
+        OBLIQ_PUBLIC_NETWORK_STATUS: "PUBLIC_NETWORK_READY_FOR_FUNDED_TEST",
+      }),
+    ).toThrow("cannot claim public-network readiness");
+  });
+
   it("fails public preview closed if a private dependency or secret is configured", () => {
     const preview = {
       NODE_ENV: "production",

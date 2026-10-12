@@ -1,7 +1,8 @@
 import { createHash, createHmac, randomBytes, randomInt } from "node:crypto";
 
-export type DeploymentMode = "development" | "preview" | "production" | "test";
-export type AuthMode = "development" | "disabled" | "oidc";
+export type DeploymentMode =
+  "development" | "preview" | "pilot" | "production" | "test";
+export type AuthMode = "development" | "disabled" | "guest" | "oidc";
 export type StorageMode = "disabled" | "local-development" | "s3-private";
 export type PublicNetworkStatus =
   | "PUBLIC_NETWORK_BLOCKED"
@@ -70,19 +71,20 @@ export function parseRuntimeSecurityConfig(
     env.OBLIQ_DEPLOYMENT_MODE ??
     (env.NODE_ENV === "production" ? "production" : "development");
   if (
-    !(["development", "preview", "production", "test"] as const).includes(
-      deploymentMode as DeploymentMode,
-    )
+    !(
+      ["development", "preview", "pilot", "production", "test"] as const
+    ).includes(deploymentMode as DeploymentMode)
   )
     throw new Error("OBLIQ_DEPLOYMENT_MODE is invalid");
   const authMode = env.OBLIQ_SESSION_MODE;
   if (
     authMode !== "development" &&
     authMode !== "disabled" &&
+    authMode !== "guest" &&
     authMode !== "oidc"
   )
     throw new Error(
-      "OBLIQ_SESSION_MODE must be development, disabled, or oidc",
+      "OBLIQ_SESSION_MODE must be development, disabled, guest, or oidc",
     );
   const storageMode = env.OBLIQ_STORAGE_MODE ?? "local-development";
   if (
@@ -152,6 +154,46 @@ export function parseRuntimeSecurityConfig(
       "OBLIQ_STORAGE_ENDPOINT",
       "OBLIQ_STORAGE_KMS_KEY_ID",
       "OBLIQ_STORAGE_REGION",
+    ].forEach((name) => rejectPreviewSecret(env, name));
+  } else if (deploymentMode === "pilot") {
+    if (authMode !== "guest")
+      throw new Error("Public pilot requires database-backed guest sessions");
+    if (storageMode !== "disabled")
+      throw new Error("Public pilot requires invoice storage to be disabled");
+    if (selectedNetwork !== "disabled" || observerNetwork !== "disabled")
+      throw new Error("Public pilot requires Zcash runtimes to be disabled");
+    if (publicNetworkStatus !== "PUBLIC_NETWORK_BLOCKED")
+      throw new Error("Public pilot cannot claim public-network readiness");
+    httpsUrl(required(env, "OBLIQ_APP_BASE_URL"), "OBLIQ_APP_BASE_URL");
+    required(env, "DATABASE_URL");
+    if (required(env, "OBLIQ_SESSION_PEPPER").length < 32)
+      throw new Error(
+        "OBLIQ_SESSION_PEPPER must contain at least 32 characters",
+      );
+    [
+      "OBSERVER_BINARY",
+      "OBSERVER_DB",
+      "OBSERVER_ENDPOINT",
+      "OBSERVER_SOURCE",
+      "OIDC_CLIENT_ID",
+      "OIDC_ISSUER",
+      "OIDC_CLIENT_SECRET",
+      "OBLIQ_DEV_MAIL_TOKEN",
+      "OBLIQ_DEV_ORGANIZATION_ID",
+      "OBLIQ_DEV_USER_ID",
+      "OBLIQ_DOCUMENT_SCANNER_URL",
+      "OBLIQ_DOCUMENT_SCANNER_TOKEN",
+      "OBLIQ_PROOF_ORGANIZATION_ID",
+      "OBLIQ_RECIPIENT_EMAIL_ENDPOINT",
+      "OBLIQ_RECIPIENT_EMAIL_TOKEN",
+      "OBLIQ_RECIPIENT_TOKEN_PEPPER",
+      "OBLIQ_STORAGE_BUCKET",
+      "OBLIQ_STORAGE_ENDPOINT",
+      "OBLIQ_STORAGE_KMS_KEY_ID",
+      "OBLIQ_STORAGE_REGION",
+      "OBLIQ_TESTNET_HANDOFF_FILE",
+      "OBLIQ_TRACER_HANDOFF_FILE",
+      "OBLIQ_UPLOAD_DIR",
     ].forEach((name) => rejectPreviewSecret(env, name));
   } else if (
     authMode === "disabled" ||

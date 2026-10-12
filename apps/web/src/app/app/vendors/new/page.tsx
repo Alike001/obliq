@@ -2,10 +2,12 @@ import { createVendorAction } from "../../actions";
 import { Field, Input } from "@/components/finance-form";
 import { BackLink } from "@/components/record";
 import { SubmitButton } from "@/components/submit-button";
+import { getRuntimeSecurityConfig } from "@/lib/runtime-config";
 
 export const metadata = { title: "Add a vendor" };
 
 export default function NewVendorPage() {
+  const pilot = getRuntimeSecurityConfig().deploymentMode === "pilot";
   return (
     <main className="p-4 md:p-8">
       <div className="mx-auto max-w-3xl">
@@ -30,12 +32,22 @@ export default function NewVendorPage() {
           <Field label="Category (optional)">
             <Input name="category" maxLength={80} />
           </Field>
-          <Field label="Contact name (optional)">
-            <Input name="contactName" maxLength={100} autoComplete="off" />
-          </Field>
-          <Field label="Contact email (optional)">
-            <Input name="contactEmail" type="email" autoComplete="off" />
-          </Field>
+          {!pilot && (
+            <Field label="Contact name (optional)">
+              <Input name="contactName" maxLength={100} autoComplete="off" />
+            </Field>
+          )}
+          {!pilot && (
+            <Field label="Contact email (optional)">
+              <Input name="contactEmail" type="email" autoComplete="off" />
+            </Field>
+          )}
+          {pilot && (
+            <p className="notice notice-hold sm:col-span-2">
+              Use an invented company name only. Contact details are disabled;
+              never enter personal or financial information in this trial.
+            </p>
+          )}
           <div className="flex items-end">
             <SubmitButton
               className="button button-dark w-full"

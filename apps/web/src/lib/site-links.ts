@@ -31,11 +31,26 @@ export function isReadOnlyPreview(
   return env.OBLIQ_DEPLOYMENT_MODE === "preview";
 }
 
-export function siteLinks(readOnlyPreview: boolean): SiteLinks {
+export function isPublicPilot(
+  env: Record<string, string | undefined> = process.env,
+) {
+  return env.OBLIQ_DEPLOYMENT_MODE === "pilot";
+}
+
+export function siteLinks(
+  readOnlyPreview: boolean,
+  publicPilot = isPublicPilot(),
+): SiteLinks {
   if (readOnlyPreview)
     return {
       nav,
       primary: { label: "Try interactive demo", href: "/demo" },
+      secondary: { label: "See what is proven", href: "/proof" },
+    };
+  if (publicPilot)
+    return {
+      nav,
+      primary: { label: "Start fictional pilot", href: "/pilot" },
       secondary: { label: "See what is proven", href: "/proof" },
     };
   return {

@@ -7,6 +7,7 @@ import {
   createObligation,
   createSource,
   createVendor,
+  getVendor,
   createDefaultPolicy,
   changeEvidenceStatus,
   createPolicyVersion,
@@ -23,8 +24,10 @@ import {
   requestExternalSignature,
   resolveDuplicateFinding,
   RecipientAdministrationError,
+  consumePilotQuota,
   updateRecipientContactEmail,
   updateObligation,
+  updateVendor,
   verifyDestinationManually,
 } from "@obliq/database";
 import {
@@ -50,6 +53,7 @@ import {
   positiveInteger,
 } from "@/lib/input-validation";
 import { recipientTokenPepper } from "@/lib/recipient-security";
+import { pilotQuotaForMutation } from "@/lib/pilot-capabilities";
 
 function field(formData: FormData, name: string) {
   const value = formData.get(name);
@@ -64,8 +68,14 @@ async function mutationActor(
   limit = 120,
   windowSeconds = 60,
 ) {
-  if (getRuntimeSecurityConfig().deploymentMode === "preview")
+  const runtime = getRuntimeSecurityConfig();
+  const pilotQuota = pilotQuotaForMutation(scope);
+  if (runtime.deploymentMode === "preview")
     throw new Error("Financial operations are unavailable in public preview");
+  if (runtime.deploymentMode === "pilot" && !pilotQuota)
+    throw new Error(
+      "This operation requires a verified production identity and is unavailable in the fictional pilot",
+    );
   const actor = await resolveTenantContext();
   await rateLimitRequest(
     `app:${scope}`,
@@ -73,20 +83,53 @@ async function mutationActor(
     limit,
     windowSeconds,
   );
+  if (runtime.deploymentMode === "pilot")
+    await consumePilotQuota(getDatabase(), {
+      ...actor,
+      kind: pilotQuota!,
+    });
   return actor;
 }
 
 export async function createVendorAction(formData: FormData) {
-  const actor = await mutationActor();
+  const actor = await mutationActor("create-vendor", 30, 3600);
+  const pilot = getRuntimeSecurityConfig().deploymentMode === "pilot";
   const vendor = await createVendor(getDatabase(), actor, {
     legalName: field(formData, "legalName"),
     displayName: field(formData, "displayName"),
     category: optional(formData, "category"),
-    contactName: optional(formData, "contactName"),
-    contactEmail: optional(formData, "contactEmail"),
+    contactName: pilot ? undefined : optional(formData, "contactName"),
+    contactEmail: pilot ? undefined : optional(formData, "contactEmail"),
   });
   revalidatePath("/app/vendors");
   redirect(`/app/vendors/${vendor.id}?created=1`);
+}
+
+export async function updatePilotVendorAction(
+  vendorId: string,
+  formData: FormData,
+) {
+  opaqueId(vendorId, "vendor identifier");
+  if (getRuntimeSecurityConfig().deploymentMode !== "pilot")
+    throw new Error("The fictional vendor editor is pilot-only");
+  const actor = await mutationActor("update-vendor", 60, 3600);
+  const current = await getVendor(
+    getDatabase(),
+    actor.organizationId,
+    vendorId,
+  );
+  if (!current) throw new Error("Vendor not found");
+  const vendor = await updateVendor(getDatabase(), actor, vendorId, {
+    legalName: field(formData, "legalName"),
+    displayName: field(formData, "displayName"),
+    category: optional(formData, "category"),
+    contactName: current.contactName ?? undefined,
+    contactEmail: current.contactEmail ?? undefined,
+  });
+  if (!vendor) throw new Error("Vendor not found");
+  revalidatePath("/app/vendors");
+  revalidatePath("/app/vendors/" + vendorId);
+  redirect("/app/vendors/" + vendorId + "?updated=1");
 }
 
 export async function addDestinationAction(
@@ -136,9 +179,17 @@ export async function updateVendorContactAction(
   }
 }
 
-async function persistObligation(formData: FormData, sourceId?: string) {
+async function persistObligation(
+  formData: FormData,
+  sourceId?: string,
+  pilotAllowed = false,
+) {
   if (sourceId) opaqueId(sourceId, "source identifier");
-  const actor = await mutationActor();
+  const actor = await mutationActor(
+    pilotAllowed ? "create-obligation" : "create-reviewed-obligation",
+    60,
+    3600,
+  );
   try {
     const obligation = await createObligation(getDatabase(), actor, {
       vendorId: field(formData, "vendorId"),
@@ -162,7 +213,7 @@ async function persistObligation(formData: FormData, sourceId?: string) {
 }
 
 export async function createManualObligationAction(formData: FormData) {
-  return persistObligation(formData);
+  return persistObligation(formData, undefined, true);
 }
 
 export async function createReviewedObligationAction(
@@ -178,7 +229,7 @@ export async function updateObligationAction(
   formData: FormData,
 ) {
   opaqueId(obligationId, "obligation identifier");
-  const actor = await mutationActor();
+  const actor = await mutationActor("update-obligation", 120, 3600);
   try {
     const obligation = await updateObligation(
       getDatabase(),
@@ -340,7 +391,7 @@ export async function createPolicyVersionAction(
 
 export async function evaluateControlsAction(obligationId: string) {
   opaqueId(obligationId, "obligation identifier");
-  const actor = await mutationActor();
+  const actor = await mutationActor("evaluate-controls", 120, 3600);
   await evaluateObligationControls(getDatabase(), actor, obligationId);
   revalidatePath(`/app/obligations/${obligationId}`);
   redirect(`/app/obligations/${obligationId}?controls=evaluated`);

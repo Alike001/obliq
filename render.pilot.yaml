@@ -1,0 +1,41 @@
+databases:
+  - name: obliq-public-pilot-db
+    plan: free
+    databaseName: obliq_pilot
+    user: obliq_pilot
+
+services:
+  - type: web
+    name: obliq-public-pilot
+    runtime: node
+    plan: free
+    rootDir: .
+    buildCommand: npm ci && npm run pilot:check && npm run db:migrate && npm run build:pilot
+    startCommand: npm run start:pilot
+    healthCheckPath: /health/ready
+    autoDeployTrigger: "off"
+    envVars:
+      - key: NODE_VERSION
+        value: 24.21.0
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: OBLIQ_DEPLOYMENT_MODE
+        value: pilot
+      - key: OBLIQ_SESSION_MODE
+        value: guest
+      - key: OBLIQ_STORAGE_MODE
+        value: disabled
+      - key: OBLIQ_ZCASH_NETWORK
+        value: disabled
+      - key: OBSERVER_NETWORK
+        value: disabled
+      - key: OBLIQ_PUBLIC_NETWORK_STATUS
+        value: PUBLIC_NETWORK_BLOCKED
+      - key: OBLIQ_APP_BASE_URL
+        sync: false
+      - key: OBLIQ_SESSION_PEPPER
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: obliq-public-pilot-db
+          property: connectionString

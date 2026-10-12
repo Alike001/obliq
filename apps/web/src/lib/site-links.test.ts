@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isReadOnlyPreview, siteLinks } from "./site-links";
+import { isPublicPilot, isReadOnlyPreview, siteLinks } from "./site-links";
 
 const all = (links: ReturnType<typeof siteLinks>) => [
   ...links.nav,
@@ -31,6 +31,14 @@ describe("public site links", () => {
       label: "See what is proven",
       href: "/proof",
     });
+  });
+
+  it("sends pilot visitors through isolated guest-session creation", () => {
+    expect(siteLinks(false, true).primary).toEqual({
+      label: "Start fictional pilot",
+      href: "/pilot",
+    });
+    expect(isPublicPilot({ OBLIQ_DEPLOYMENT_MODE: "pilot" })).toBe(true);
   });
 
   it("treats only the preview deployment mode as a preview", () => {

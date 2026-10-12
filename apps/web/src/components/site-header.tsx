@@ -1,12 +1,13 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { isReadOnlyPreview, siteLinks } from "@/lib/site-links";
+import { isPublicPilot, isReadOnlyPreview, siteLinks } from "@/lib/site-links";
 import { Brand } from "./brand";
 
 /** The header wraps on narrow screens; no link is hidden behind a script. */
 export function SiteHeader() {
   const preview = isReadOnlyPreview();
-  const { nav, primary } = siteLinks(preview);
+  const pilot = isPublicPilot();
+  const { nav, primary } = siteLinks(preview, pilot);
   return (
     <header className="site-nav">
       <div className="page-wrap flex flex-wrap items-center justify-between gap-x-7 gap-y-0 py-3">
@@ -15,6 +16,7 @@ export function SiteHeader() {
           {preview && (
             <span className="cap cap-hatched">Read-only preview</span>
           )}
+          {pilot && <span className="cap cap-hatched">Fictional pilot</span>}
         </div>
         {/* Below 640px the links take their own row under the button. */}
         <nav
