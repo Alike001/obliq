@@ -334,6 +334,8 @@ export default async function ObligationDetail({
                   (tenant.role === "APPROVER" && req.role === "FINANCE");
                 const creatorRestricted =
                   req.prohibitCreator && tenant.userId === o.createdBy;
+                const obligationAcceptsApproval =
+                  o.state === "APPROVAL_REQUIRED";
                 const action = approvalDecisionAction.bind(null, req.id, id);
                 return (
                   <div key={req.id} className="p-5">
@@ -354,6 +356,7 @@ export default async function ObligationDetail({
                         )}
                       </div>
                       {req.state === "PENDING" &&
+                        obligationAcceptsApproval &&
                         canAct &&
                         !creatorRestricted && (
                           <form
@@ -385,11 +388,15 @@ export default async function ObligationDetail({
                           </form>
                         )}
                       {req.state === "PENDING" &&
-                        (!canAct || creatorRestricted) && (
+                        (!obligationAcceptsApproval ||
+                          !canAct ||
+                          creatorRestricted) && (
                           <span className="text-muted text-xs">
-                            {creatorRestricted
-                              ? "You requested this, so you cannot decide it"
-                              : `Your role cannot decide this; it needs ${stateLabel(req.role)}`}
+                            {!obligationAcceptsApproval
+                              ? "Resolve blocking controls before this approval can be decided"
+                              : creatorRestricted
+                                ? "You requested this, so you cannot decide it"
+                                : `Your role cannot decide this; it needs ${stateLabel(req.role)}`}
                           </span>
                         )}
                     </div>
