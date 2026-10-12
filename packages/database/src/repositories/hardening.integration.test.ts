@@ -1,7 +1,7 @@
 import { operationalFingerprint } from "@obliq/security";
-import { eq, inArray } from "drizzle-orm";
+import { inArray } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createDatabase, schema } from "../index";
 import {
   RateLimitExceededError,
@@ -53,7 +53,12 @@ suite("production identity and abuse-control repositories", () => {
   afterAll(async () => {
     await connection.db
       .delete(schema.rateLimitBuckets)
-      .where(eq(schema.rateLimitBuckets.scope, "test:hardening"));
+      .where(
+        inArray(schema.rateLimitBuckets.scope, [
+          "test:hardening",
+          "test:hardening:window",
+        ]),
+      );
     await connection.db
       .delete(schema.authSessions)
       .where(inArray(schema.authSessions.userId, [userA, userB]));
@@ -161,6 +166,32 @@ suite("production identity and abuse-control repositories", () => {
     expect(rejected).toBeDefined();
     if (rejected?.status === "rejected")
       expect(rejected.reason).toBeInstanceOf(RateLimitExceededError);
+  });
+
+  it("starts a fresh fixed window at the configured boundary", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const input = {
+        scope: "test:hardening:window",
+        subject: randomUUID(),
+        limit: 1,
+        windowSeconds: 60,
+        pepper,
+      };
+      vi.setSystemTime(new Date("2026-10-12T10:00:10.000Z"));
+      await expect(
+        enforceDatabaseRateLimit(connection.db, input),
+      ).resolves.toMatchObject({ remaining: 0 });
+      await expect(
+        enforceDatabaseRateLimit(connection.db, input),
+      ).rejects.toBeInstanceOf(RateLimitExceededError);
+      vi.setSystemTime(new Date("2026-10-12T10:01:00.000Z"));
+      await expect(
+        enforceDatabaseRateLimit(connection.db, input),
+      ).resolves.toMatchObject({ remaining: 0 });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 
