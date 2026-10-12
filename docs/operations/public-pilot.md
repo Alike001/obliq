@@ -42,7 +42,8 @@ render.pilot.yaml describes a **separate** web service and database. It does
 not modify render.yaml or the existing preview.
 
 1. Review the Blueprint and select a region for both resources.
-2. Set OBLIQ_APP_BASE_URL to the pilot's final HTTPS origin.
+2. Confirm the Blueprint resolves `OBLIQ_APP_BASE_URL` from the
+   `obliq-public-pilot` service's Render-provided `RENDER_EXTERNAL_URL`.
 3. Let Render generate OBLIQ_SESSION_PEPPER; never copy it into Git.
 4. Keep automatic deploys off.
 5. Review the migration from an empty database, then manually deploy.
