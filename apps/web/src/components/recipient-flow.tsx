@@ -13,6 +13,7 @@ import {
   challengeOutcome,
   destinationOutcome,
   groupReceiver,
+  hasUnresolvedAttempt,
   isCompleteCode,
   maxCodeAttempts,
   minutesRemaining,
@@ -38,7 +39,7 @@ type Phase =
   | "review"
   | "confirmed"
   | "closed";
-type Closed = "LINK" | "SESSION" | "CONFLICT";
+type Closed = "LINK" | "SESSION" | "CONFLICT" | "UNRESOLVED";
 type Busy = "code" | "verify" | "summary" | "submit" | null;
 type Message = {
   tone: "done" | "hold" | "stop" | "info";
@@ -94,6 +95,11 @@ export function RecipientFlow() {
   // The token lives in memory only: never in storage, markup or the URL.
   const token = useRef<string | null>(null);
   const idempotencyKey = useRef<string | null>(null);
+  // The exact address bound to the key once a request has been sent. A retry
+  // sends this and nothing else, whatever the form shows.
+  const lockedReceiver = useRef<string | null>(null);
+  // True while a sent address has no authoritative answer.
+  const unresolved = useRef(false);
   const started = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
 
@@ -112,6 +118,7 @@ export function RecipientFlow() {
   const [receiverError, setReceiverError] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
   const [uncertain, setUncertain] = useState(false);
+  const [earlierUnresolved, setEarlierUnresolved] = useState(false);
   const [confirmation, setConfirmation] =
     useState<RecipientConfirmation | null>(null);
 
@@ -122,7 +129,11 @@ export function RecipientFlow() {
 
   const close = useCallback(
     (reason: Closed) => {
-      setClosed(reason);
+      // A closed link or session says nothing about a request that was sent
+      // earlier and never answered, so that case gets its own screen.
+      setClosed(
+        unresolved.current && reason !== "CONFLICT" ? "UNRESOLVED" : reason,
+      );
       go("closed");
     },
     [go],
@@ -148,6 +159,9 @@ export function RecipientFlow() {
         stored?.state ?? "UNSENT",
       );
       const recovering = Boolean(stored?.receiver);
+      lockedReceiver.current = stored?.receiver ?? null;
+      unresolved.current = stored?.state === "PENDING";
+      setEarlierUnresolved(unresolved.current);
       setSeenBefore(recovering);
       setReceiver(stored?.receiver ?? "");
       setUncertain(recovering);
@@ -193,6 +207,13 @@ export function RecipientFlow() {
     started.current = true;
     token.current = readInvitationToken(window.location.hash);
     setTokenAvailable(token.current !== null);
+    try {
+      setEarlierUnresolved(
+        hasUnresolvedAttempt(window.sessionStorage.getItem(attemptStorageKey)),
+      );
+    } catch {
+      // Without storage there is no earlier attempt to know about.
+    }
     // Drop the fragment, and any query string, from the address bar and from
     // this history entry so the token cannot be copied, bookmarked or synced.
     if (window.location.hash || window.location.search)
@@ -238,8 +259,8 @@ export function RecipientFlow() {
     if (outcome === "UNREACHABLE")
       return setMessage({
         tone: "stop",
-        title: "The request did not go through",
-        body: "Obliq could not be reached, so no code was requested. Check your connection and try again.",
+        title: "We could not tell whether a code was sent",
+        body: "Obliq did not answer. A code may or may not be on its way. Check your email first; if nothing arrives in a minute, try again. A new code replaces any earlier one.",
       });
     setCode("");
     setAttempts(0);
@@ -314,7 +335,8 @@ export function RecipientFlow() {
   }
 
   function reviewAddress() {
-    if (!summary) return;
+    // Once an address has been sent, a different one cannot be reviewed.
+    if (!summary || lockedReceiver.current) return;
     const problem = receiverProblem(receiver, summary.network);
     if (problem) {
       setReceiverError(receiverProblemMessage(problem, summary.network));
@@ -328,7 +350,8 @@ export function RecipientFlow() {
 
   async function submitAddress() {
     if (!summary || !idempotencyKey.current || busy || !checked) return;
-    const submittedReceiver = receiver.trim();
+    const submittedReceiver = lockedReceiver.current ?? receiver.trim();
+    lockedReceiver.current = submittedReceiver;
     // Persist the exact receiver/key pair before the network request. A reload
     // or lost response can therefore retry only this operation, never bind the
     // same key to a different destination.
@@ -351,6 +374,8 @@ export function RecipientFlow() {
     );
     setBusy(null);
     if (outcome.kind === "CONFIRMED") {
+      unresolved.current = false;
+      setEarlierUnresolved(false);
       token.current = null;
       setTokenAvailable(false);
       remember(
@@ -367,6 +392,9 @@ export function RecipientFlow() {
       // before the database operation. It is therefore safe to start a new
       // attempt with a new key and let the recipient edit the address.
       idempotencyKey.current = window.crypto.randomUUID();
+      lockedReceiver.current = null;
+      unresolved.current = false;
+      setEarlierUnresolved(false);
       remember(summary.invitationId, idempotencyKey.current, null, "UNSENT");
       setUncertain(false);
       setSeenBefore(false);
@@ -383,11 +411,13 @@ export function RecipientFlow() {
           ? "SESSION"
           : "LINK",
       );
+    unresolved.current = true;
+    setEarlierUnresolved(true);
     setUncertain(true);
     setMessage({
       tone: "hold",
       title: "We do not know whether your address was recorded",
-      body: "Obliq did not return an authoritative result. The exact address and retry key are locked together in this browser tab. Retry this same address; do not submit another destination while the outcome is unresolved.",
+      body: "Obliq did not return an authoritative result. The exact address and retry key are locked together in this browser tab. Keep this tab open and retry this same address; another destination cannot be submitted while the outcome is unresolved.",
     });
   }
 
@@ -435,6 +465,7 @@ export function RecipientFlow() {
         {phase === "missing" && (
           <>
             <Heading ref={heading}>Open the link from your email</Heading>
+            {earlierUnresolved && <UnresolvedNotice reopen />}
             <p className="text-muted mt-3">
               This page works only when it is opened from the invitation link in
               the email you received. The access is carried by the link itself,
@@ -555,10 +586,11 @@ export function RecipientFlow() {
           <>
             <Heading ref={heading}>We could not load your details</Heading>
             <p className="text-muted mt-3">
-              Obliq did not answer, so nothing is shown and nothing was changed.
-              Your verification, if you completed it, is still valid until its
-              30 minutes run out.
+              Obliq did not answer, so nothing is shown. Loading this page does
+              not record or change anything. Your verification, if you completed
+              it, is still valid until its 30 minutes run out.
             </p>
+            {earlierUnresolved && <UnresolvedNotice />}
             <button
               type="button"
               className="button button-dark mt-6"
@@ -860,8 +892,8 @@ export function RecipientFlow() {
                   your privacy we do not say which applies.
                 </p>
                 <p className="text-muted mt-3">
-                  Nothing was changed. Ask the person who is paying you to send
-                  a new link.
+                  This attempt recorded nothing. Ask the person who is paying
+                  you to send a new link.
                 </p>
               </>
             )}
@@ -870,7 +902,7 @@ export function RecipientFlow() {
                 <Heading ref={heading}>Your verified session has ended</Heading>
                 <p className="text-muted mt-3">
                   For your security a verified session lasts 30 minutes. No
-                  address was submitted.
+                  address was sent from this page.
                 </p>
                 <p className="text-muted mt-3">
                   If the original 24-hour invitation is still open, you can
@@ -893,6 +925,7 @@ export function RecipientFlow() {
                     payer to send a new one.
                   </p>
                 )}
+                {message && <FlowNotice message={message} />}
               </>
             )}
             {closed === "CONFLICT" && (
@@ -902,12 +935,55 @@ export function RecipientFlow() {
                 </Heading>
                 <p className="text-muted mt-3">
                   It is different from the one you just entered. The first
-                  address stands and nothing was changed.
+                  address stands, and this attempt did not replace it.
                 </p>
                 <p className="text-muted mt-3">
                   If the first address was wrong, tell the person who is paying
                   you and ask for a new link.
                 </p>
+              </>
+            )}
+            {closed === "UNRESOLVED" && (
+              <>
+                <Heading ref={heading}>
+                  We could not confirm whether your address was recorded
+                </Heading>
+                <p className="text-muted mt-3">
+                  An address was sent from this browser and Obliq never returned
+                  a result. This link or its verified session has now closed, so
+                  this page can no longer find out. The address may have been
+                  recorded, or it may not.
+                </p>
+                <p className="text-muted mt-3">
+                  Tell the person who is paying you. They can see whether an
+                  address arrived, and can send a new link if it did not. Do not
+                  treat the address as submitted until they confirm it.
+                </p>
+                {tokenAvailable ? (
+                  <>
+                    <p className="text-muted mt-3">
+                      If the original invitation is still open, you can repeat
+                      the email check. This browser will then retry the same
+                      address with the same request, never a different one.
+                    </p>
+                    <button
+                      type="button"
+                      className="button button-dark mt-6"
+                      onClick={() => void requestCode(true)}
+                      disabled={busy !== null}
+                      aria-busy={busy === "code" || undefined}
+                    >
+                      {busy === "code" ? "Requesting…" : "Email me a new code"}
+                    </button>
+                    {message && <FlowNotice message={message} />}
+                  </>
+                ) : (
+                  <p className="text-muted mt-3">
+                    To try again yourself, paste the original link from your
+                    email into this same tab. This tab still holds the exact
+                    address and will retry only that one.
+                  </p>
+                )}
               </>
             )}
           </>
@@ -939,6 +1015,23 @@ function FlowNotice({ message }: { message: Message }) {
   return (
     <Notice tone={message.tone} title={message.title} live className="mt-5">
       {message.body}
+    </Notice>
+  );
+}
+
+/** Says that an earlier request from this tab was never answered. */
+function UnresolvedNotice({ reopen = false }: { reopen?: boolean }) {
+  return (
+    <Notice
+      tone="hold"
+      title="An earlier submission from this tab is unresolved"
+      className="mt-5"
+    >
+      An address was sent from this tab and Obliq never returned a result, so we
+      do not know whether it was recorded.{" "}
+      {reopen
+        ? "Paste the link from your email into this same tab to retry that exact address, or ask the person who is paying you whether it arrived."
+        : "Keep this tab open and try again. Only that exact address will be retried."}
     </Notice>
   );
 }

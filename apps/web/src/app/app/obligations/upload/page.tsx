@@ -3,6 +3,8 @@ import { BackLink } from "@/components/record";
 import { SubmitButton } from "@/components/submit-button";
 import { uploadInvoiceAction } from "../../actions";
 
+export const metadata = { title: "Upload an invoice" };
+
 export default function UploadInvoicePage() {
   return (
     <main className="p-4 md:p-8">

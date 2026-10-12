@@ -28,7 +28,7 @@ export function DocsShell({ children }: { children: React.ReactNode }) {
               Proof
             </Link>
             <span className="bg-carbon hidden rounded-full px-3 py-1.5 text-xs font-semibold text-white sm:inline">
-              Docs · Phase 5
+              Docs
             </span>
           </div>
         </div>

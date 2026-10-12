@@ -9,6 +9,16 @@ export function generateStaticParams() {
     .map(([, href]) => ({ section: href.split("/").at(-1) }));
 }
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ section: string }>;
+}) {
+  const { section } = await params;
+  const entry = appSections.find(([, href]) => href === `/app/${section}`);
+  return entry ? { title: entry[0] } : {};
+}
+
 export default async function FoundationSection({
   params,
 }: {
@@ -29,9 +39,9 @@ export default async function FoundationSection({
         </div>
         <h1 className="mt-5 text-3xl font-medium tracking-[-.04em]">{label}</h1>
         <p className="text-muted mt-4 text-sm leading-6">
-          This product area is represented in the product navigation and
-          architecture, but its operational workflow has not been implemented.
-          No actions on this surface can move or claim to move funds.
+          {label} is planned and not built yet. It is listed so you can see
+          where it will live. Nothing on this page can record, move or claim to
+          move funds.
         </p>
         <a
           href="/docs/implementation-status"

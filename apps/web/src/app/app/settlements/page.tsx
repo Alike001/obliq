@@ -7,6 +7,8 @@ import { StateTag } from "@/components/state-tag";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 
+export const metadata = { title: "Settlements" };
+
 export const dynamic = "force-dynamic";
 
 export default async function SettlementsPage({

@@ -8,6 +8,8 @@ import { StatusPill } from "@/components/status-pill";
 import { getDatabase } from "@/lib/db";
 import { getTenantContext } from "@/lib/session";
 import { createReviewedObligationAction } from "../../../actions";
+
+export const metadata = { title: "Review an invoice" };
 export const dynamic = "force-dynamic";
 
 export default async function ReviewPage({

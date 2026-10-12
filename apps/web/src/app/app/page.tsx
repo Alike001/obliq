@@ -15,6 +15,8 @@ import { attentionQueue } from "@/lib/attention";
 import { getDatabase } from "@/lib/db";
 import { firstRunSteps } from "@/lib/first-run";
 import { getTenantContext } from "@/lib/session";
+
+export const metadata = { title: "Overview" };
 export const dynamic = "force-dynamic";
 
 // `listObligations` returns at most this many, earliest due date first. The
@@ -45,12 +47,12 @@ export default async function AppOverviewPage() {
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
           <div>
-            <p className="eyebrow">Operations overview</p>
+            <p className="eyebrow">Overview</p>
             <h1 className="mt-3 text-3xl font-medium tracking-tight">
-              Obligation operations
+              What you owe, and what needs you
             </h1>
             <p className="text-muted mt-2 text-sm">
-              Live metrics from this organization&apos;s persisted records.
+              Counts and lists come from your organization&apos;s own records.
             </p>
           </div>
           <Link href="/app/obligations/new" className="button button-dark">
@@ -98,18 +100,18 @@ export default async function AppOverviewPage() {
             <div className="hairline flex flex-wrap items-baseline justify-between gap-2 border-b p-5">
               <div>
                 <h2 id="attention-h" className="font-semibold">
-                  Needs attention, from loaded records
+                  Needs attention
                 </h2>
                 <p className="text-muted mt-1 max-w-[68ch] text-xs leading-5">
-                  Built from the {recent.length}{" "}
-                  {recent.length === 1 ? "obligation" : "obligations"} this page
-                  loaded (up to {LOADED_LIMIT}, earliest due date first). It is
-                  not a list of every outstanding obligation. The counts above
-                  cover the whole organization.
+                  The most urgent of the {recent.length}{" "}
+                  {recent.length === 1 ? "bill" : "bills"} shown on this page.
+                  This page shows up to {LOADED_LIMIT}, earliest due date first,
+                  so it is not a list of every open bill. The counts above cover
+                  the whole organization.
                 </p>
               </div>
               <p className="text-muted text-xs">
-                {queue.length} of {recent.length} loaded
+                {queue.length} of {recent.length} shown
               </p>
             </div>
             {recent.length >= LOADED_LIMIT && (
@@ -163,7 +165,7 @@ export default async function AppOverviewPage() {
             <div className="hairline flex justify-between border-b p-5">
               <div>
                 <h2 className="font-semibold">Recent obligations</h2>
-                <p className="text-muted mt-1 text-xs">Persisted—not seeded</p>
+                <p className="text-muted mt-1 text-xs">Earliest due first</p>
               </div>
               <Link href="/app/obligations" className="text-link min-h-0!">
                 View all
@@ -206,20 +208,23 @@ export default async function AppOverviewPage() {
             )}
           </section>
           <section className="card p-5">
-            <h2 className="font-semibold">System readiness</h2>
+            <h2 className="font-semibold">What this workspace can do</h2>
             <div className="mt-5 space-y-4">
-              <Ready label="Obligation persistence" status="IMPLEMENTED" />
-              <Ready label="Policy + approvals" status="IMPLEMENTED" />
-              <Ready label="Settlement readiness" status="IMPLEMENTED" />
-              <Ready label="Audit hash chain" status="IMPLEMENTED" />
-              <Ready label="Extraction fixture" status="SEEDED" />
+              <Ready label="Record and track bills" status="IMPLEMENTED" />
+              <Ready label="Policy and approvals" status="IMPLEMENTED" />
+              <Ready label="Settlement readiness check" status="IMPLEMENTED" />
               <Ready
-                label="External settlement · regtest"
+                label="Tamper-evident audit history"
+                status="IMPLEMENTED"
+              />
+              <Ready label="Invoice field extraction" status="SEEDED" />
+              <Ready
+                label="Shielded settlement, regtest only"
                 status="IMPLEMENTED"
               />
             </div>
             <a href="/proof" className="text-link mt-4">
-              Open proof surface
+              See what is proven
             </a>
           </section>
         </div>
