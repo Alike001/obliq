@@ -106,7 +106,31 @@ See the [judge-facing technical summary](docs/submission/TECHNICAL_SUMMARY.md), 
 | Production email delivery and infrastructure                               | **UNAVAILABLE**           | Adapter exists; provider credentials and delivery validation do not                                             |
 | Native PDF receipts, live pricing, production AI, external audit anchoring | **PLANNED**               | Preserved roadmap; not represented as current behavior                                                          |
 
-The public Render deployment is a read-only preview. It intentionally denies `/app`, `/auth`, `/verify`, recipient workflows, and all mutations; it is not the full product runtime.
+## Public deployments
+
+### Persistent public pilot
+
+- **Start a fictional workspace:** [obliq-public-pilot.onrender.com/pilot](https://obliq-public-pilot.onrender.com/pilot)
+- **Runtime readiness:** [obliq-public-pilot.onrender.com/health/ready](https://obliq-public-pilot.onrender.com/health/ready)
+- **Give feedback:** [obliq-public-pilot.onrender.com/feedback](https://obliq-public-pilot.onrender.com/feedback)
+
+The pilot is a real, isolated PostgreSQL-backed product trial for **fictional data only**. A guest can create and persist vendors and obligations, exercise deterministic duplicate detection and control evaluation, inspect structured findings, and review the resulting activity and audit history. It does not manufacture a second approver or a successful payment.
+
+Each opaque, server-side guest session receives its own organization and expires after two hours. A workspace is capped at 20 vendors, 50 obligations, and 200 mutations. Workspace creation is protected by PostgreSQL fixed-window limits of five attempts per trusted client per hour and 100 eligible attempts globally per hour. On Render's public edge, only a valid `CF-Connecting-IP` value is accepted as the client signal; forwarded headers supplied by callers are ignored, and missing or malformed trusted input shares a bounded `unknown` bucket.
+
+Pilot mode keeps settlement preparation, destination and approval authority, signing, broadcasting, reconciliation, evidence issuance, invoice storage/scanning, email delivery, the Zcash observer, and every Zcash network disabled. Its runtime status remains `PUBLIC_NETWORK_BLOCKED`.
+
+The separate [read-only Render preview](https://obliq-7xh9.onrender.com) remains database-free and intentionally denies `/app`, `/auth`, `/verify`, recipient workflows, and all mutations. Its browser-only `/demo` does not persist financial records. Neither deployment is the production product runtime.
+
+To run the two-browser pilot acceptance ceremony against the public URL:
+
+```bash
+OBLIQ_PILOT_ACCEPTANCE_URL=https://obliq-public-pilot.onrender.com \
+OBLIQ_PILOT_ACCEPTANCE_ORIGIN=https://obliq-public-pilot.onrender.com \
+npm run accept:pilot
+```
+
+The command creates fictional records and consumes workspace-start capacity. Its presence here is not a claim that a live ceremony, customer onboarding, or feedback submission has passed. Feedback opens only an owner-configured external HTTPS form; Obliq does not store the response, and no response collection is claimed when that form is absent or unverified. Never submit wallet secrets, viewing keys, financial records, or payment credentials.
 
 ## Demo and submission material
 
