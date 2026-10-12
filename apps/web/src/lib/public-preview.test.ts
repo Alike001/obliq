@@ -5,6 +5,7 @@ describe("public preview request boundary", () => {
   it.each([
     "/",
     "/demo",
+    "/feedback",
     "/docs",
     "/docs/privacy-model",
     "/security",
@@ -54,7 +55,7 @@ describe("public preview request boundary", () => {
           serverAction: false,
         }),
       ).toBe(false);
-    for (const pathname of ["/", "/demo"])
+    for (const pathname of ["/", "/demo", "/feedback"])
       expect(
         isPublicPreviewRequestAllowed({
           method: "POST",

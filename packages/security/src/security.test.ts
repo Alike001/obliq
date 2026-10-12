@@ -3,10 +3,29 @@ import {
   operationalFingerprint,
   isAllowedMutationOrigin,
   parseRuntimeSecurityConfig,
+  parsePublicFeedbackUrl,
   redactOperationalValue,
   generateRecipientToken,
   hashRecipientSecret,
 } from "./index";
+
+describe("public feedback URL", () => {
+  it("accepts only an owner-configured HTTPS destination", () => {
+    expect(parsePublicFeedbackUrl(undefined)).toBeNull();
+    expect(parsePublicFeedbackUrl("https://feedback.example/form")).toBe(
+      "https://feedback.example/form",
+    );
+    expect(() =>
+      parsePublicFeedbackUrl("http://feedback.example/form"),
+    ).toThrow("must be an HTTPS URL");
+    expect(() =>
+      parsePublicFeedbackUrl("https://user:pass@example.com/form"),
+    ).toThrow("without credentials or a fragment");
+    expect(() =>
+      parsePublicFeedbackUrl("https://example.com/form#secret"),
+    ).toThrow("without credentials or a fragment");
+  });
+});
 
 describe("runtime security configuration", () => {
   it("keeps explicit development mode separate", () => {

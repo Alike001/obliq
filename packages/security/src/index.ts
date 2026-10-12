@@ -31,6 +31,17 @@ function httpsUrl(value: string, name: string) {
     throw new Error(`${name} must use HTTPS in production`);
 }
 
+export function parsePublicFeedbackUrl(value: string | undefined) {
+  const configured = value?.trim();
+  if (!configured) return null;
+  const url = new URL(configured);
+  if (url.protocol !== "https:" || url.username || url.password || url.hash)
+    throw new Error(
+      "OBLIQ_PUBLIC_FEEDBACK_URL must be an HTTPS URL without credentials or a fragment",
+    );
+  return url.href;
+}
+
 function network(value: string | undefined, name: string): RuntimeNetwork {
   if (
     value === "disabled" ||
@@ -50,6 +61,7 @@ function rejectPreviewSecret(env: NodeJS.ProcessEnv, name: string) {
 export function parseRuntimeSecurityConfig(
   env: NodeJS.ProcessEnv,
 ): RuntimeSecurityConfig {
+  parsePublicFeedbackUrl(env.OBLIQ_PUBLIC_FEEDBACK_URL);
   if (env.OBSERVER_UFVK?.trim())
     throw new Error(
       "OBSERVER_UFVK is forbidden; initialize the isolated observer through its private input",

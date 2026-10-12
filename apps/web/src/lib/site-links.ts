@@ -18,6 +18,7 @@ export interface SiteLinks {
 }
 
 const nav = [
+  { label: "Give feedback", href: "/feedback" },
   { label: "Documentation", href: "/docs" },
   { label: "Security", href: "/security" },
   { label: "What is proven", href: "/proof" },
