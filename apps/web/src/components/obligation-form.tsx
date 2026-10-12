@@ -73,6 +73,8 @@ export function ObligationForm({
             aria-label="Amount"
             required
             inputMode="decimal"
+            pattern="(?:0|[1-9][0-9]*)(?:[.][0-9]{1,2})?"
+            title="Enter a non-negative amount with no more than two decimal places"
             placeholder="0.00"
             defaultValue={defaults.amount}
           />
