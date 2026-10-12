@@ -22,6 +22,17 @@ describe("public site links", () => {
     }
   });
 
+  it("makes the browser-only demo the preview's primary action", () => {
+    expect(siteLinks(true).primary).toEqual({
+      label: "Try interactive demo",
+      href: "/demo",
+    });
+    expect(siteLinks(true).secondary).toEqual({
+      label: "See what is proven",
+      href: "/proof",
+    });
+  });
+
   it("treats only the preview deployment mode as a preview", () => {
     expect(isReadOnlyPreview({ OBLIQ_DEPLOYMENT_MODE: "preview" })).toBe(true);
     for (const mode of ["development", "test", "production", undefined])

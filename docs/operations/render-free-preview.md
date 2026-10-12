@@ -15,16 +15,21 @@ fail before Next.js starts.
 The request proxy allows only `GET` and `HEAD` requests for:
 
 - `/`, `/docs` and `/docs/*`;
+- `/demo`, a browser-memory-only fictional policy sandbox;
 - `/security` and `/proof`;
 - `/health/live` and `/health/ready`;
 - the application icon and Next.js build assets.
 
-It rejects server actions, mutations, `/app/*`, `/auth/*`, and `/verify/*`.
+It rejects server actions, mutations (including every non-GET/HEAD request to
+`/demo`), `/app/*`, `/auth/*`, and `/verify/*`.
 Server actions and database-backed verification also enforce the preview block
 inside their server boundaries. Public evidence packages cannot be verified
 without canonical PostgreSQL records and shared rate limiting, so the preview
 does not pretend to support them. `/proof` shows only safe embedded regtest
-evidence and actual disabled runtime states.
+evidence and actual disabled runtime states. `/demo` imports browser-safe exact
+money and deterministic policy/readiness functions, but performs no fetch,
+database call, identity operation, storage access, signing, observation, or
+evidence issuance. Its state disappears on reload.
 
 ## Render configuration
 
@@ -79,10 +84,15 @@ is required.
 2. Require `/health/ready` to return HTTP 200 with `deploymentMode: preview`,
    `database: disabled`, `authMode: disabled`, `network: disabled`, and
    `PUBLIC_NETWORK_BLOCKED`.
-3. Check `/`, `/docs/overview`, `/security`, and `/proof` return HTTP 200.
-4. Check `/app`, `/auth/login`, `/verify/test`, and a `POST /` return HTTP 404.
+3. Check `/`, `/demo`, `/docs/overview`, `/security`, and `/proof` return HTTP
+   200 for `GET` and `HEAD`.
+4. Check `/app`, `/auth/login`, `/verify/test`, and `POST`, `PUT`, and `OPTIONS`
+   requests to `/demo` return HTTP 404 with `Cache-Control: no-store`.
 5. Confirm `/proof` shows `PREVIEW`, disabled runtime dependencies, no database,
    regtest-only historical evidence, and blocked public-network status.
+6. In `/demo`, change the amount and control inputs, confirm the structured
+   findings and approval requirements change, reset the sandbox, and verify the
+   historical regtest section remains unchanged.
 
 ## Rollback
 

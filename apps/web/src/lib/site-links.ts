@@ -34,8 +34,8 @@ export function siteLinks(readOnlyPreview: boolean): SiteLinks {
   if (readOnlyPreview)
     return {
       nav,
-      primary: { label: "See what is proven", href: "/proof" },
-      secondary: { label: "Read the documentation", href: "/docs" },
+      primary: { label: "Try interactive demo", href: "/demo" },
+      secondary: { label: "See what is proven", href: "/proof" },
     };
   return {
     nav,

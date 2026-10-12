@@ -4,6 +4,7 @@ import { isPublicPreviewRequestAllowed } from "./public-preview";
 describe("public preview request boundary", () => {
   it.each([
     "/",
+    "/demo",
     "/docs",
     "/docs/privacy-model",
     "/security",
@@ -45,19 +46,52 @@ describe("public preview request boundary", () => {
   });
 
   it("blocks mutations and server actions even on an allowed path", () => {
+    for (const method of ["POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+      expect(
+        isPublicPreviewRequestAllowed({
+          method,
+          pathname: "/demo",
+          serverAction: false,
+        }),
+      ).toBe(false);
+    for (const pathname of ["/", "/demo"])
+      expect(
+        isPublicPreviewRequestAllowed({
+          method: "POST",
+          pathname,
+          serverAction: true,
+        }),
+      ).toBe(false);
+  });
+
+  it("allows HEAD but rejects server actions and demo lookalikes", () => {
     expect(
       isPublicPreviewRequestAllowed({
-        method: "POST",
-        pathname: "/",
+        method: "HEAD",
+        pathname: "/demo",
         serverAction: false,
       }),
-    ).toBe(false);
+    ).toBe(true);
     expect(
       isPublicPreviewRequestAllowed({
-        method: "POST",
-        pathname: "/",
+        method: "GET",
+        pathname: "/demo",
         serverAction: true,
       }),
     ).toBe(false);
+    for (const pathname of [
+      "/demo/",
+      "/demo/action",
+      "/Demo",
+      "/demo%2Faction",
+      "//demo",
+    ])
+      expect(
+        isPublicPreviewRequestAllowed({
+          method: "GET",
+          pathname,
+          serverAction: false,
+        }),
+      ).toBe(false);
   });
 });
