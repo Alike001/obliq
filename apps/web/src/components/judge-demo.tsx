@@ -9,11 +9,13 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
+  demoScenarios,
   evaluateDemoPolicy,
   initialDemoApprovalCounts,
   initialDemoInputs,
   type DemoApprovalCounts,
   type DemoInputs,
+  type DemoScenarioId,
 } from "@/lib/demo-policy";
 import { Field, Input, Select } from "./finance-form";
 
@@ -24,11 +26,11 @@ const outcomeTone = {
 } as const;
 
 const lifecycle = [
-  ["CAPTURE", "Sample invoice loaded"],
-  ["CONTROL", "Policy and approvals"],
-  ["SETTLE", "External signer required"],
-  ["RECONCILE", "Read-only observer required"],
-  ["PROVE", "Settled record required"],
+  ["CAPTURE", "Fictional invoice loaded"],
+  ["CONTROL", "Calculated here"],
+  ["SETTLE", "External authority"],
+  ["RECONCILE", "Read-only observer"],
+  ["PROVE", "Settled record"],
 ] as const;
 
 function Toggle({
@@ -64,12 +66,15 @@ function Toggle({
 }
 
 export function JudgeDemo() {
+  const [activeScenario, setActiveScenario] = useState<DemoScenarioId | null>(
+    "NEW_VENDOR",
+  );
   const [inputs, setInputs] = useState<DemoInputs>(initialDemoInputs);
   const [approvals, setApprovals] = useState<DemoApprovalCounts>(
     initialDemoApprovalCounts,
   );
   const [changeNotice, setChangeNotice] = useState(
-    "No sandbox changes have been made yet.",
+    "Start by resolving the highlighted control.",
   );
 
   const evaluation = useMemo(() => {
@@ -88,39 +93,114 @@ export function JudgeDemo() {
 
   function changeInputs(
     patch: Partial<DemoInputs>,
-    reason = "A material input changed. Illustrative approvals were reset.",
+    reason = "A material input changed. Browser-only approval counters were reset.",
   ) {
     setInputs((current) => {
       const next = { ...current, ...patch };
       if (patch.recipientConfirmed === false) next.destinationReviewed = false;
       return next;
     });
+    setActiveScenario(null);
     setApprovals(initialDemoApprovalCounts);
     setChangeNotice(reason);
   }
 
-  function reset() {
-    setInputs(initialDemoInputs);
+  function selectScenario(id: DemoScenarioId) {
+    const scenario = demoScenarios.find((item) => item.id === id);
+    if (!scenario) return;
+    setActiveScenario(id);
+    setInputs({ ...scenario.inputs });
     setApprovals(initialDemoApprovalCounts);
-    setChangeNotice("Sandbox reset to its fictional starting record.");
+    setChangeNotice(
+      `${scenario.label} loaded. No approval, record, or payment was created.`,
+    );
+  }
+
+  function reset() {
+    selectScenario("NEW_VENDOR");
+    setChangeNotice("Sandbox reset to the fictional new-vendor scenario.");
   }
 
   const result = evaluation.result;
   const ready = result?.readiness.ready ?? false;
+  const blockers = result?.decision.findings.filter(
+    (finding) => finding.outcome === "BLOCK",
+  );
+  const nextAction = evaluation.error
+    ? "Enter a valid non-negative USD amount with no more than two decimals."
+    : !inputs.fieldsComplete
+      ? "Complete the required financial fields."
+      : inputs.duplicateStatus !== "CLEAR"
+        ? "Resolve the duplicate finding before authorization."
+        : !inputs.recipientConfirmed
+          ? "Obtain recipient contact confirmation of a destination."
+          : !inputs.destinationReviewed
+            ? "Have a different finance operator review the destination."
+            : ready
+              ? "Stop here. A persisted product would prepare a settlement intent next."
+              : "Satisfy the policy-derived human approval requirements below.";
 
   return (
-    <div className="space-y-10">
-      <section
-        className="grid gap-6 lg:grid-cols-[minmax(0,.82fr)_minmax(0,1.18fr)]"
-        aria-labelledby="demo-record-heading"
-      >
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-14">
+      <section aria-labelledby="demo-record-heading">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,.85fr)]">
+          <div className="sheet p-5 md:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="eyebrow">Step 1 · Review the payable</p>
+                <h2 id="demo-record-heading" className="t-title mt-3 text-3xl!">
+                  Northstar Studio
+                </h2>
+                <p className="text-muted mt-2 text-sm">
+                  INV-1048 · October design services · due October 28
+                </p>
+              </div>
+              <p className="font-mono text-2xl font-semibold tabular-nums">
+                {evaluation.result?.formattedAmount ?? "Amount needs review"}
+              </p>
+            </div>
+            <div className="border-line mt-6 grid gap-4 border-t pt-5 sm:grid-cols-3">
+              <div>
+                <p className="fact-label">Customer</p>
+                <p className="mt-1 text-sm font-semibold">
+                  Aster Works finance
+                </p>
+              </div>
+              <div>
+                <p className="fact-label">Business problem</p>
+                <p className="mt-1 text-sm font-semibold">
+                  Pay without publishing the vendor
+                </p>
+              </div>
+              <div>
+                <p className="fact-label">Your task</p>
+                <p className="mt-1 text-sm font-semibold">
+                  Clear controls, then inspect readiness
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <aside className="notice notice-hold items-start!" aria-live="polite">
+            <span className="glyph glyph-attn" aria-hidden />
             <div>
-              <p className="eyebrow">Fictional payable</p>
-              <h2 id="demo-record-heading" className="t-section mt-3 text-2xl!">
-                Northstar Studio · INV-1048
-              </h2>
+              <strong>Next human action</strong>
+              <p>{nextAction}</p>
+              <p className="mt-3 text-xs">
+                The sandbox calculates policy locally. It never records who
+                acted or grants real financial authorization.
+              </p>
+            </div>
+          </aside>
+        </div>
+
+        <div className="mt-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <p className="fact-label">Choose a grounded scenario</p>
+              <p className="text-muted mt-1 text-sm">
+                Presets change inputs only. Outcomes are never prewritten.
+              </p>
             </div>
             <button
               className="button button-light"
@@ -130,37 +210,187 @@ export function JudgeDemo() {
               <RotateCcw size={15} aria-hidden /> Reset
             </button>
           </div>
-          <dl className="sheet divide-line mt-5 divide-y text-sm">
-            <div className="flex justify-between gap-5 p-4">
-              <dt className="text-muted">Organization</dt>
-              <dd className="font-medium">Aster Works (fictional)</dd>
-            </div>
-            <div className="flex justify-between gap-5 p-4">
-              <dt className="text-muted">Purpose</dt>
-              <dd className="text-right font-medium">
-                October design services
-              </dd>
-            </div>
-            <div className="flex justify-between gap-5 p-4">
-              <dt className="text-muted">Due</dt>
-              <dd className="font-medium">October 28, 2026</dd>
-            </div>
-            <div className="flex justify-between gap-5 p-4">
-              <dt className="text-muted">Source</dt>
-              <dd className="font-medium">Demo invoice fixture</dd>
-            </div>
-          </dl>
-          <p className="text-muted mt-3 text-xs leading-5">
-            This record exists only in this browser tab. It is not stored,
-            emailed, approved, or submitted to an Obliq service.
+          <div
+            className="mt-4 grid gap-3 md:grid-cols-3"
+            role="group"
+            aria-label="Payable scenario"
+          >
+            {demoScenarios.map((scenario, index) => {
+              const active = activeScenario === scenario.id;
+              return (
+                <button
+                  key={scenario.id}
+                  type="button"
+                  aria-pressed={active}
+                  className={`card min-h-32 p-4 text-left transition ${active ? "border-gold-deep! bg-gold-pale!" : "hover:border-gold-deep"}`}
+                  onClick={() => selectScenario(scenario.id)}
+                >
+                  <span className="font-mono text-xs font-semibold">
+                    0{index + 1}
+                  </span>
+                  <span className="mt-4 block font-semibold">
+                    {scenario.label}
+                  </span>
+                  <span className="text-muted mt-2 block text-xs leading-5">
+                    {scenario.summary}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="control-results-heading">
+        <div className="section-intro mb-5!">
+          <div>
+            <p className="eyebrow">Step 2 · Apply controls</p>
+            <h2 id="control-results-heading" className="t-title mt-3 text-3xl!">
+              A deterministic decision, not an AI opinion
+            </h2>
+          </div>
+          <p className="t-small">
+            The browser calls the same @obliq/domain and @obliq/policy functions
+            as the persisted product. No API or database is used.
           </p>
         </div>
 
-        <fieldset className="sheet p-5 md:p-6">
-          <legend className="px-2 text-sm font-semibold">
-            Change control inputs
-          </legend>
-          <div className="grid gap-5 sm:grid-cols-2">
+        {result ? (
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,.9fr)]">
+            <div className="sheet overflow-hidden">
+              <div className="sheet-head">
+                <div>
+                  <p className="fact-label">Policy decision</p>
+                  <p className="mt-1 text-lg font-semibold">
+                    {result.decision.result.replaceAll("_", " ")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-sm font-semibold">
+                    {result.formattedAmount}
+                  </p>
+                  <p className="text-muted mt-1 text-xs">
+                    {blockers?.length ?? 0} blocking finding(s)
+                  </p>
+                </div>
+              </div>
+              <ul className="divide-line divide-y">
+                {result.decision.findings.map((finding) => (
+                  <li
+                    key={finding.code}
+                    className="flex items-start gap-3 p-4 md:px-6"
+                  >
+                    <span
+                      className={`mt-0.5 rounded px-2 py-1 text-[0.625rem] font-bold tracking-wider ${outcomeTone[finding.outcome]}`}
+                    >
+                      {finding.outcome.replace("_", " ")}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-semibold">
+                        {finding.message}
+                      </span>
+                      <code className="text-muted mt-1 block text-[0.6875rem] break-all">
+                        {finding.code}
+                      </code>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-4">
+              <div className="sheet p-5 md:p-6">
+                <p className="fact-label">Required human action</p>
+                <h3 className="mt-2 text-lg font-semibold">
+                  Policy-derived thresholds
+                </h3>
+                <p className="text-muted mt-2 text-sm leading-6">
+                  Counters below are an exercise—not people, signatures, or
+                  persisted approvals.
+                </p>
+                {result.requirements.length ? (
+                  <ul className="mt-4 space-y-3">
+                    {result.requirements.map((requirement) => {
+                      const complete =
+                        requirement.approvedCount >= requirement.count;
+                      return (
+                        <li
+                          key={requirement.role}
+                          className="border-line border-t pt-3 first:border-0 first:pt-0"
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="text-sm font-semibold">
+                                {requirement.role}
+                              </p>
+                              <p className="text-muted mt-1 text-xs leading-5">
+                                {requirement.reason}
+                              </p>
+                            </div>
+                            <span className="font-mono text-xs font-semibold">
+                              {requirement.approvedCount}/{requirement.count}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="button button-light mt-3 w-full"
+                            disabled={
+                              complete || result.decision.result === "BLOCKED"
+                            }
+                            onClick={() => {
+                              setApprovals((current) => ({
+                                ...current,
+                                [requirement.role]:
+                                  (current[requirement.role] ?? 0) + 1,
+                              }));
+                              setChangeNotice(
+                                "A browser-only counter changed. No identity or approval was recorded.",
+                              );
+                            }}
+                          >
+                            {complete ? (
+                              <Check size={15} aria-hidden />
+                            ) : (
+                              <UserRoundCheck size={15} aria-hidden />
+                            )}
+                            {complete
+                              ? "Exercise threshold met"
+                              : "Mark one exercise approval"}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="text-muted mt-4 text-sm">
+                    Resolve blocking controls before exercising approvals.
+                  </p>
+                )}
+              </div>
+              <p className="text-muted text-xs leading-5" aria-live="polite">
+                {changeNotice}
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="notice notice-stop" role="alert">
+            <span className="glyph glyph-stop" aria-hidden />
+            <div>
+              <strong>Policy evaluation stopped</strong>
+              <p>{evaluation.error}</p>
+            </div>
+          </div>
+        )}
+
+        <details className="sheet mt-5 p-5">
+          <summary className="cursor-pointer font-semibold">
+            Adjust individual policy inputs
+          </summary>
+          <p className="text-muted mt-2 text-sm">
+            Explore amount tiers, duplicates, completeness, and destination
+            assurance. Every material change resets exercise counters.
+          </p>
+          <div className="mt-5 grid gap-5 sm:grid-cols-2">
             <Field
               label="Invoice amount (USD)"
               hint="Exact decimal parsing; no floating point."
@@ -196,7 +426,7 @@ export function JudgeDemo() {
               checked={inputs.vendorKnown}
               onChange={(vendorKnown) => changeInputs({ vendorKnown })}
               label="Known vendor"
-              description="Turn off to see first-payment Treasury review."
+              description="Turn off to require first-payment Treasury review."
             />
             <Toggle
               checked={inputs.fieldsComplete}
@@ -209,7 +439,7 @@ export function JudgeDemo() {
               onChange={(recipientConfirmed) =>
                 changeInputs(
                   { recipientConfirmed },
-                  "Destination assurance changed. Illustrative approvals were reset.",
+                  "Destination assurance changed. Exercise counters were reset.",
                 )
               }
               label="Recipient contact confirmed a destination"
@@ -221,11 +451,11 @@ export function JudgeDemo() {
               onChange={(destinationReviewed) =>
                 changeInputs(
                   { destinationReviewed },
-                  "Independent destination review changed. Illustrative approvals were reset.",
+                  "Independent destination review changed. Exercise counters were reset.",
                 )
               }
               label="Independent finance review recorded"
-              description="Models a different authorized reviewer; this click is not a real review."
+              description="Models a separate reviewer; this click is not a real review."
             />
           </div>
           <p
@@ -235,219 +465,63 @@ export function JudgeDemo() {
           >
             {evaluation.error ?? "Amount is valid."}
           </p>
-          <p className="text-muted mt-4 text-xs leading-5" aria-live="polite">
-            {changeNotice}
-          </p>
-        </fieldset>
-      </section>
-
-      <section aria-labelledby="control-results-heading">
-        <div className="section-intro mb-5!">
-          <div>
-            <p className="eyebrow">Actual deterministic engine</p>
-            <h2 id="control-results-heading" className="t-title mt-3 text-3xl!">
-              Control decision
-            </h2>
-          </div>
-          <p className="t-small">
-            Calculated in your browser by the same @obliq/policy functions used
-            by the persisted product. The sandbox does not call an API.
-          </p>
-        </div>
-
-        {result ? (
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,.85fr)]">
-            <div className="sheet overflow-hidden">
-              <div className="sheet-head">
-                <div>
-                  <p className="fact-label">Policy decision</p>
-                  <p className="mt-1 text-lg font-semibold">
-                    {result.decision.result.replaceAll("_", " ")}
-                  </p>
-                </div>
-                <p className="font-mono text-sm font-semibold">
-                  {result.formattedAmount}
-                </p>
-              </div>
-              <ul className="divide-line divide-y">
-                {result.decision.findings.map((finding) => (
-                  <li
-                    key={finding.code}
-                    className="flex items-start gap-3 p-4 md:px-6"
-                  >
-                    <span
-                      className={`mt-0.5 rounded px-2 py-1 text-[0.625rem] font-bold tracking-wider ${outcomeTone[finding.outcome]}`}
-                    >
-                      {finding.outcome.replace("_", " ")}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-sm font-semibold">
-                        {finding.message}
-                      </span>
-                      <code className="text-muted mt-1 block text-[0.6875rem] break-all">
-                        {finding.code}
-                      </code>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="sheet p-5 md:p-6">
-              <p className="fact-label">Illustrative approval counters</p>
-              <h3 className="mt-2 text-lg font-semibold">
-                Requirements derived from policy
-              </h3>
-              <p className="text-muted mt-2 text-sm leading-6">
-                These buttons do not identify or authorize a person. They only
-                let you test how current requirements affect readiness.
-              </p>
-              {result.requirements.length ? (
-                <ul className="mt-5 space-y-4">
-                  {result.requirements.map((requirement) => {
-                    const complete =
-                      requirement.approvedCount >= requirement.count;
-                    return (
-                      <li key={requirement.role} className="card p-4">
-                        <div className="flex items-start justify-between gap-4">
-                          <div>
-                            <p className="font-semibold">{requirement.role}</p>
-                            <p className="text-muted mt-1 text-xs leading-5">
-                              {requirement.reason}
-                              {requirement.prohibitCreator
-                                ? " · creator cannot satisfy this requirement"
-                                : ""}
-                            </p>
-                          </div>
-                          <span className="font-mono text-xs font-semibold">
-                            {requirement.approvedCount}/{requirement.count}
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          className="button button-light mt-3 w-full"
-                          disabled={
-                            complete || result.decision.result === "BLOCKED"
-                          }
-                          onClick={() => {
-                            setApprovals((current) => ({
-                              ...current,
-                              [requirement.role]:
-                                (current[requirement.role] ?? 0) + 1,
-                            }));
-                            setChangeNotice(
-                              "An illustrative approval counter changed. No identity or approval was recorded.",
-                            );
-                          }}
-                        >
-                          {complete ? (
-                            <Check size={15} aria-hidden />
-                          ) : (
-                            <UserRoundCheck size={15} aria-hidden />
-                          )}
-                          {complete
-                            ? "Threshold shown as met"
-                            : "Add illustrative approval"}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <p className="text-muted mt-5 text-sm">
-                  Correct the blocking amount or currency before requirements
-                  can be shown.
-                </p>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="notice notice-stop" role="alert">
-            <span className="glyph glyph-stop" aria-hidden />
-            <div>
-              <strong>Policy evaluation stopped</strong>
-              <p>{evaluation.error}</p>
-            </div>
-          </div>
-        )}
+        </details>
       </section>
 
       <section aria-labelledby="readiness-heading">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,.78fr)_minmax(0,1.22fr)]">
-          <div
-            className={`notice ${ready ? "notice-clear" : "notice-hold"} items-start!`}
-            role="status"
-            aria-live="polite"
-          >
-            <span
-              className={ready ? "glyph glyph-done" : "glyph glyph-attn"}
-              aria-hidden
-            />
-            <div>
-              <strong id="readiness-heading">
-                {ready ? "Ready to settle" : "Not ready to settle"}
-              </strong>
-              <p>
-                {ready
-                  ? "The real readiness function finds no unresolved reason for this browser-only scenario. No settlement intent or payment was created."
-                  : "The real readiness function explains what remains before this scenario could reach settlement preparation."}
-              </p>
-            </div>
-          </div>
-          <div className="sheet p-5 md:p-6">
-            <p className="fact-label">Structured readiness reasons</p>
-            {result?.readiness.reasons.length ? (
-              <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-                {result.readiness.reasons.map((reason) => (
-                  <li key={reason.code} className="card p-4">
-                    <p className="text-sm font-semibold">{reason.message}</p>
-                    <code className="text-muted mt-2 block text-[0.6875rem] break-all">
-                      {reason.code}
-                    </code>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted mt-3 text-sm leading-6">
-                No readiness blockers in this calculation. The sandbox stops
-                here because signing is a separate external authority.
-              </p>
-            )}
-          </div>
-        </div>
-      </section>
-
-      <section aria-labelledby="lifecycle-heading">
-        <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="section-intro mb-5!">
           <div>
-            <p className="eyebrow">Explore the boundary</p>
-            <h2 id="lifecycle-heading" className="t-title mt-3 text-3xl!">
-              Payment lifecycle
+            <p className="eyebrow">Step 3 · Read the outcome</p>
+            <h2 id="readiness-heading" className="t-title mt-3 text-3xl!">
+              Browser-calculated settlement readiness
             </h2>
           </div>
-          <span className="cap cap-hatched">Sandbox · browser only</span>
+          <span className="cap cap-hatched">Not financial authorization</span>
         </div>
-        <ol className="mt-6 grid gap-3 md:grid-cols-5">
+        <div
+          className={`notice ${ready ? "notice-clear" : "notice-hold"} items-start!`}
+          role="status"
+          aria-live="polite"
+        >
+          <span
+            className={ready ? "glyph glyph-done" : "glyph glyph-attn"}
+            aria-hidden
+          />
+          <div>
+            <strong>
+              Browser calculation: {ready ? "READY TO SETTLE" : "NOT READY"}
+            </strong>
+            <p>
+              {ready
+                ? "No readiness blocker remains in this fictional calculation. No obligation, approval, settlement intent, or payment was created."
+                : (result?.readiness.reasons
+                    .map((reason) => reason.message)
+                    .join(" · ") ?? evaluation.error)}
+            </p>
+          </div>
+        </div>
+
+        <ol
+          className="mt-6 grid gap-3 md:grid-cols-5"
+          aria-label="Obliq lifecycle boundary"
+        >
           {lifecycle.map(([name, description], index) => {
-            const active =
-              index === 0 ||
-              (index === 1 && Boolean(result)) ||
-              (index === 2 && ready);
+            const active = index === 0 || (index === 1 && Boolean(result));
             return (
               <li
                 key={name}
-                className={`card relative min-h-36 p-4 ${active ? "border-gold-deep!" : "bg-sunken!"}`}
+                className={`card relative p-4 ${active ? "border-gold-deep!" : "bg-sunken!"}`}
               >
                 <span className="font-mono text-xs font-semibold">
                   0{index + 1}
                 </span>
-                <h3 className="mt-5 font-semibold">{name}</h3>
-                <p className="text-muted mt-2 text-xs leading-5">
-                  {active ? description : "Not performed in this sandbox"}
+                <h3 className="mt-3 text-sm font-semibold">{name}</h3>
+                <p className="text-muted mt-1 text-xs leading-5">
+                  {active ? description : "Not performed here"}
                 </p>
                 {index >= 2 && (
                   <LockKeyhole
-                    size={16}
+                    size={14}
                     className="text-muted absolute top-4 right-4"
                     aria-label="Unavailable in sandbox"
                   />
@@ -459,12 +533,10 @@ export function JudgeDemo() {
         <div className="notice notice-hatched mt-5" role="note">
           <CircleAlert className="glyph" aria-hidden />
           <div>
-            <strong>The sandbox never creates a payment success state</strong>
+            <strong>The exercise stops before money movement</strong>
             <p>
-              It does not persist an obligation, verify a person or wallet,
-              create an intent, contact a signer, broadcast, scan Zcash, or
-              issue evidence. The separate historical section below is the only
-              settlement evidence on this page.
+              It does not authenticate a person, persist a record, contact a
+              signer, broadcast, scan Zcash, reconcile, or issue evidence.
             </p>
           </div>
         </div>

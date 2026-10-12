@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  demoScenarios,
   evaluateDemoPolicy,
   initialDemoInputs,
   type DemoApprovalCounts,
@@ -20,7 +21,11 @@ describe("judge demo policy model", () => {
   });
 
   it("derives role requirements and readiness from reviewed inputs", () => {
-    const inputs = { ...initialDemoInputs, destinationReviewed: true };
+    const inputs = {
+      ...initialDemoInputs,
+      vendorKnown: true,
+      destinationReviewed: true,
+    };
     const pending = evaluateDemoPolicy(inputs, {});
     expect(pending.decision.result).toBe("APPROVAL_REQUIRED");
     expect(pending.requirements.map(({ role }) => role)).toEqual([
@@ -39,6 +44,7 @@ describe("judge demo policy model", () => {
     const inputs = {
       ...initialDemoInputs,
       amount: "12000.00",
+      vendorKnown: true,
       destinationReviewed: true,
     };
     const one = evaluateDemoPolicy(inputs, { TREASURY: 1 });
@@ -61,6 +67,7 @@ describe("judge demo policy model", () => {
       const result = evaluateDemoPolicy(
         {
           ...initialDemoInputs,
+          vendorKnown: true,
           destinationReviewed: true,
           duplicateStatus,
         },
@@ -78,5 +85,37 @@ describe("judge demo policy model", () => {
     expect(() =>
       evaluateDemoPolicy({ ...initialDemoInputs, amount: "-1" }, {}),
     ).toThrow("non-negative decimal amount");
+  });
+
+  it("calculates all three presets through the policy engine", () => {
+    const newVendor = evaluateDemoPolicy(demoScenarios[0]!.inputs, {});
+    const duplicateInvoice = evaluateDemoPolicy(demoScenarios[1]!.inputs, {});
+    const approvedControlPath = evaluateDemoPolicy(
+      demoScenarios[2]!.inputs,
+      {},
+    );
+
+    expect(newVendor.decision.findings).toContainEqual(
+      expect.objectContaining({
+        code: "VENDOR_NEW",
+        outcome: "REQUIRE_APPROVAL",
+      }),
+    );
+    expect(newVendor.readiness.ready).toBe(false);
+    expect(duplicateInvoice.decision.findings).toContainEqual(
+      expect.objectContaining({
+        code: "POSSIBLE_DUPLICATE_OPEN",
+        outcome: "BLOCK",
+      }),
+    );
+    expect(duplicateInvoice.readiness.ready).toBe(false);
+    expect(approvedControlPath.decision.result).toBe("APPROVAL_REQUIRED");
+    expect(approvedControlPath.readiness.ready).toBe(false);
+    expect(
+      evaluateDemoPolicy(demoScenarios[2]!.inputs, {
+        FINANCE: 1,
+        TREASURY: 1,
+      }).readiness.ready,
+    ).toBe(true);
   });
 });

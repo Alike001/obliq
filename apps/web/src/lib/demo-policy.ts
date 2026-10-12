@@ -19,14 +19,59 @@ export interface DemoInputs {
 
 export type DemoApprovalCounts = Partial<Record<ApprovalRole, number>>;
 
-export const initialDemoInputs: DemoInputs = {
-  amount: "2750.00",
-  vendorKnown: true,
-  fieldsComplete: true,
-  duplicateStatus: "CLEAR",
-  recipientConfirmed: true,
-  destinationReviewed: false,
-};
+export type DemoScenarioId =
+  "NEW_VENDOR" | "DUPLICATE_INVOICE" | "APPROVED_CONTROL_PATH";
+
+export interface DemoScenario {
+  id: DemoScenarioId;
+  label: string;
+  summary: string;
+  inputs: DemoInputs;
+}
+
+export const demoScenarios: readonly DemoScenario[] = [
+  {
+    id: "NEW_VENDOR",
+    label: "New vendor",
+    summary: "First payment and an unreviewed destination need human control.",
+    inputs: {
+      amount: "2750.00",
+      vendorKnown: false,
+      fieldsComplete: true,
+      duplicateStatus: "CLEAR",
+      recipientConfirmed: true,
+      destinationReviewed: false,
+    },
+  },
+  {
+    id: "DUPLICATE_INVOICE",
+    label: "Unresolved duplicate",
+    summary: "A possible duplicate stops the payable before authorization.",
+    inputs: {
+      amount: "2750.00",
+      vendorKnown: true,
+      fieldsComplete: true,
+      duplicateStatus: "POSSIBLE_OPEN",
+      recipientConfirmed: true,
+      destinationReviewed: true,
+    },
+  },
+  {
+    id: "APPROVED_CONTROL_PATH",
+    label: "Approved-control path",
+    summary: "Controls pass; exercise the required approval thresholds next.",
+    inputs: {
+      amount: "2750.00",
+      vendorKnown: true,
+      fieldsComplete: true,
+      duplicateStatus: "CLEAR",
+      recipientConfirmed: true,
+      destinationReviewed: true,
+    },
+  },
+] as const;
+
+export const initialDemoInputs: DemoInputs = demoScenarios[0]!.inputs;
 
 export const initialDemoApprovalCounts: DemoApprovalCounts = {};
 
