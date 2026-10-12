@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowDown, ArrowUpRight } from "lucide-react";
+import { ArrowDown, ArrowUpRight, MessageSquareText } from "lucide-react";
 import { JudgeDemo } from "@/components/judge-demo";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
@@ -38,6 +38,29 @@ export default function DemoPage() {
                   private vendor payable, resolve deterministic controls, and
                   see exactly where human authorization is still required.
                 </p>
+                <ol
+                  className="mt-6 grid max-w-2xl gap-3 text-sm sm:grid-cols-3"
+                  aria-label="Sandbox steps"
+                >
+                  <li className="border-t border-white/15 pt-3">
+                    <strong>1. Pick a case</strong>
+                    <span className="mt-1 block text-white/60">
+                      New vendor, duplicate, or clear controls.
+                    </span>
+                  </li>
+                  <li className="border-t border-white/15 pt-3">
+                    <strong>2. Review findings</strong>
+                    <span className="mt-1 block text-white/60">
+                      See why policy passes or blocks it.
+                    </span>
+                  </li>
+                  <li className="border-t border-white/15 pt-3">
+                    <strong>3. Read the boundary</strong>
+                    <span className="mt-1 block text-white/60">
+                      Readiness is not approval or payment.
+                    </span>
+                  </li>
+                </ol>
               </div>
               <div className="notice notice-hatched text-ink" role="note">
                 <span className="glyph glyph-unknown" aria-hidden />
@@ -58,6 +81,27 @@ export default function DemoPage() {
 
         <section id="sandbox" className="page-wrap scroll-mt-24 py-14 md:py-20">
           <JudgeDemo />
+        </section>
+
+        <section
+          className="band band-fog"
+          aria-labelledby="demo-feedback-heading"
+        >
+          <div className="page-wrap grid gap-6 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+            <div>
+              <p className="eyebrow">After the exercise</p>
+              <h2 id="demo-feedback-heading" className="t-title mt-3 text-3xl!">
+                What would make this usable for your payables?
+              </h2>
+              <p className="text-muted mt-3 max-w-2xl text-sm leading-6">
+                Share your role, what was clear, what was confusing, and the
+                capability you would need next. Use fictional information only.
+              </p>
+            </div>
+            <Link href="/feedback" className="button button-dark">
+              <MessageSquareText size={15} aria-hidden /> Give product feedback
+            </Link>
+          </div>
         </section>
 
         <section

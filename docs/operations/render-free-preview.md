@@ -16,6 +16,8 @@ The request proxy allows only `GET` and `HEAD` requests for:
 
 - `/`, `/docs` and `/docs/*`;
 - `/demo`, a browser-memory-only fictional policy sandbox;
+- `/feedback`, which links to an optional owner-configured external form and
+  stores no response in Obliq;
 - `/security` and `/proof`;
 - `/health/live` and `/health/ready`;
 - the application icon and Next.js build assets.
@@ -65,7 +67,16 @@ OBLIQ_ZCASH_NETWORK=disabled
 OBSERVER_NETWORK=disabled
 OBLIQ_PUBLIC_NETWORK_STATUS=PUBLIC_NETWORK_BLOCKED
 OBLIQ_APP_BASE_URL=https://<exact-service-name>.onrender.com
+OBLIQ_PUBLIC_FEEDBACK_URL=https://<reviewed-external-form-url>
 ```
+
+`OBLIQ_PUBLIC_FEEDBACK_URL` is optional. If absent, `/feedback` explains that
+collection is unavailable and exposes no fallback submission. When set it must
+use HTTPS and contain no URL credentials or fragment. Configure the external
+form itself to ask only for role, workflow clarity, confusing steps, missing
+capability and optional contact. It must warn respondents not to submit wallet
+keys, seed phrases, viewing keys, payment credentials, invoice files, financial
+records or private destination addresses.
 
 Do not configure `DATABASE_URL`, OIDC credentials, storage credentials,
 scanner credentials, observer paths/endpoints, viewing authority, or signer
@@ -84,7 +95,7 @@ is required.
 2. Require `/health/ready` to return HTTP 200 with `deploymentMode: preview`,
    `database: disabled`, `authMode: disabled`, `network: disabled`, and
    `PUBLIC_NETWORK_BLOCKED`.
-3. Check `/`, `/demo`, `/docs/overview`, `/security`, and `/proof` return HTTP
+3. Check `/`, `/demo`, `/feedback`, `/docs/overview`, `/security`, and `/proof` return HTTP
    200 for `GET` and `HEAD`.
 4. Check `/app`, `/auth/login`, `/verify/test`, and `POST`, `PUT`, and `OPTIONS`
    requests to `/demo` return HTTP 404 with `Cache-Control: no-store`.

@@ -1,5 +1,10 @@
 import type { ImplementationStatus } from "@obliq/domain";
-import { ArrowUpRight, Check, MoveRight } from "lucide-react";
+import {
+  ArrowUpRight,
+  Check,
+  MessageSquareText,
+  MoveRight,
+} from "lucide-react";
 import Link from "next/link";
 import { AuthorityTrack, lifecycleStages } from "@/components/authority-track";
 import { HeroWindow } from "@/components/hero-window";
@@ -164,6 +169,32 @@ export default function LandingPage() {
                 <p>{summary.rest}</p>
               </div>
             </div>
+            {preview && (
+              <div className="sheet mt-3 grid gap-5 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center md:p-7">
+                <div>
+                  <p className="eyebrow">
+                    Try one fictional bill · about two minutes
+                  </p>
+                  <h2 className="t-title mt-3 text-2xl!">
+                    Change the payable. Watch deterministic controls respond.
+                  </h2>
+                  <p className="text-muted mt-3 max-w-2xl text-sm leading-6">
+                    Explore a new vendor, a duplicate invoice, and a clear
+                    control path. The actual policy code runs in your browser;
+                    no identity, approval, database record, or payment is
+                    created.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-3 md:justify-end">
+                  <Link href="/demo" className="button button-dark">
+                    Try interactive demo <ArrowUpRight size={15} aria-hidden />
+                  </Link>
+                  <Link href="/feedback" className="button button-light">
+                    <MessageSquareText size={15} aria-hidden /> Give feedback
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </section>
 
