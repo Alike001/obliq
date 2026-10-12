@@ -1,6 +1,8 @@
 # Hackathon submission checklist
 
-Deadline supplied by the owner: **October 12, 2026**. The owner must verify the actual portal deadline and timezone inside the authenticated competition dashboard; no public source inspected for this package exposed the event-specific form.
+Deadline supplied by the owner: **October 12, 2026**. The owner must verify the exact portal deadline and timezone inside the authenticated competition dashboard.
+
+This checklist follows the current [Colosseum hackathon FAQ](https://colosseum.com/hackathon), which requests a two-to-three-minute founder/product presentation **and** a separate product-demo video no longer than three minutes, along with team, location, product graphic, technical, validation, and go-to-market information. The authenticated form remains authoritative if it differs.
 
 ## Repository and release candidate
 
@@ -9,7 +11,7 @@ Deadline supplied by the owner: **October 12, 2026**. The owner must verify the 
 - [x] Root README explains customer, product, Zcash role, architecture, evidence, and limitations.
 - [x] Architecture, threat model, ADRs, runbooks, and evidence records are linked.
 - [x] License obligations for studied references are documented; no external contract code was copied.
-- [ ] Merge PR #27 after owner review so the final visual polish and approved screenshots reach `main`.
+- [x] PR #27 is merged; final visual polish and approved screenshots are on `main`.
 - [ ] Merge the Issue #7 documentation PR after owner review.
 - [ ] Tag or record one final submission commit SHA; do not submit a moving branch name alone.
 - [ ] Confirm repository visibility and judge access without changing collaborator permissions unnecessarily.
@@ -43,29 +45,52 @@ Deadline supplied by the owner: **October 12, 2026**. The owner must verify the 
 - [ ] Use “Obliq” and the tagline “Pay your business bills without publishing your business.”
 - [ ] Paste an approved short description from [PROJECT_DESCRIPTION.md](./PROJECT_DESCRIPTION.md).
 - [ ] Select the exact Zcash/privacy/payments track offered by the authenticated form.
-- [ ] Add team background without inventing credentials or customer relationships.
-- [ ] Add the repository, preview URL, pitch/demo video, and any required technical walkthrough.
+- [ ] List the blockchains and tools actually integrated: Zcash, Zebra/Zaino data boundary, external Zallet, librustzcash observer, Next.js, PostgreSQL, TypeScript, and Rust; distinguish experiments from shipped dependencies.
+- [ ] Add every teammate’s truthful background, prior experience, role, and commitment without inventing credentials or customer relationships.
+- [ ] Add the team location: `[CITY/REGION, COUNTRY]`.
+- [ ] Upload the approved product logo or graphic: `[FINAL ASSET PATH]`.
+- [ ] Add the repository, read-only preview URL, founder presentation URL, and technical product-demo URL.
+- [ ] Describe demand validation exactly as completed: `[INTERVIEWS / PILOTS / OTHER CONSENTED EVIDENCE, OR “NOT YET COMPLETED”]`.
+- [ ] Describe the go-to-market and distribution plan as hypotheses until validated: `[FOUNDER-LED CUSTOMER SEGMENT AND CHANNELS]`.
+- [ ] State the business-model hypothesis without claiming unvalidated pricing or revenue.
+- [ ] Complete the prior-development disclosure: list the dates and scope of all Obliq work/code created before the official competition window, plus what was completed during the event. Do not omit relevant pre-existing work.
 - [ ] Disclose third-party/open-source dependencies and licenses if requested.
 - [ ] Confirm every mandatory field, consent, eligibility rule, and submission-time timezone in the live form.
 - [ ] Save a private screenshot or export of the completed form before final submission.
 
-## Demo recording
+## Video 1 — founder/product presentation (two to three minutes)
 
-- [ ] Keep the final combined video under three minutes unless the actual portal states otherwise.
-- [ ] Follow [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) and rehearse to 2:50–3:00.
+- [ ] Follow [PITCH_SCRIPT.md](./PITCH_SCRIPT.md) and rehearse to 2:20–2:50.
+- [ ] Replace every team placeholder; remove any sentence whose facts cannot be verified.
+- [ ] Cover the problem, target customer, insight, solution, Zcash advantage, differentiation, team credibility, business-model hypothesis, go-to-market plan, validation status, and long-term opportunity.
+- [ ] Keep product footage illustrative; leave the detailed workflow to the technical demo.
+- [ ] State that demand, pricing, public-network settlement, and production operations remain unverified where applicable.
+- [ ] Upload to an organizer-supported host: `[FOUNDER PRESENTATION URL]`.
+- [ ] Test this URL in a signed-out browser and confirm audio, captions, and access.
+
+## Video 2 — technical product demo (no more than three minutes)
+
+- [ ] Follow [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) and rehearse to 2:40–2:58.
 - [ ] Record at 1080p with readable text and no desktop notifications.
-- [ ] Show the problem and customer within the first 20 seconds.
 - [ ] Demonstrate a persisted obligation, controls/approvals, Private Payables Link, and independent review.
+- [ ] Demonstrate the separation between business approval, external Zallet signing, and UFVK-only observation.
 - [ ] Show `/proof` as historical isolated-regtest evidence, not live demo activity.
 - [ ] Say explicitly that the mail sink is development-only and public settlement is unverified.
 - [ ] Do not display invitation fragments, verification codes, receiver strings, UFVKs, RPC credentials, environment files, local paths, or real identities.
 - [ ] Add captions or a transcript and check audio intelligibility.
-- [ ] Upload to an organizer-supported host and test access in a signed-out browser.
-- [ ] Keep a second private/local copy and checksum as backup.
+- [ ] Upload separately from the founder presentation: `[TECHNICAL DEMO URL]`.
+- [ ] Test this URL in a signed-out browser and confirm it is no longer than three minutes.
+
+## Video delivery
+
+- [ ] Confirm the two URLs resolve to two distinct, separately accessible videos.
+- [ ] Keep a private/local master and checksum for each video as backup.
+- [ ] Ensure the title and thumbnail make “Founder presentation” and “Technical product demo” unambiguous.
+- [ ] Ensure neither video contains claims absent from the final submission text.
 
 ## Screenshots and media
 
-- [ ] After PR #27 merges, select approved desktop/mobile images from `docs/design/implementation/final-polish/`.
+- [ ] Select approved desktop/mobile images from `docs/design/implementation/final-polish/`.
 - [ ] Prefer landing, obligation, Private Payables panel, recipient entry, independent destination review, and proof timeline.
 - [ ] Do not use a settlement/evidence screenshot backed by an invented database record.
 - [ ] Label fixture screens `SEEDED` or “demo record” where necessary.
@@ -94,9 +119,9 @@ Deadline supplied by the owner: **October 12, 2026**. The owner must verify the 
 ## Owner-only final gate
 
 - [ ] Review the complete submission in a signed-out browser.
-- [ ] Confirm PR #27 and the documentation PR were merged in the intended order without conflicts.
+- [ ] Confirm the documentation PR merges cleanly after PR #27.
 - [ ] Confirm the deployment revision equals the final accepted `main` SHA.
-- [ ] Confirm the video and repository are accessible to judges.
+- [ ] Confirm both videos and the repository are accessible to judges.
 - [ ] Submit before the verified portal deadline.
 - [ ] Record submission confirmation privately.
 

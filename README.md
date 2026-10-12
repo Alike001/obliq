@@ -110,7 +110,8 @@ The public Render deployment is a read-only preview. It intentionally denies `/a
 
 ## Demo and submission material
 
-- [Three-minute demo script](docs/submission/DEMO_SCRIPT.md)
+- [Founder/product presentation script](docs/submission/PITCH_SCRIPT.md)
+- [Technical product-demo script](docs/submission/DEMO_SCRIPT.md)
 - [Local demo runbook](docs/submission/LOCAL_DEMO_RUNBOOK.md)
 - [Project description](docs/submission/PROJECT_DESCRIPTION.md)
 - [Technical summary](docs/submission/TECHNICAL_SUMMARY.md)

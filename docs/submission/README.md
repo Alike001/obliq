@@ -4,7 +4,8 @@ This directory contains the judge-facing and operator-facing material for GitHub
 
 - [Project description](./PROJECT_DESCRIPTION.md)
 - [Technical summary](./TECHNICAL_SUMMARY.md)
-- [Three-minute demo script](./DEMO_SCRIPT.md)
+- [Founder/product presentation script](./PITCH_SCRIPT.md)
+- [Technical product-demo script](./DEMO_SCRIPT.md)
 - [Local demo runbook](./LOCAL_DEMO_RUNBOOK.md)
 - [Submission checklist](./SUBMISSION_CHECKLIST.md)
 
