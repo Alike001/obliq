@@ -2,6 +2,11 @@
 
 Status: **PUBLIC_NETWORK_READY_FOR_FUNDED_TEST**
 
+Execution gate (reviewed 2026-10-12): **BLOCKED — NO COMPATIBLE EXTERNAL PCZT
+SIGNER**. The read-only observer remains qualified, but Ceremonies 4–7 are not
+authorized with the pinned Zallet beta.3 artifact. See the latest
+[compatibility audit](./evidence/PUBLIC_TESTNET_COMPATIBILITY_2026-10-12.md).
+
 This runbook stops before funding, signing, or broadcasting. A completed sync
 is not payment evidence. Only a real, externally authorized, fully shielded
 testnet output that the UFVK-only observer decrypts and Obliq reconciles can
@@ -9,7 +14,7 @@ change the classification to `PUBLIC_NETWORK_VERIFIED`.
 
 ## Frozen implementation set
 
-The preparation was reviewed on 2026-10-08 against:
+The preparation was originally reviewed on 2026-10-08 against:
 
 - Obliq observer: `zcash_client_backend 0.24.0`,
   `zcash_client_sqlite 0.22.0`, `zcash_keys 0.16.1`,
@@ -29,6 +34,14 @@ The preparation was reviewed on 2026-10-08 against:
 Zallet is beta software. Before executing the ceremony, pin the binaries and
 run `zallet rpc help <method>` for every RPC below. Stop if its live schema
 differs from this reviewed version.
+
+The 2026-10-12 re-review found no compatible released Zallet replacement.
+Zallet main commit `d9a09634…` is unreleased, removed the `zallet-zaino`
+backend in PR #900, and still resolves the pre-final NU7 librustzcash pin. It
+must not be built from main and substituted into this ceremony. Zingo PC
+2.0.26-196 is an official NU7 pre-release candidate for a separately approved,
+limited observer-receipt experiment, but its wallet-internal sign-and-broadcast
+flow is not Obliq's inspectable external PCZT boundary.
 
 Zallet beta.3 was published before ZIP 259 finalized the NU7 branch ID. Its
 checksum proves artifact identity, not post-NU7 compatibility. The 2026-10-10
@@ -56,14 +69,14 @@ version string alone is not sufficient evidence.
 
 ## Minimum topology
 
-| Boundary                  | Minimum for the funded test                                                                                         | Security property                                                                                           |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| External recipient wallet | Existing Zingo PC 2.0.25 Zecceipt Merchant testnet account, whose receiver was matched locally to the observer UFVK | Holds recipient spend authority; Obliq receives only its UFVK                                               |
-| External sender           | Separate fresh testnet Zallet v0.1.0-beta.3 wallet/account                                                          | Faucet funds and inspectable PCZT signing remain outside Obliq; the existing Zingo sender is not the signer |
-| Wallet chain service      | Zebra v7.0.0-rc.0 JSON-RPC plus Zallet v0.1.0-beta.3 **`zallet-zaino`** configured with backend `zaino`             | Reject the default co-located `zebra` backend; wallet RPC stays loopback-only behind an encrypted tunnel    |
-| Observer                  | `tools/zcash-observer` with a private SQLite cache and recipient UFVK                                               | Read-only; API contains no spend, sign, or broadcast operation                                              |
-| Observer data service     | TLS lightwalletd-compatible testnet endpoint                                                                        | Supplies compact blocks, transactions, tree state, subtree roots, and chain identity                        |
-| Application               | Obliq plus PostgreSQL                                                                                               | Stores the obligation, intent, sanitized execution receipts, observation, and audit chain; no wallet secret |
+| Boundary                  | Minimum for the funded test                                                                                         | Security property                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| External recipient wallet | Existing Zingo PC 2.0.25 Zecceipt Merchant testnet account, whose receiver was matched locally to the observer UFVK | Holds recipient spend authority; Obliq receives only its UFVK                                                 |
+| External sender           | **BLOCKED:** no released finalized-NU7 Zallet PCZT signer is currently accepted                                     | A future signer must keep funds and inspectable PCZT signing outside Obliq                                    |
+| Wallet chain service      | **BLOCKED:** beta.3 `zallet-zaino` predates final NU7; main removed this backend                                    | Do not substitute the co-located Zebra backend or Zingo's internal signer without a new reviewed architecture |
+| Observer                  | `tools/zcash-observer` with a private SQLite cache and recipient UFVK                                               | Read-only; API contains no spend, sign, or broadcast operation                                                |
+| Observer data service     | TLS lightwalletd-compatible testnet endpoint                                                                        | Supplies compact blocks, transactions, tree state, subtree roots, and chain identity                          |
+| Application               | Obliq plus PostgreSQL                                                                                               | Stores the obligation, intent, sanitized execution receipts, observation, and audit chain; no wallet secret   |
 
 The Z3 operator guide gives a minimum of 2 CPU cores, 8 GB RAM for the full
 stack, and about 30 GB SSD for testnet, with an initial sync commonly taking
@@ -74,11 +87,13 @@ place to download or synchronize Zebra state. Reuse a compatible synchronized
 private host or provision a dedicated temporary host after owner approval; do
 not run the node here or add a redundant node merely for the demo.
 
-`zallet-zaino` talks to Zebra JSON-RPC and does not require Zallet to read a
-co-located Zebra state database or connect to Zebra's indexer gRPC. Do not run
-the default `zallet`/`zebra` backend accidentally: it has those additional
-co-location and indexer requirements and is outside this reviewed topology. A
-standalone Zaino process is also unnecessary for the selected backend.
+The historical beta.3 `zallet-zaino` topology talks to Zebra JSON-RPC without
+reading a co-located Zebra state database. It is retained here only to explain
+the reviewed architecture; it is not executable on post-NU7 testnet. Current
+Zallet main removed that backend. Its Zebra backend instead requires Linux,
+co-located compatible Zebra state, a Zebra build with the non-default `indexer`
+feature, the indexer read-state service and gRPC, plus JSON-RPC. That is a
+different, unreleased architecture and is not an accepted fallback.
 
 Obliq and PostgreSQL can share a separate modest application host for this
 single test, but the observer cache, UFVK, and wallet hosts remain isolated.
@@ -258,8 +273,11 @@ ceremony authorization is false, and neither result is payment evidence.
 **Stop gate:** do not begin this ceremony from the offline validator output.
 Require the independently collected live Zebra/Zallet evidence and second-human
 review from Ceremony 3. In their absence, the funded ceremony is unauthorized.
+As of the 2026-10-12 audit, no compatible released Zallet exists, so this stop
+gate is active and the remaining steps are retained as future procedure only.
 
-1. Create a Zallet v0.1.0-beta.3 datadir, encryption identity, mnemonic,
+1. After a new review pins a finalized-NU7-compatible Zallet release, create
+   its datadir, encryption identity, mnemonic,
    confirmed backup, and account on the isolated signer host. This is the
    independent sender. Do not import either existing Zingo mnemonic and do not
    reuse the recipient account. Bind Zallet's plaintext RPC to loopback only.

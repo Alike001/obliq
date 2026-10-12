@@ -41,13 +41,13 @@ export function networkClaims(
         ? "Verified"
         : ready
           ? "Ready for funded test"
-          : "Blocked",
-      tone: verified ? "verified" : ready ? "ready" : "blocked",
+          : "Previously demonstrated",
+      tone: verified ? "verified" : "ready",
       detail: verified
         ? "The observer has synchronized with the public test network."
         : ready
           ? "The observer is qualified to attempt a funded test. No funds have moved."
-          : "Obliq has not proven synchronization with a public network.",
+          : "A UFVK-only observer previously synchronized with public testnet. This hosted runtime has networking disabled, and no funded public payment was observed.",
     },
     {
       id: "public-settlement",
@@ -88,6 +88,6 @@ export function networkSummary(status: PublicNetworkStatus): {
     };
   return {
     lead: "Shielded settlement is verified on regtest only.",
-    rest: "Public-network operation is blocked.",
+    rest: "A prior UFVK-only public-testnet synchronization was demonstrated; this hosted runtime has networking disabled, and no funded public settlement is verified.",
   };
 }

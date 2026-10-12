@@ -236,9 +236,11 @@ export default async function ProofPage() {
           ))}
         </ul>
         <p className="text-muted mt-4 max-w-[68ch] text-sm leading-6">
-          A solid stamp is a live fact. A result that holds on the isolated test
-          network only always carries the hatched Regtest tag, so it is never
-          read as public-network readiness.
+          A solid stamp is a verified fact. A hatched stamp can describe
+          historical or readiness evidence and must be read with its detail. The
+          hosted-runtime card below reports what this deployment can reach now.
+          A result that holds on the isolated test network only always carries
+          the hatched Regtest tag.
         </p>
       </section>
       <RegtestSettlement />

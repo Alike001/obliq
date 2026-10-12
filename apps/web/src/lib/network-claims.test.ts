@@ -5,16 +5,16 @@ const labels = (...args: Parameters<typeof networkClaims>) =>
   Object.fromEntries(networkClaims(...args).map((c) => [c.id, c.label]));
 
 describe("network claims", () => {
-  it("claims regtest only while the public network is blocked", () => {
+  it("separates recorded read-only testnet sync from a blocked runtime", () => {
     expect(labels("PUBLIC_NETWORK_BLOCKED", "regtest")).toEqual({
       regtest: "Verified",
-      "testnet-sync": "Blocked",
+      "testnet-sync": "Previously demonstrated",
       "public-settlement": "Not verified",
       mainnet: "Blocked",
     });
     expect(networkSummary("PUBLIC_NETWORK_BLOCKED")).toEqual({
       lead: "Shielded settlement is verified on regtest only.",
-      rest: "Public-network operation is blocked.",
+      rest: "A prior UFVK-only public-testnet synchronization was demonstrated; this hosted runtime has networking disabled, and no funded public settlement is verified.",
     });
   });
 
