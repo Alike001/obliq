@@ -1,6 +1,19 @@
 # Public pilot operations
 
-Status: **IMPLEMENTED, NOT DEPLOYED**
+Status: **IMPLEMENTED AND DEPLOYED; LIVE BROWSER ACCEPTANCE NOT YET VERIFIED**
+
+Deployment status as of 13 October 2026:
+
+- the separate pilot service is deployed at
+  <https://obliq-public-pilot.onrender.com/pilot>;
+- <https://obliq-public-pilot.onrender.com/health/ready> has returned healthy
+  pilot configuration;
+- browser onboarding is **UNDER VERIFICATION** after a reverse-proxy redirect
+  origin caused the strict `form-action 'self'` policy to block navigation;
+- the correction uses the validated `OBLIQ_APP_BASE_URL` for lifecycle
+  redirects and has to pass the live browser ceremony after deployment; and
+- the complete live two-browser acceptance ceremony has **not** yet passed and
+  must not be represented as customer onboarding or pilot readiness.
 
 The public pilot is a separate deployment from the database-free Render
 preview. It gives each guest an expiring, PostgreSQL-backed fictional workspace
@@ -50,6 +63,21 @@ not modify render.yaml or the existing preview.
 6. Verify /health/ready reports pilot, guest, disabled storage/network/
    observer, PostgreSQL rate limits, and PUBLIC_NETWORK_BLOCKED.
 7. Execute the two-browser tenant-isolation ceremony before sharing the URL.
+
+Run that ceremony only against the exact HTTPS service origin:
+
+```bash
+OBLIQ_PILOT_ACCEPTANCE_URL=https://obliq-public-pilot.onrender.com \
+OBLIQ_PILOT_ACCEPTANCE_ORIGIN=https://obliq-public-pilot.onrender.com \
+npm run accept:pilot
+```
+
+The script performs real browser form submissions for workspace start and
+reset, creates fictional PostgreSQL records, and consumes rate-limit capacity.
+It checks HTTPS same-origin redirects, Secure/HttpOnly/SameSite cookies,
+persistence, duplicate blocking, policy evaluation, tenant isolation and
+desktop/mobile behavior. A browser crash or uncertain navigation is a failure,
+never a pass. Do not run it repeatedly against the public service.
 
 The Free web service is 0.1 CPU/512 MB and can spin down. Free PostgreSQL is
 limited to 1 GB, has no backups or managed connection pooling, and expires
